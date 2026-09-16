@@ -39,7 +39,7 @@
 
 *   **Module 5: Encyclopedia / Plant Directory (Albhero)**
     *   **Description:** An encyclopedia containing plant species, guides, and user collections. This module handles the core external API integration.
-    *   **CRUD:** **Create** (Add a plant to a personal collection), **Read** (Browse guides and species data), **Update** (Modify collection names), **Delete** (Remove a species from a collection).
+    *   **CRUD:** **Create** (Create personal plant collection), **Read** (Browse guides and species data), **Update** (Modify collection names, add and remove plants inside collection), **Delete** (Remove a personal plant collection).
     *   **API Filtering:** Fetches the main dataset from Trefle.io and allows users to search/filter the directory by plant attributes.
 
 *   **Module 6: Community Q&A Forum (William)**
