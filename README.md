@@ -56,5 +56,5 @@
 *   **Admin/Moderator:** Has all Gardener privileges, plus the authority to verify achievement claims, moderate forum discussions, remove inappropriate social posts, and manage the event calendar.
 
 ## 6. Project Links
-*   **Figma Design:** [figma link]
+*   **Figma Design:** [https://www.figma.com/design/Rgarm0NKaaezYTwWCWxCSb/Untitled?node-id=0-1&t=0N0NtdJeEtON4oHQ-1](https://www.figma.com/design/Rgarm0NKaaezYTwWCWxCSb/Untitled?node-id=0-1&t=0N0NtdJeEtON4oHQ-1)
 *   **PWS Deployment:** [pws link]
