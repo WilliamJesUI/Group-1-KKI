@@ -164,7 +164,7 @@ Icons from the Figma icon set (Lucide) are in `static/img/icons/`:
 <img src="{% static 'img/icons/clock.svg' %}" alt="" width="16" height="16">
 ```
 
-If you need another icon, export it from the Figma Design System page (Icons section) instead of drawing or generating one. The logo is `static/img/logo-tomato.png`, drawn by a friend of the team.
+If you need another icon, export it from the Figma Design System page (Icons section) instead of drawing or generating one. The logo is `static/img/logo-tomato.png`, drawn by William. 
 
 Photos are from Pexels only. Add the credit to docs/CREDITS.md (photographer name + Pexels link).
 
