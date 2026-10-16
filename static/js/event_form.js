@@ -89,13 +89,50 @@ function setCoverError(text) {
     }
 }
 
+// When editing, the event may already have a photo. We remember it so we can show it again.
+let currentCover = null;
+
+function showEmptyBox() {
+    const dropBox = document.getElementById('cover-drop');
+    const preview = document.getElementById('cover-preview');
+    dropBox.classList.remove('hidden');
+    dropBox.classList.add('flex');
+    preview.classList.add('hidden');
+    preview.classList.remove('flex');
+}
+
+function showPreview(src, name) {
+    const dropBox = document.getElementById('cover-drop');
+    const preview = document.getElementById('cover-preview');
+    const previewImg = document.getElementById('cover-preview-img');
+    if (previewImg.src.startsWith('blob:')) {
+        URL.revokeObjectURL(previewImg.src); // free the old temporary link
+    }
+    previewImg.src = src;
+    document.getElementById('cover-file-name').textContent = name;
+    dropBox.classList.add('hidden');
+    dropBox.classList.remove('flex');
+    preview.classList.remove('hidden');
+    preview.classList.add('flex');
+}
+
+// Forget the picked file and go back to the current photo (if there is one and it wasn't removed)
 function resetCover() {
-    const coverInput = hostEventForm.elements['cover_upload'];
-    coverInput.value = '';
-    URL.revokeObjectURL(document.getElementById('cover-preview-img').src);
-    document.getElementById('cover-drop').classList.remove('hidden');
-    document.getElementById('cover-preview').classList.add('hidden');
-    document.getElementById('cover-preview').classList.remove('flex');
+    hostEventForm.elements['cover_upload'].value = '';
+    const removed = hostEventForm.elements['remove_cover'].value === 'True';
+    if (currentCover && !removed) {
+        showPreview(currentCover, 'Current photo');
+    } else {
+        showEmptyBox();
+    }
+}
+
+// "Remove" button: no photo at all. When editing, this also tells the server to delete the current photo.
+function removeCover() {
+    setCoverError('');
+    hostEventForm.elements['cover_upload'].value = '';
+    hostEventForm.elements['remove_cover'].value = currentCover ? 'True' : '';
+    showEmptyBox();
 }
 
 function showCover(file) {
@@ -115,13 +152,9 @@ function showCover(file) {
         setCoverError('That photo is too big. Please pick one under 2 MB.');
         return;
     }
-    const previewImg = document.getElementById('cover-preview-img');
-    URL.revokeObjectURL(previewImg.src);
-    previewImg.src = URL.createObjectURL(file); // a temporary link to the file on this computer
-    document.getElementById('cover-file-name').textContent = file.name;
-    document.getElementById('cover-drop').classList.add('hidden');
-    document.getElementById('cover-preview').classList.remove('hidden');
-    document.getElementById('cover-preview').classList.add('flex');
+    // A new photo replaces the current one, so there's nothing to remove
+    hostEventForm.elements['remove_cover'].value = '';
+    showPreview(URL.createObjectURL(file), file.name); // a temporary link to the file on this computer
 }
 
 function setUpCoverBox() {
@@ -129,8 +162,12 @@ function setUpCoverBox() {
     const dropBox = document.getElementById('cover-drop');
     const dropText = document.getElementById('cover-drop-text');
 
+    // If the page opened with a photo already in the preview, that's the event's current photo
+    const previewSrc = document.getElementById('cover-preview-img').getAttribute('src');
+    currentCover = previewSrc ? previewSrc : null;
+
     coverInput.addEventListener('change', () => showCover(coverInput.files[0]));
-    document.getElementById('cover-remove').addEventListener('click', resetCover);
+    document.getElementById('cover-remove').addEventListener('click', removeCover);
 
     dropBox.addEventListener('dragover', (event) => {
         event.preventDefault(); // needed, otherwise the browser opens the photo in the tab

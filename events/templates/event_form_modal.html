@@ -1,13 +1,20 @@
 {% load static %}
+{% comment %}
+The "Host an event" / "Edit event" pop-up. Include it with:
+  modal_title  = heading, e.g. "Edit event"
+  submit_label = text on the green button
+  form_action  = URL the form is sent to
+{% endcomment %}
 <div id="host-event-modal"
      popover="auto"
      role="dialog"
      aria-modal="true"
      aria-labelledby="host-event-title"
      class="m-auto max-h-[calc(100dvh-2rem)] w-[560px] max-w-[calc(100%-2rem)] overflow-y-auto rounded-[20px] border-2 border-ink bg-surface p-6 text-ink opacity-0 translate-y-2 transition-all transition-discrete duration-250 ease-out backdrop:bg-ink/90 open:opacity-100 open:translate-y-0 starting:open:opacity-0 starting:open:translate-y-2 motion-reduce:translate-y-0">
-    <form id="host-event-form" method="post" action="{% url 'events:create_event_ajax' %}" novalidate class="flex flex-col gap-4">
+    <form id="host-event-form" method="post" action="{{ form_action }}" novalidate class="flex flex-col gap-4">
         {% csrf_token %}
-        <h2 id="host-event-title" class="font-display text-2xl leading-[1.25]">Host an event</h2>
+        <h2 id="host-event-title" class="font-display text-2xl leading-[1.25]">{{ modal_title }}</h2>
+        {{ form.remove_cover }}
 
         <div class="flex flex-col gap-2">
             <label for="{{ form.name.id_for_label }}" class="text-[13px] font-extrabold">{{ form.name.label }}</label>
@@ -59,17 +66,17 @@
             {{ form.cover_upload }}
 
             {# Empty state: click to browse or drop a photo. data-drag is added by JS while a file hovers over it. #}
-            <label id="cover-drop" for="{{ form.cover_upload.id_for_label }}" class="flex h-[160px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink bg-surface text-center peer-focus-visible:ring-2 peer-focus-visible:ring-brand peer-aria-invalid:border-danger data-drag:border-brand data-drag:bg-brand-tint *:pointer-events-none">
+            <label id="cover-drop" for="{{ form.cover_upload.id_for_label }}" class="{% if form.instance.cover_image_type %}hidden{% else %}flex{% endif %} h-[160px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink bg-surface text-center peer-focus-visible:ring-2 peer-focus-visible:ring-brand peer-aria-invalid:border-danger data-drag:border-brand data-drag:bg-brand-tint *:pointer-events-none">
                 <img src="{% static 'img/icons/upload.svg' %}" alt="" width="24" height="24">
                 <span id="cover-drop-text" class="text-[13px] font-extrabold">Drop a photo or browse</span>
                 <span class="text-xs text-ink-soft">JPG, PNG or WebP, up to 2 MB</span>
             </label>
 
             {# Filled state: preview of the chosen photo #}
-            <div id="cover-preview" class="hidden flex-col gap-2 rounded-2xl border-2 border-ink bg-surface p-3">
-                <img id="cover-preview-img" src="" alt="Preview of the chosen cover photo" class="h-24 w-full rounded-xl bg-brand-tint object-cover">
+            <div id="cover-preview" class="{% if form.instance.cover_image_type %}flex{% else %}hidden{% endif %} flex-col gap-2 rounded-2xl border-2 border-ink bg-surface p-3">
+                <img id="cover-preview-img" src="{% if form.instance.cover_image_type %}{{ form.instance.cover_src }}{% endif %}" alt="Preview of the chosen cover photo" class="h-24 w-full rounded-xl bg-brand-tint object-cover">
                 <div class="flex items-center justify-between gap-3 text-xs">
-                    <span id="cover-file-name" class="truncate"></span>
+                    <span id="cover-file-name" class="truncate">{% if form.instance.cover_image_type %}Current photo{% endif %}</span>
                     <span class="flex shrink-0 gap-3 font-bold">
                         <label for="{{ form.cover_upload.id_for_label }}" class="cursor-pointer hover:underline">Replace</label>
                         <button type="button" id="cover-remove" class="hover:underline">Remove</button>
@@ -87,7 +94,7 @@
 
         <div class="flex justify-end gap-3">
             <button type="button" popovertarget="host-event-modal" popovertargetaction="hide" class="rounded-full border-2 border-ink bg-surface px-6 py-3 text-[15px] font-extrabold hover:bg-brand-tint">Cancel</button>
-            <button type="submit" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover disabled:opacity-40">Publish event</button>
+            <button type="submit" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover disabled:opacity-40">{{ submit_label }}</button>
         </div>
     </form>
 </div>

@@ -35,18 +35,21 @@ def detect_image_type(data):
 class EventForm(ModelForm):
     # The model stores start_time and end_time as full date + time values.
     # The form asks for one date and two times, like the Figma design, and combines them in clean().
+    # format=... makes the saved value show up in the right shape when the form is opened for editing
     date = forms.DateField(
-        widget=forms.DateInput(attrs={"type": "date", "class": PICKER_CLASS}),
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date", "class": PICKER_CLASS}),
         error_messages={"required": "Please pick a date."},
     )
     start = forms.TimeField(
-        widget=forms.TimeInput(attrs={"type": "time", "class": PICKER_CLASS, "aria-label": "Start time"}),
+        widget=forms.TimeInput(format="%H:%M", attrs={"type": "time", "class": PICKER_CLASS, "aria-label": "Start time"}),
         error_messages={"required": "Please pick a start time."},
     )
     end = forms.TimeField(
         required=False,
-        widget=forms.TimeInput(attrs={"type": "time", "class": PICKER_CLASS, "aria-label": "End time"}),
+        widget=forms.TimeInput(format="%H:%M", attrs={"type": "time", "class": PICKER_CLASS, "aria-label": "End time"}),
     )
+    # Set to true by JS when the host clicks "Remove" on their current photo while editing
+    remove_cover = forms.BooleanField(required=False, widget=forms.HiddenInput)
     # Not a model field: the photo is checked here and then saved into cover_image in the view
     cover_upload = forms.FileField(
         required=False,
@@ -86,6 +89,16 @@ class EventForm(ModelForm):
             "description": {"required": "Please tell people what the event is about."},
             "cover_photo_url": {"invalid": "Please paste a full image link, starting with https://"},
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # When editing an existing event, fill the date and time boxes from its start_time and end_time
+        if self.instance.pk:
+            start_time = timezone.localtime(self.instance.start_time)
+            self.initial["date"] = start_time.date()
+            self.initial["start"] = start_time.time()
+            if self.instance.end_time:
+                self.initial["end"] = timezone.localtime(self.instance.end_time).time()
 
     def clean_cover_upload(self):
         upload = self.cleaned_data.get("cover_upload")

@@ -364,3 +364,110 @@ class CoverUploadTest(TestCase):
         self.assertContains(response, 'id="cover-drop"')
         self.assertContains(response, 'type="file" name="cover_upload"')
         self.assertContains(response, "JPG, PNG or WebP, up to 2 MB")
+
+
+class EditEventTest(TestCase):
+    PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"0" * 100
+    JPG_BYTES = b"\xff\xd8\xff\xe0" + b"1" * 100
+
+    def setUp(self):
+        self.host = User.objects.create_user(username="rina", password="tomatoes123")
+        self.other = User.objects.create_user(username="ben", password="tomatoes123")
+        self.event = Event.objects.create(
+            name="Community Seed Swap", description="Bring seeds.", location="Menteng Urban Farm",
+            start_time=timezone.make_aware(datetime(2026, 11, 7, 9, 0)),
+            end_time=timezone.make_aware(datetime(2026, 11, 7, 12, 0)),
+            cover_image=self.PNG_BYTES, cover_image_type="image/png",
+            host=self.host,
+        )
+        self.url = reverse("events:edit_event_ajax", args=[self.event.id])
+        self.detail_url = reverse("events:show_event", args=[self.event.id])
+        self.data = {
+            "name": "Big Seed Swap", "date": "2026-11-08", "start": "10:00", "end": "",
+            "location": "Taman Suropati", "description": "Bring more seeds.",
+        }
+
+    def test_must_be_logged_in(self):
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_only_host_can_edit(self):
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 403)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.name, "Community Seed Swap")
+
+    def test_get_not_allowed(self):
+        self.client.login(username="rina", password="tomatoes123")
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    def test_unknown_event_returns_404(self):
+        self.client.login(username="rina", password="tomatoes123")
+        url = reverse("events:edit_event_ajax", args=["00000000-0000-0000-0000-000000000000"])
+        self.assertEqual(self.client.post(url, self.data).status_code, 404)
+
+    def test_host_can_edit(self):
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["url"], self.detail_url)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.name, "Big Seed Swap")
+        self.assertEqual(self.event.location, "Taman Suropati")
+        self.assertEqual(timezone.localtime(self.event.start_time).strftime("%Y-%m-%d %H:%M"), "2026-11-08 10:00")
+        self.assertIsNone(self.event.end_time)
+        self.assertEqual(self.event.host, self.host)
+        self.assertEqual(Event.objects.count(), 1)
+
+    def test_errors_are_returned(self):
+        self.client.login(username="rina", password="tomatoes123")
+        self.data["name"] = ""
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("name", response.json()["errors"])
+
+    def test_cover_kept_when_not_changed(self):
+        self.client.login(username="rina", password="tomatoes123")
+        self.client.post(self.url, self.data)
+        self.event.refresh_from_db()
+        self.assertEqual(bytes(self.event.cover_image), self.PNG_BYTES)
+
+    def test_cover_replaced(self):
+        self.client.login(username="rina", password="tomatoes123")
+        self.data["cover_upload"] = SimpleUploadedFile("new.jpg", self.JPG_BYTES, content_type="image/jpeg")
+        self.client.post(self.url, self.data)
+        self.event.refresh_from_db()
+        self.assertEqual(bytes(self.event.cover_image), self.JPG_BYTES)
+        self.assertEqual(self.event.cover_image_type, "image/jpeg")
+
+    def test_cover_removed(self):
+        self.client.login(username="rina", password="tomatoes123")
+        self.data["remove_cover"] = "True"
+        self.client.post(self.url, self.data)
+        self.event.refresh_from_db()
+        self.assertIsNone(self.event.cover_image)
+        self.assertEqual(self.event.cover_image_type, "")
+
+    def test_edit_form_filled_in_for_host_only(self):
+        response = self.client.get(self.detail_url)
+        self.assertNotContains(response, 'id="host-event-modal"')
+        self.client.login(username="ben", password="tomatoes123")
+        self.assertNotContains(self.client.get(self.detail_url), 'id="host-event-modal"')
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.get(self.detail_url)
+        self.assertContains(response, "Edit event</h2>")
+        self.assertContains(response, "Save changes")
+        self.assertContains(response, f'action="{self.url}"')
+        self.assertContains(response, 'value="Community Seed Swap"')
+        self.assertContains(response, 'value="2026-11-07"')
+        self.assertContains(response, 'value="09:00"')
+        self.assertContains(response, 'value="12:00"')
+        self.assertContains(response, "Current photo")
+
+    def test_host_form_on_list_page_still_creates(self):
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.get(reverse("events:show_events"))
+        self.assertContains(response, "Host an event</h2>")
+        self.assertContains(response, f'action="{reverse("events:create_event_ajax")}"')
+        self.assertContains(response, "Publish event")

@@ -90,7 +90,7 @@
                 <p class="text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-brand">You're the host</p>
                 <p class="text-xs text-ink-soft">Only you see this box.</p>
                 <div class="flex flex-wrap gap-2.5">
-                    <a href="#" class="rounded-full border-2 border-ink bg-surface px-6 py-3 text-[15px] font-extrabold hover:bg-brand-tint">Edit event</a>
+                    <button type="button" popovertarget="host-event-modal" class="rounded-full border-2 border-ink bg-surface px-6 py-3 text-[15px] font-extrabold hover:bg-brand-tint">Edit event</button>
                     <a href="#" class="rounded-full border-2 border-ink bg-danger px-6 py-3 text-[15px] font-extrabold text-white hover:bg-danger-hover">Delete event</a>
                 </div>
             </div>
@@ -98,4 +98,9 @@
         </aside>
     </div>
 </div>
+
+{% if is_host %}
+{% url 'events:edit_event_ajax' event.id as edit_url %}
+{% include "event_form_modal.html" with modal_title="Edit event" submit_label="Save changes" form_action=edit_url %}
+{% endif %}
 {% endblock content %}

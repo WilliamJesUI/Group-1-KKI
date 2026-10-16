@@ -56,6 +56,9 @@ def show_event(request, event_id):
         "bring_list": [line.strip() for line in event.what_to_bring.splitlines() if line.strip()],
         "is_host": request.user == event.host,
     }
+    if context["is_host"]:
+        # The edit pop-up, already filled in with this event's details
+        context["form"] = EventForm(instance=event)
     return render(request, "event_detail.html", context)
 
 
@@ -71,6 +74,20 @@ def show_event_cover(request, event_id):
     return response
 
 
+def save_event_from_form(event, form):
+    # Used by both create and edit: saves the parts the form can't save by itself (times and photo)
+    event.start_time = form.cleaned_data["start_time"]
+    event.end_time = form.cleaned_data["end_time"]
+    cover = form.cleaned_data["cover_upload"]
+    if cover:
+        event.cover_image = cover["data"]
+        event.cover_image_type = cover["type"]
+    elif form.cleaned_data["remove_cover"]:
+        event.cover_image = None
+        event.cover_image_type = ""
+    event.save()
+
+
 @require_POST
 def create_event_ajax(request):
     # Not @login_required: for fetch requests we want a JSON error, not a redirect to a login page
@@ -81,16 +98,28 @@ def create_event_ajax(request):
     form = EventForm(request.POST, request.FILES)
     if form.is_valid():
         event = form.save(commit=False)
-        event.start_time = form.cleaned_data["start_time"]
-        event.end_time = form.cleaned_data["end_time"]
         event.host = request.user
-        cover = form.cleaned_data["cover_upload"]
-        if cover:
-            event.cover_image = cover["data"]
-            event.cover_image_type = cover["type"]
-        event.save()
+        save_event_from_form(event, form)
         return JsonResponse(
             {"message": "Event published.", "url": reverse("events:show_event", args=[event.id])},
             status=201,
         )
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+
+
+@require_POST
+def edit_event_ajax(request, event_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"message": "Please log in to edit this event."}, status=403)
+    event = get_object_or_404(Event, pk=event_id)
+    # Hiding the Edit button isn't enough, anyone could send this request with fetch, so check the host here too
+    if event.host != request.user:
+        return JsonResponse({"message": "Only the host can edit this event."}, status=403)
+
+    # instance=event means "update this event" instead of making a new one
+    form = EventForm(request.POST, request.FILES, instance=event)
+    if form.is_valid():
+        event = form.save(commit=False)
+        save_event_from_form(event, form)
+        return JsonResponse({"message": "Event updated.", "url": reverse("events:show_event", args=[event.id])})
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)

@@ -92,6 +92,7 @@
 {% endif %}
 
 {% if user.is_authenticated %}
-{% include "event_form_modal.html" %}
+{% url 'events:create_event_ajax' as create_url %}
+{% include "event_form_modal.html" with modal_title="Host an event" submit_label="Publish event" form_action=create_url %}
 {% endif %}
 {% endblock content %}
