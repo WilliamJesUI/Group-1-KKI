@@ -18,7 +18,7 @@
     </div>
 
     {% if next_event %}
-    <div class="w-full max-w-[300px] shrink-0 overflow-hidden rounded-2xl border-2 border-ink bg-surface shadow-[4px_4px_0_0_var(--color-ink)]">
+    <a href="{% url 'events:show_event' next_event.id %}" class="block w-full max-w-[300px] shrink-0 overflow-hidden rounded-2xl border-2 border-ink bg-surface shadow-[4px_4px_0_0_var(--color-ink)]">
         <div class="h-[110px] bg-brand-tint">
             {% if next_event.cover_photo_url %}
             <img src="{{ next_event.cover_photo_url }}" alt="Cover photo for {{ next_event.name }}" class="size-full object-cover">
@@ -34,14 +34,14 @@
             <p class="text-xs text-ink-soft">{{ next_event.start_time|date:"j M" }} · {{ next_event.start_time|time:"H:i" }} · {{ next_event.location }}</p>
             <p class="pt-2 text-xs font-bold">{{ next_event.attendees.count }} going</p>
         </div>
-    </div>
+    </a>
     {% endif %}
 </section>
 
 {% if event_list %}
 <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
     {% for event in event_list %}
-    <article class="overflow-hidden rounded-2xl border-2 border-ink bg-surface">
+    <a href="{% url 'events:show_event' event.id %}" class="block overflow-hidden rounded-2xl border-2 border-ink bg-surface transition-shadow duration-150 ease-out hover:shadow-[4px_4px_0_0_var(--color-ink)]">
         <div class="relative h-[180px] bg-brand-tint">
             {% if event.cover_photo_url %}
             <img src="{{ event.cover_photo_url }}" alt="Cover photo for {{ event.name }}" class="size-full object-cover">
@@ -72,7 +72,7 @@
                 {{ event.attendees.count }} going
             </p>
         </div>
-    </article>
+    </a>
     {% endfor %}
 </div>
 {% else %}

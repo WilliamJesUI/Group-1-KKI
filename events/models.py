@@ -7,6 +7,8 @@ class Event(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
     description = models.TextField()
+    # One item per line, shown as a checklist on the event page
+    what_to_bring = models.TextField(blank=True)
     location = models.CharField(max_length=255)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(blank=True, null=True)
