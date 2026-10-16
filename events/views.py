@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
@@ -28,9 +28,11 @@ def get_when_label(start_time):
 
 def show_events(request):
     # The soonest event that hasn't started yet, for the "Next up" card
-    next_event = Event.objects.filter(start_time__gte=timezone.now()).first()
+    # defer("cover_image") skips loading the photo bytes, the page only needs the cover URL
+    events = Event.objects.defer("cover_image")
+    next_event = events.filter(start_time__gte=timezone.now()).first()
     context = {
-        "event_list": Event.objects.all(),
+        "event_list": events,
         "next_event": next_event,
         "next_event_when": get_when_label(next_event.start_time) if next_event else "",
         # An empty form for the "Host an event" pop-up
@@ -40,7 +42,7 @@ def show_events(request):
 
 
 def show_event(request, event_id):
-    event = get_object_or_404(Event, pk=event_id)
+    event = get_object_or_404(Event.objects.defer("cover_image"), pk=event_id)
     going_count = event.attendees.count()
     context = {
         "event": event,
@@ -55,6 +57,17 @@ def show_event(request, event_id):
         "is_host": request.user == event.host,
     }
     return render(request, "event_detail.html", context)
+
+
+def show_event_cover(request, event_id):
+    # Sends the uploaded cover photo from the database to the browser, like a normal image file
+    event = get_object_or_404(Event, pk=event_id)
+    if not event.cover_image_type:
+        raise Http404("This event has no uploaded cover photo.")
+    response = HttpResponse(bytes(event.cover_image), content_type=event.cover_image_type)
+    # Let the browser keep the photo for an hour instead of downloading it on every visit
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
 
 
 @require_POST

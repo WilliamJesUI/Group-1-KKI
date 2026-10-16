@@ -11,8 +11,8 @@
     </a>
 
     <div class="relative h-[220px] overflow-hidden rounded-[20px] border-2 border-ink bg-brand-tint sm:h-[380px]">
-        {% if event.cover_photo_url %}
-        <img src="{{ event.cover_photo_url }}" alt="Cover photo for {{ event.name }}" class="size-full object-cover">
+        {% if event.cover_src %}
+        <img src="{{ event.cover_src }}" alt="Cover photo for {{ event.name }}" class="size-full object-cover">
         {% else %}
         <div class="flex size-full items-center justify-center">
             <img src="{% static 'img/icons/image.svg' %}" alt="" width="24" height="24" class="opacity-40">

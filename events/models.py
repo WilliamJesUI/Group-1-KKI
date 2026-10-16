@@ -1,6 +1,7 @@
 import uuid
 from django.contrib.auth.models import User
 from django.db import models
+from django.urls import reverse
 
 
 class Event(models.Model):
@@ -13,6 +14,10 @@ class Event(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(blank=True, null=True)
     cover_photo_url = models.URLField(blank=True, max_length=500)
+    # An uploaded cover photo is saved inside the database (not as a file), so it survives PWS redeploys.
+    # cover_image holds the image bytes, cover_image_type holds e.g. "image/png" (empty means no upload).
+    cover_image = models.BinaryField(blank=True, null=True)
+    cover_image_type = models.CharField(max_length=20, blank=True)
     # One host per event, one user can host many events
     host = models.ForeignKey(User, on_delete=models.CASCADE, related_name="hosted_events")
     # One event can have many attendees, and one user can RSVP to many events
@@ -24,3 +29,9 @@ class Event(models.Model):
 
     def __str__(self):
         return self.name
+
+    def cover_src(self):
+        # What to put in <img src="...">: the uploaded photo first, then the link, otherwise nothing
+        if self.cover_image_type:
+            return reverse("events:show_event_cover", args=[self.id])
+        return self.cover_photo_url

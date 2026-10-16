@@ -232,3 +232,52 @@ class CreateEventTest(TestCase):
         response = self.client.get(reverse("events:show_events"))
         self.assertContains(response, 'id="host-event-modal"')
         self.assertContains(response, 'popovertarget="host-event-modal"')
+
+
+class EventCoverTest(TestCase):
+    # The first bytes of every PNG file, plus some filler
+    PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"0" * 100
+
+    def setUp(self):
+        self.host = User.objects.create_user(username="rina", password="tomatoes123")
+        self.event = Event.objects.create(
+            name="Community Seed Swap", description="-", location="Menteng Urban Farm",
+            start_time=timezone.now() + timedelta(days=3), host=self.host,
+        )
+        self.cover_url = reverse("events:show_event_cover", args=[self.event.id])
+
+    def test_uploaded_cover_is_served(self):
+        self.event.cover_image = self.PNG_BYTES
+        self.event.cover_image_type = "image/png"
+        self.event.save()
+        response = self.client.get(self.cover_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "image/png")
+        self.assertEqual(response.content, self.PNG_BYTES)
+
+    def test_no_uploaded_cover_returns_404(self):
+        response = self.client.get(self.cover_url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_uploaded_cover_wins_over_link(self):
+        self.event.cover_photo_url = "https://images.pexels.com/photos/7782153/pexels-photo-7782153.jpeg"
+        self.event.cover_image = self.PNG_BYTES
+        self.event.cover_image_type = "image/png"
+        self.event.save()
+        self.assertEqual(self.event.cover_src(), self.cover_url)
+        for url in [reverse("events:show_events"), reverse("events:show_event", args=[self.event.id])]:
+            response = self.client.get(url)
+            self.assertContains(response, f'src="{self.cover_url}"')
+            self.assertNotContains(response, "pexels-photo-7782153")
+
+    def test_link_used_when_no_upload(self):
+        self.event.cover_photo_url = "https://images.pexels.com/photos/7782153/pexels-photo-7782153.jpeg"
+        self.event.save()
+        self.assertEqual(self.event.cover_src(), self.event.cover_photo_url)
+        response = self.client.get(reverse("events:show_event", args=[self.event.id]))
+        self.assertContains(response, 'src="https://images.pexels.com/photos/7782153/pexels-photo-7782153.jpeg"')
+
+    def test_no_cover_at_all(self):
+        self.assertEqual(self.event.cover_src(), "")
+        response = self.client.get(reverse("events:show_event", args=[self.event.id]))
+        self.assertContains(response, "img/icons/image.svg")
