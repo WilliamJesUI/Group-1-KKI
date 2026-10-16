@@ -45,7 +45,7 @@
         /* Navbar tabs, so the same classes are not repeated six times */
         @layer components {
             .nav-tab {
-                @apply rounded-full px-3 py-2 text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-ink hover:bg-brand-soft-hover;
+                @apply rounded-full px-3 py-3 lg:py-2 text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-ink hover:bg-brand-soft-hover;
             }
             .nav-tab-active {
                 @apply bg-brand text-white hover:bg-brand;
@@ -58,7 +58,7 @@
 <body class="min-h-screen bg-page font-sans text-ink">
     {% with app=request.resolver_match.app_name %}
     <header class="border-b-2 border-ink bg-surface">
-        <div class="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:h-[86px] lg:flex-nowrap lg:py-0">
+        <div class="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-x-4 px-4 py-4 sm:px-6 lg:h-[86px] lg:flex-nowrap lg:py-0">
             <a href="/" class="flex items-center gap-3">
                 <img src="{% static 'img/logo-tomato.png' %}" alt="Grow Your Garden logo" class="size-12">
                 <span class="flex flex-col">
@@ -67,12 +67,13 @@
                 </span>
             </a>
 
-            <button id="nav-toggle" type="button" class="rounded-full p-2 hover:bg-brand-tint lg:hidden" aria-label="Open menu" aria-expanded="false" aria-controls="nav-menu">
-                <img src="{% static 'img/icons/menu.svg' %}" alt="" width="24" height="24">
+            <button id="nav-toggle" type="button" class="group rounded-full p-2 hover:bg-brand-tint lg:hidden" aria-label="Open menu" aria-expanded="false" aria-controls="nav-menu">
+                <img src="{% static 'img/icons/menu.svg' %}" alt="" width="24" height="24" class="group-aria-expanded:hidden">
+                <img src="{% static 'img/icons/x.svg' %}" alt="" width="24" height="24" class="hidden group-aria-expanded:block">
             </button>
 
-            <div id="nav-menu" class="hidden w-full flex-col gap-4 lg:flex lg:w-auto lg:flex-1 lg:flex-row lg:items-center lg:justify-between lg:pl-10">
-                <nav class="flex flex-col gap-1 rounded-3xl border-2 border-ink bg-brand-soft p-2 lg:flex-row lg:rounded-full lg:px-2 lg:py-1">
+            <div id="nav-menu" class="invisible flex max-h-0 w-full flex-col overflow-hidden opacity-0 transition-all duration-250 ease-out motion-reduce:transition-opacity data-open:visible data-open:max-h-[40rem] data-open:opacity-100 lg:visible lg:max-h-none lg:w-auto lg:flex-1 lg:flex-row lg:items-center lg:justify-between lg:overflow-visible lg:pl-10 lg:opacity-100 lg:transition-none">
+                <nav class="mt-4 flex flex-col gap-1 border-t border-line pt-4 lg:mt-0 lg:flex-row lg:rounded-full lg:border-2 lg:border-ink lg:bg-brand-soft lg:px-2 lg:py-1">
                     <a href="#" class="nav-tab {% if app == 'garden' %}nav-tab-active{% endif %}">Garden</a>
                     <a href="#" class="nav-tab {% if app == 'events' %}nav-tab-active{% endif %}">Events</a>
                     <a href="#" class="nav-tab {% if app == 'encyclopedia' %}nav-tab-active{% endif %}">Encyclopedia</a>
@@ -82,7 +83,7 @@
                 </nav>
 
                 {% if user.is_authenticated %}
-                <div class="flex items-center gap-3">
+                <div class="mt-4 flex items-center gap-3 border-t border-line pt-4 lg:mt-0 lg:border-0 lg:pt-0">
                     <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink bg-brand-soft font-extrabold">{{ user.username|first|upper }}</span>
                     <span class="flex flex-col">
                         <span class="text-[13px] font-extrabold leading-tight">{{ user.first_name|default:user.username }}</span>
@@ -90,9 +91,9 @@
                     </span>
                 </div>
                 {% else %}
-                <div class="flex items-center gap-2">
-                    <a href="#" class="rounded-full border-2 border-ink bg-surface px-4 py-2 text-[13px] font-extrabold hover:bg-brand-tint">Log in</a>
-                    <a href="#" class="rounded-full border-2 border-ink bg-brand px-4 py-2 text-[13px] font-extrabold text-white hover:bg-brand-hover">Register</a>
+                <div class="mt-4 flex items-center gap-3 border-t border-line pt-4 lg:mt-0 lg:gap-2 lg:border-0 lg:pt-0">
+                    <a href="#" class="flex-1 rounded-full border-2 border-ink bg-surface px-4 py-2 text-center text-[13px] font-extrabold hover:bg-brand-tint lg:flex-none">Log in</a>
+                    <a href="#" class="flex-1 rounded-full border-2 border-ink bg-brand px-4 py-2 text-center text-[13px] font-extrabold text-white hover:bg-brand-hover lg:flex-none">Register</a>
                 </div>
                 {% endif %}
             </div>
