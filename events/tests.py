@@ -157,3 +157,78 @@ class EventDetailTest(TestCase):
         response = self.client.get(self.url)
         self.assertContains(response, "7 going")
         self.assertContains(response, "+3")
+
+
+class CreateEventTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="rina", password="tomatoes123")
+        self.url = reverse("events:create_event_ajax")
+        self.data = {
+            "name": "Community Seed Swap",
+            "date": "2026-11-07",
+            "start": "09:00",
+            "end": "12:00",
+            "location": "Menteng Urban Farm",
+            "description": "Bring seeds to share.",
+            "what_to_bring": "Seeds\nA bag",
+            "cover_photo_url": "",
+        }
+
+    def test_must_be_logged_in(self):
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Event.objects.count(), 0)
+
+    def test_get_not_allowed(self):
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 405)
+
+    def test_create_event(self):
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 201)
+        event = Event.objects.get()
+        self.assertEqual(event.host, self.user)
+        self.assertEqual(event.what_to_bring.splitlines(), ["Seeds", "A bag"])
+        self.assertEqual(timezone.localtime(event.start_time).strftime("%Y-%m-%d %H:%M"), "2026-11-07 09:00")
+        self.assertEqual(timezone.localtime(event.end_time).strftime("%H:%M"), "12:00")
+        self.assertEqual(response.json()["url"], reverse("events:show_event", args=[event.id]))
+
+    def test_end_time_is_optional(self):
+        self.client.login(username="rina", password="tomatoes123")
+        self.data["end"] = ""
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 201)
+        self.assertIsNone(Event.objects.get().end_time)
+
+    def test_missing_name_shows_error(self):
+        self.client.login(username="rina", password="tomatoes123")
+        self.data["name"] = ""
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["errors"]["name"][0]["message"], "Please give your event a name.")
+        self.assertEqual(Event.objects.count(), 0)
+
+    def test_end_before_start_shows_error(self):
+        self.client.login(username="rina", password="tomatoes123")
+        self.data["end"] = "08:00"
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("end", response.json()["errors"])
+
+    def test_bad_cover_link_shows_error(self):
+        self.client.login(username="rina", password="tomatoes123")
+        self.data["cover_photo_url"] = "javascript:alert(1)"
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("cover_photo_url", response.json()["errors"])
+
+    def test_form_only_shown_when_logged_in(self):
+        response = self.client.get(reverse("events:show_events"))
+        self.assertNotContains(response, 'id="host-event-modal"')
+        self.assertContains(response, "Log in to host an event")
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.get(reverse("events:show_events"))
+        self.assertContains(response, 'id="host-event-modal"')
+        self.assertContains(response, 'popovertarget="host-event-modal"')

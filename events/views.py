@@ -1,5 +1,9 @@
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
+from events.forms import EventForm
 from events.models import Event
 
 
@@ -29,6 +33,8 @@ def show_events(request):
         "event_list": Event.objects.all(),
         "next_event": next_event,
         "next_event_when": get_when_label(next_event.start_time) if next_event else "",
+        # An empty form for the "Host an event" pop-up
+        "form": EventForm(),
     }
     return render(request, "event_list.html", context)
 
@@ -49,3 +55,23 @@ def show_event(request, event_id):
         "is_host": request.user == event.host,
     }
     return render(request, "event_detail.html", context)
+
+
+@require_POST
+def create_event_ajax(request):
+    # Not @login_required: for fetch requests we want a JSON error, not a redirect to a login page
+    if not request.user.is_authenticated:
+        return JsonResponse({"message": "Please log in to host an event."}, status=403)
+
+    form = EventForm(request.POST)
+    if form.is_valid():
+        event = form.save(commit=False)
+        event.start_time = form.cleaned_data["start_time"]
+        event.end_time = form.cleaned_data["end_time"]
+        event.host = request.user
+        event.save()
+        return JsonResponse(
+            {"message": "Event published.", "url": reverse("events:show_event", args=[event.id])},
+            status=201,
+        )
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
