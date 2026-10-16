@@ -1,9 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from events.models import Event
+from events.views import get_when_label
 
 
 class EventListTest(TestCase):
@@ -59,3 +60,38 @@ class EventListTest(TestCase):
         Event.objects.all().delete()
         response = self.client.get(reverse("events:show_events"))
         self.assertContains(response, "Nothing here yet")
+
+    def test_banner_is_shown(self):
+        response = self.client.get(reverse("events:show_events"))
+        self.assertContains(response, "Grow better,")
+        self.assertContains(response, "Meet, share and grow together")
+
+    def test_next_up_shows_soonest_upcoming_event(self):
+        Event.objects.create(
+            name="Past Compost Day", description="-", location="Tebet Eco Park",
+            start_time=timezone.now() - timedelta(days=1), host=self.host,
+        )
+        soon = Event.objects.create(
+            name="Tomorrow Herb Walk", description="-", location="Taman Suropati",
+            start_time=timezone.now() + timedelta(days=1), host=self.host,
+        )
+        response = self.client.get(reverse("events:show_events"))
+        self.assertEqual(response.context["next_event"], soon)
+        self.assertContains(response, "Next up · Tomorrow")
+
+    def test_no_next_up_when_no_upcoming_events(self):
+        self.event.start_time = timezone.now() - timedelta(days=1)
+        self.event.save()
+        response = self.client.get(reverse("events:show_events"))
+        self.assertIsNone(response.context["next_event"])
+        self.assertNotContains(response, "Next up")
+
+
+class WhenLabelTest(TestCase):
+    def test_labels(self):
+        now = timezone.now()
+        self.assertEqual(get_when_label(now), "Today")
+        self.assertEqual(get_when_label(now + timedelta(days=1)), "Tomorrow")
+        in_three_days = now + timedelta(days=3)
+        self.assertEqual(get_when_label(in_three_days), "This " + timezone.localtime(in_three_days).strftime("%A"))
+        self.assertEqual(get_when_label(now + timedelta(days=10)), "")
