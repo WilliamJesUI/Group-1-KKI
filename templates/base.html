@@ -1,4 +1,11 @@
 {% load static %}
+{% comment %}
+Shared layout for every page. Start your template with {% extends 'base.html' %} and fill these blocks:
+  title   = text in the browser tab, e.g. "Events - Grow Your Garden"
+  meta    = extra stuff for <head> (rarely needed)
+  content = your page, already inside the centered 1180px container
+More info and examples: docs/TEAM-GUIDE.md
+{% endcomment %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -42,7 +49,7 @@
             --color-gold: #928935;
         }
 
-        /* Navbar tabs, so the same classes are not repeated six times */
+        /* Navbar tabs, so the same classes are not repeated six times. Only used in the navbar below. */
         @layer components {
             .nav-tab {
                 @apply rounded-full px-3 py-3 lg:py-2 text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-ink hover:bg-brand-soft-hover;
@@ -56,6 +63,7 @@
 </head>
 
 <body class="min-h-screen bg-page font-sans text-ink">
+    {# "app" is the app_name from the urls.py of the page you're on. It decides which tab is highlighted. #}
     {% with app=request.resolver_match.app_name %}
     <header class="border-b-2 border-ink bg-surface">
         <div class="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-x-4 px-4 py-4 sm:px-6 lg:h-[86px] lg:flex-nowrap lg:py-0">
@@ -73,6 +81,11 @@
             </button>
 
             <div id="nav-menu" class="invisible flex max-h-0 w-full flex-col overflow-hidden opacity-0 transition-all duration-250 ease-out motion-reduce:transition-opacity data-open:visible data-open:max-h-[40rem] data-open:opacity-100 lg:visible lg:max-h-none lg:w-auto lg:flex-1 lg:flex-row lg:items-center lg:justify-between lg:overflow-visible lg:pl-10 lg:opacity-100 lg:transition-none">
+                {% comment %}
+                Your tab lights up when app_name in your urls.py matches the name in the if below
+                (garden, events, encyclopedia, community, achievements, profile).
+                To link your tab, replace href="#" with your page, e.g. href="{% url 'community:show_questions' %}".
+                {% endcomment %}
                 <nav class="mt-4 flex flex-col gap-1 border-t border-line pt-4 lg:mt-0 lg:flex-row lg:rounded-full lg:border-2 lg:border-ink lg:bg-brand-soft lg:px-2 lg:py-1">
                     <a href="#" class="nav-tab {% if app == 'garden' %}nav-tab-active{% endif %}">Garden</a>
                     <a href="{% url 'events:show_events' %}" class="nav-tab {% if app == 'events' %}nav-tab-active{% endif %}">Events</a>
@@ -82,6 +95,7 @@
                     <a href="#" class="nav-tab {% if app == 'profile' %}nav-tab-active{% endif %}">Profile</a>
                 </nav>
 
+                {# Logged in: letter avatar + name. Logged out: Log in / Register (links are "#" until the auth pages exist). #}
                 {% if user.is_authenticated %}
                 <div class="mt-4 flex items-center gap-3 border-t border-line pt-4 lg:mt-0 lg:border-0 lg:pt-0">
                     <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink bg-brand-soft font-extrabold">{{ user.username|first|upper }}</span>
@@ -101,10 +115,12 @@
     </header>
     {% endwith %}
 
+    {# Your page goes here. The container and side padding are already set, so you don't need your own. #}
     <main class="mx-auto max-w-[1180px] px-4 py-8 sm:px-6">
         {% block content %} {% endblock content %}
     </main>
 
+    {# Opens and closes the navbar menu on phones #}
     <script src="{% static 'js/navbar.js' %}"></script>
 </body>
 </html>
