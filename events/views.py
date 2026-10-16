@@ -1,5 +1,6 @@
 from django.http import Http404, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.core.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -123,3 +124,13 @@ def edit_event_ajax(request, event_id):
         save_event_from_form(event, form)
         return JsonResponse({"message": "Event updated.", "url": reverse("events:show_event", args=[event.id])})
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+
+
+@require_POST
+def delete_event(request, event_id):
+    event = get_object_or_404(Event, pk=event_id)
+    # Only the host may delete. Visitors who aren't logged in never equal the host, so they're stopped here too.
+    if request.user != event.host:
+        raise PermissionDenied
+    event.delete()
+    return redirect("events:show_events")

@@ -471,3 +471,56 @@ class EditEventTest(TestCase):
         self.assertContains(response, "Host an event</h2>")
         self.assertContains(response, f'action="{reverse("events:create_event_ajax")}"')
         self.assertContains(response, "Publish event")
+
+
+class DeleteEventTest(TestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(username="rina", password="tomatoes123")
+        self.other = User.objects.create_user(username="ben", password="tomatoes123")
+        self.event = Event.objects.create(
+            name="Community Seed Swap", description="-", location="Menteng Urban Farm",
+            start_time=timezone.now() + timedelta(days=3), host=self.host,
+        )
+        self.event.attendees.add(self.other)
+        self.url = reverse("events:delete_event", args=[self.event.id])
+        self.detail_url = reverse("events:show_event", args=[self.event.id])
+
+    def test_host_can_delete(self):
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.post(self.url)
+        self.assertRedirects(response, reverse("events:show_events"))
+        self.assertFalse(Event.objects.filter(pk=self.event.pk).exists())
+        # The event is gone from the attendee's list too
+        self.assertEqual(self.other.rsvped_events.count(), 0)
+
+    def test_other_user_cannot_delete(self):
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Event.objects.filter(pk=self.event.pk).exists())
+
+    def test_visitor_cannot_delete(self):
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Event.objects.filter(pk=self.event.pk).exists())
+
+    def test_get_does_not_delete(self):
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 405)
+        self.assertTrue(Event.objects.filter(pk=self.event.pk).exists())
+
+    def test_unknown_event_returns_404(self):
+        self.client.login(username="rina", password="tomatoes123")
+        url = reverse("events:delete_event", args=["00000000-0000-0000-0000-000000000000"])
+        self.assertEqual(self.client.post(url).status_code, 404)
+
+    def test_confirm_popup_for_host_only(self):
+        self.assertNotContains(self.client.get(self.detail_url), 'id="delete-event-modal"')
+        self.client.login(username="ben", password="tomatoes123")
+        self.assertNotContains(self.client.get(self.detail_url), 'id="delete-event-modal"')
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.get(self.detail_url)
+        self.assertContains(response, 'Delete "Community Seed Swap"?')
+        self.assertContains(response, 'popovertarget="delete-event-modal"')
+        self.assertContains(response, f'action="{self.url}"')
