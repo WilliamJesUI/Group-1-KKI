@@ -55,9 +55,31 @@
         </div>
 
         <div class="flex flex-col gap-2">
-            <label for="{{ form.cover_photo_url.id_for_label }}" class="text-[13px] font-extrabold">{{ form.cover_photo_url.label }} <span class="font-normal text-ink-soft">(optional)</span></label>
+            <span class="text-[13px] font-extrabold">Cover photo <span class="font-normal text-ink-soft">(optional)</span></span>
+            {{ form.cover_upload }}
+
+            {# Empty state: click to browse or drop a photo. data-drag is added by JS while a file hovers over it. #}
+            <label id="cover-drop" for="{{ form.cover_upload.id_for_label }}" class="flex h-[160px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink bg-surface text-center peer-focus-visible:ring-2 peer-focus-visible:ring-brand peer-aria-invalid:border-danger data-drag:border-brand data-drag:bg-brand-tint *:pointer-events-none">
+                <img src="{% static 'img/icons/upload.svg' %}" alt="" width="24" height="24">
+                <span id="cover-drop-text" class="text-[13px] font-extrabold">Drop a photo or browse</span>
+                <span class="text-xs text-ink-soft">JPG, PNG or WebP, up to 2 MB</span>
+            </label>
+
+            {# Filled state: preview of the chosen photo #}
+            <div id="cover-preview" class="hidden flex-col gap-2 rounded-2xl border-2 border-ink bg-surface p-3">
+                <img id="cover-preview-img" src="" alt="Preview of the chosen cover photo" class="h-24 w-full rounded-xl bg-brand-tint object-cover">
+                <div class="flex items-center justify-between gap-3 text-xs">
+                    <span id="cover-file-name" class="truncate"></span>
+                    <span class="flex shrink-0 gap-3 font-bold">
+                        <label for="{{ form.cover_upload.id_for_label }}" class="cursor-pointer hover:underline">Replace</label>
+                        <button type="button" id="cover-remove" class="hover:underline">Remove</button>
+                    </span>
+                </div>
+            </div>
+            <p data-error-for="cover_upload" class="hidden text-xs text-danger-text"></p>
+
+            <label for="{{ form.cover_photo_url.id_for_label }}" class="mt-1 text-xs text-ink-soft">Or paste a link to a photo instead, for example from Pexels:</label>
             {{ form.cover_photo_url }}
-            <p class="text-xs text-ink-soft">Paste a link to a photo, for example from Pexels.</p>
             <p data-error-for="cover_photo_url" class="hidden text-xs text-danger-text"></p>
         </div>
 

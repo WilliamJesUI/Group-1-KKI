@@ -72,8 +72,94 @@ async function publishEvent(event) {
     }
 }
 
+// Cover photo box: pick or drop a photo, show a preview, or remove it again
+const ALLOWED_COVER_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_COVER_SIZE = 2 * 1024 * 1024; // 2 MB, same limit as the server
+
+function setCoverError(text) {
+    const message = hostEventForm.querySelector('[data-error-for="cover_upload"]');
+    message.textContent = text;
+    message.classList.toggle('hidden', !text);
+    // Red border on the drop box while there's an error
+    const coverInput = hostEventForm.elements['cover_upload'];
+    if (text) {
+        coverInput.setAttribute('aria-invalid', 'true');
+    } else {
+        coverInput.removeAttribute('aria-invalid');
+    }
+}
+
+function resetCover() {
+    const coverInput = hostEventForm.elements['cover_upload'];
+    coverInput.value = '';
+    URL.revokeObjectURL(document.getElementById('cover-preview-img').src);
+    document.getElementById('cover-drop').classList.remove('hidden');
+    document.getElementById('cover-preview').classList.add('hidden');
+    document.getElementById('cover-preview').classList.remove('flex');
+}
+
+function showCover(file) {
+    setCoverError('');
+    if (!file) {
+        resetCover();
+        return;
+    }
+    // Quick check so people don't wait for the server. The server checks again for real.
+    if (!ALLOWED_COVER_TYPES.includes(file.type)) {
+        resetCover();
+        setCoverError('Please pick a JPG, PNG or WebP photo.');
+        return;
+    }
+    if (file.size > MAX_COVER_SIZE) {
+        resetCover();
+        setCoverError('That photo is too big. Please pick one under 2 MB.');
+        return;
+    }
+    const previewImg = document.getElementById('cover-preview-img');
+    URL.revokeObjectURL(previewImg.src);
+    previewImg.src = URL.createObjectURL(file); // a temporary link to the file on this computer
+    document.getElementById('cover-file-name').textContent = file.name;
+    document.getElementById('cover-drop').classList.add('hidden');
+    document.getElementById('cover-preview').classList.remove('hidden');
+    document.getElementById('cover-preview').classList.add('flex');
+}
+
+function setUpCoverBox() {
+    const coverInput = hostEventForm.elements['cover_upload'];
+    const dropBox = document.getElementById('cover-drop');
+    const dropText = document.getElementById('cover-drop-text');
+
+    coverInput.addEventListener('change', () => showCover(coverInput.files[0]));
+    document.getElementById('cover-remove').addEventListener('click', resetCover);
+
+    dropBox.addEventListener('dragover', (event) => {
+        event.preventDefault(); // needed, otherwise the browser opens the photo in the tab
+        dropBox.dataset.drag = '';
+        dropText.textContent = 'Drop to upload';
+    });
+    dropBox.addEventListener('dragleave', () => {
+        delete dropBox.dataset.drag;
+        dropText.textContent = 'Drop a photo or browse';
+    });
+    dropBox.addEventListener('drop', (event) => {
+        event.preventDefault();
+        delete dropBox.dataset.drag;
+        dropText.textContent = 'Drop a photo or browse';
+        const file = event.dataTransfer.files[0];
+        if (!file) {
+            return;
+        }
+        // Put only the first dropped file into the real file input, so it gets sent with the form
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
+        coverInput.files = transfer.files;
+        showCover(file);
+    });
+}
+
 if (hostEventForm) {
     hostEventForm.addEventListener('submit', publishEvent);
+    setUpCoverBox();
 
     // Open the browser's date and time picker when the field is clicked
     hostEventForm.querySelectorAll('input[type="date"], input[type="time"]').forEach((input) => {

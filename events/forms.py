@@ -50,7 +50,8 @@ class EventForm(ModelForm):
     # Not a model field: the photo is checked here and then saved into cover_image in the view
     cover_upload = forms.FileField(
         required=False,
-        widget=forms.ClearableFileInput(attrs={"accept": "image/jpeg,image/png,image/webp"}),
+        # sr-only hides the plain file button, the drag and drop box in the template is shown instead
+        widget=forms.FileInput(attrs={"accept": "image/jpeg,image/png,image/webp", "class": "peer sr-only"}),
     )
 
     class Meta:

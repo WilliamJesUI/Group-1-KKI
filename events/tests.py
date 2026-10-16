@@ -348,3 +348,9 @@ class CoverUploadTest(TestCase):
         self.assertEqual(response.status_code, 201)
         event = Event.objects.get()
         self.assertEqual(event.cover_src(), reverse("events:show_event_cover", args=[event.id]))
+
+    def test_upload_box_in_form(self):
+        response = self.client.get(reverse("events:show_events"))
+        self.assertContains(response, 'id="cover-drop"')
+        self.assertContains(response, 'type="file" name="cover_upload"')
+        self.assertContains(response, "JPG, PNG or WebP, up to 2 MB")
