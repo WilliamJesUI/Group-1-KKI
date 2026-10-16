@@ -23,6 +23,8 @@ class Event(models.Model):
     # One event can have many attendees, and one user can RSVP to many events
     attendees = models.ManyToManyField(User, related_name="rsvped_events", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Changes every time the event is saved. Used to tell browsers when the cover photo has changed.
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["start_time"]
@@ -33,5 +35,7 @@ class Event(models.Model):
     def cover_src(self):
         # What to put in <img src="...">: the uploaded photo first, then the link, otherwise nothing
         if self.cover_image_type:
-            return reverse("events:show_event_cover", args=[self.id])
+            # ?v=... changes whenever the event is saved, so browsers download the new photo instead of an old saved copy
+            version = int(self.updated_at.timestamp())
+            return reverse("events:show_event_cover", args=[self.id]) + f"?v={version}"
         return self.cover_photo_url

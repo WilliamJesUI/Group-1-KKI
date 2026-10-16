@@ -65,8 +65,9 @@ def show_event_cover(request, event_id):
     if not event.cover_image_type:
         raise Http404("This event has no uploaded cover photo.")
     response = HttpResponse(bytes(event.cover_image), content_type=event.cover_image_type)
-    # Let the browser keep the photo for an hour instead of downloading it on every visit
-    response["Cache-Control"] = "public, max-age=3600"
+    # Let the browser keep the photo for a day. When the event changes, the ?v= part of the URL changes too,
+    # so the browser treats it as a new photo and downloads it again.
+    response["Cache-Control"] = "public, max-age=86400"
     return response
 
 

@@ -266,11 +266,21 @@ class EventCoverTest(TestCase):
         self.event.cover_image = self.PNG_BYTES
         self.event.cover_image_type = "image/png"
         self.event.save()
-        self.assertEqual(self.event.cover_src(), self.cover_url)
+        self.assertTrue(self.event.cover_src().startswith(self.cover_url + "?v="))
         for url in [reverse("events:show_events"), reverse("events:show_event", args=[self.event.id])]:
             response = self.client.get(url)
-            self.assertContains(response, f'src="{self.cover_url}"')
+            self.assertContains(response, f'src="{self.event.cover_src()}"')
             self.assertNotContains(response, "pexels-photo-7782153")
+
+    def test_cover_url_changes_after_save(self):
+        self.event.cover_image = self.PNG_BYTES
+        self.event.cover_image_type = "image/png"
+        self.event.save()
+        old_src = self.event.cover_src()
+        # Pretend the event was saved a minute later
+        Event.objects.filter(pk=self.event.pk).update(updated_at=self.event.updated_at + timedelta(minutes=1))
+        self.event.refresh_from_db()
+        self.assertNotEqual(self.event.cover_src(), old_src)
 
     def test_link_used_when_no_upload(self):
         self.event.cover_photo_url = "https://images.pexels.com/photos/7782153/pexels-photo-7782153.jpeg"
@@ -347,7 +357,7 @@ class CoverUploadTest(TestCase):
         response = self.post_with_file(self.PNG_BYTES)
         self.assertEqual(response.status_code, 201)
         event = Event.objects.get()
-        self.assertEqual(event.cover_src(), reverse("events:show_event_cover", args=[event.id]))
+        self.assertTrue(event.cover_src().startswith(reverse("events:show_event_cover", args=[event.id])))
 
     def test_upload_box_in_form(self):
         response = self.client.get(reverse("events:show_events"))
