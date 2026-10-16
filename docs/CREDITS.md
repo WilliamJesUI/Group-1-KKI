@@ -27,4 +27,4 @@ Icons in `static/img/icons/` are from [Lucide](https://lucide.dev) (ISC license)
 
 ## Logo
 
-The tomato logo (`static/img/logo-tomato.png`) was hand-drawn by a friend of the team.
+The tomato logo (`static/img/logo-tomato.png`) was hand-drawn by William.
