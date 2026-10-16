@@ -75,7 +75,7 @@
             <div id="nav-menu" class="invisible flex max-h-0 w-full flex-col overflow-hidden opacity-0 transition-all duration-250 ease-out motion-reduce:transition-opacity data-open:visible data-open:max-h-[40rem] data-open:opacity-100 lg:visible lg:max-h-none lg:w-auto lg:flex-1 lg:flex-row lg:items-center lg:justify-between lg:overflow-visible lg:pl-10 lg:opacity-100 lg:transition-none">
                 <nav class="mt-4 flex flex-col gap-1 border-t border-line pt-4 lg:mt-0 lg:flex-row lg:rounded-full lg:border-2 lg:border-ink lg:bg-brand-soft lg:px-2 lg:py-1">
                     <a href="#" class="nav-tab {% if app == 'garden' %}nav-tab-active{% endif %}">Garden</a>
-                    <a href="#" class="nav-tab {% if app == 'events' %}nav-tab-active{% endif %}">Events</a>
+                    <a href="{% url 'events:show_events' %}" class="nav-tab {% if app == 'events' %}nav-tab-active{% endif %}">Events</a>
                     <a href="#" class="nav-tab {% if app == 'encyclopedia' %}nav-tab-active{% endif %}">Encyclopedia</a>
                     <a href="#" class="nav-tab {% if app == 'community' %}nav-tab-active{% endif %}">Community</a>
                     <a href="#" class="nav-tab {% if app == 'achievements' %}nav-tab-active{% endif %}">Achievements</a>
