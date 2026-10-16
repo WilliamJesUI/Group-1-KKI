@@ -1,10 +1,12 @@
 from datetime import datetime, timedelta
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from events.models import Event
 from events.views import get_when_label
+from events.forms import detect_image_type
 
 
 class EventListTest(TestCase):
@@ -281,3 +283,68 @@ class EventCoverTest(TestCase):
         self.assertEqual(self.event.cover_src(), "")
         response = self.client.get(reverse("events:show_event", args=[self.event.id]))
         self.assertContains(response, "img/icons/image.svg")
+
+
+class CoverUploadTest(TestCase):
+    PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"0" * 100
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="rina", password="tomatoes123")
+        self.client.login(username="rina", password="tomatoes123")
+        self.url = reverse("events:create_event_ajax")
+        self.data = {
+            "name": "Community Seed Swap", "date": "2026-11-07", "start": "09:00", "end": "",
+            "location": "Menteng Urban Farm", "description": "Bring seeds to share.",
+        }
+
+    def post_with_file(self, content, name="cover.png", content_type="image/png"):
+        self.data["cover_upload"] = SimpleUploadedFile(name, content, content_type=content_type)
+        return self.client.post(self.url, self.data)
+
+    def test_detect_image_type(self):
+        self.assertEqual(detect_image_type(b"\xff\xd8\xff\xe0rest"), "image/jpeg")
+        self.assertEqual(detect_image_type(self.PNG_BYTES), "image/png")
+        self.assertEqual(detect_image_type(b"RIFF\x00\x00\x00\x00WEBPVP8 "), "image/webp")
+        self.assertIsNone(detect_image_type(b"GIF89a"))
+        self.assertIsNone(detect_image_type(b"hello"))
+
+    def test_upload_is_saved_in_database(self):
+        response = self.post_with_file(self.PNG_BYTES)
+        self.assertEqual(response.status_code, 201)
+        event = Event.objects.get()
+        self.assertEqual(bytes(event.cover_image), self.PNG_BYTES)
+        self.assertEqual(event.cover_image_type, "image/png")
+
+    def test_type_comes_from_file_content_not_name(self):
+        # A real JPG with a .png name is saved as a JPG
+        response = self.post_with_file(b"\xff\xd8\xff\xe0" + b"0" * 100, name="photo.png")
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Event.objects.get().cover_image_type, "image/jpeg")
+
+    def test_too_big_is_rejected(self):
+        response = self.post_with_file(self.PNG_BYTES + b"0" * (2 * 1024 * 1024))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["errors"]["cover_upload"][0]["message"], "That photo is too big. Please pick one under 2 MB.")
+        self.assertEqual(Event.objects.count(), 0)
+
+    def test_renamed_text_file_is_rejected(self):
+        response = self.post_with_file(b"just some text", name="sneaky.png")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["errors"]["cover_upload"][0]["message"], "Please pick a JPG, PNG or WebP photo.")
+
+    def test_gif_is_rejected(self):
+        response = self.post_with_file(b"GIF89a" + b"0" * 100, name="dance.gif", content_type="image/gif")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("cover_upload", response.json()["errors"])
+
+    def test_no_upload_is_fine(self):
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Event.objects.get().cover_image_type, "")
+
+    def test_upload_and_link_together(self):
+        self.data["cover_photo_url"] = "https://images.pexels.com/photos/7782153/pexels-photo-7782153.jpeg"
+        response = self.post_with_file(self.PNG_BYTES)
+        self.assertEqual(response.status_code, 201)
+        event = Event.objects.get()
+        self.assertEqual(event.cover_src(), reverse("events:show_event_cover", args=[event.id]))

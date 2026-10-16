@@ -17,6 +17,20 @@ TEXTAREA_CLASS = (
 # Date and time inputs sit inside a rounded box, so they have no border of their own
 PICKER_CLASS = "min-w-0 flex-1 bg-transparent text-sm focus:outline-none [&::-webkit-calendar-picker-indicator]:hidden"
 
+MAX_COVER_SIZE = 2 * 1024 * 1024  # 2 MB
+
+
+def detect_image_type(data):
+    # Every JPG, PNG and WebP file starts with the same few bytes, so we check those
+    # instead of trusting the file name (anyone can rename a file to .png).
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
 
 class EventForm(ModelForm):
     # The model stores start_time and end_time as full date + time values.
@@ -32,6 +46,11 @@ class EventForm(ModelForm):
     end = forms.TimeField(
         required=False,
         widget=forms.TimeInput(attrs={"type": "time", "class": PICKER_CLASS, "aria-label": "End time"}),
+    )
+    # Not a model field: the photo is checked here and then saved into cover_image in the view
+    cover_upload = forms.FileField(
+        required=False,
+        widget=forms.ClearableFileInput(attrs={"accept": "image/jpeg,image/png,image/webp"}),
     )
 
     class Meta:
@@ -66,6 +85,19 @@ class EventForm(ModelForm):
             "description": {"required": "Please tell people what the event is about."},
             "cover_photo_url": {"invalid": "Please paste a full image link, starting with https://"},
         }
+
+    def clean_cover_upload(self):
+        upload = self.cleaned_data.get("cover_upload")
+        if not upload:
+            return None
+        if upload.size > MAX_COVER_SIZE:
+            raise forms.ValidationError("That photo is too big. Please pick one under 2 MB.")
+        data = upload.read()
+        image_type = detect_image_type(data)
+        if image_type is None:
+            raise forms.ValidationError("Please pick a JPG, PNG or WebP photo.")
+        # Hand the bytes and the type to the view, which saves them on the event
+        return {"data": data, "type": image_type}
 
     def clean(self):
         cleaned_data = super().clean()

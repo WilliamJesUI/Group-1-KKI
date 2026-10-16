@@ -76,12 +76,17 @@ def create_event_ajax(request):
     if not request.user.is_authenticated:
         return JsonResponse({"message": "Please log in to host an event."}, status=403)
 
-    form = EventForm(request.POST)
+    # request.FILES holds the uploaded photo, request.POST holds everything else
+    form = EventForm(request.POST, request.FILES)
     if form.is_valid():
         event = form.save(commit=False)
         event.start_time = form.cleaned_data["start_time"]
         event.end_time = form.cleaned_data["end_time"]
         event.host = request.user
+        cover = form.cleaned_data["cover_upload"]
+        if cover:
+            event.cover_image = cover["data"]
+            event.cover_image_type = cover["type"]
         event.save()
         return JsonResponse(
             {"message": "Event published.", "url": reverse("events:show_event", args=[event.id])},
