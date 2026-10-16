@@ -166,7 +166,7 @@ Icons from the Figma icon set (Lucide) are in `static/img/icons/`:
 
 If you need another icon, export it from the Figma Design System page (Icons section) instead of drawing or generating one. The logo is `static/img/logo-tomato.png`, drawn by a friend of the team.
 
-Photos are from Pexels only. Add the credit to the photo credits list when you use one.
+Photos are from Pexels only. Add the credit to docs/CREDITS.md (photographer name + Pexels link).
 
 ## 9. Time zone
 
