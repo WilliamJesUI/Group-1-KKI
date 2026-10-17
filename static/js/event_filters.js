@@ -19,6 +19,13 @@ function buildUrl(filter, query) {
     return '?' + params.toString();
 }
 
+// Point each pill link at its filter plus the search, so switching pills keeps the search
+function updatePillLinks(query) {
+    pills.forEach((pill) => {
+        pill.href = buildUrl(pill.dataset.filter, query);
+    });
+}
+
 // Make the pills and the search box match the filter and search being shown
 function showSelected(filter, query) {
     pills.forEach((pill) => {
@@ -27,8 +34,8 @@ function showSelected(filter, query) {
         } else {
             pill.removeAttribute('aria-current');
         }
-        pill.href = buildUrl(pill.dataset.filter, query); // switching pills keeps the search
     });
+    updatePillLinks(query);
     filterInput.value = filter;
     if (searchInput.value.trim() !== query) {
         searchInput.value = query;
@@ -82,6 +89,7 @@ document.addEventListener('click', (event) => {
         return;
     }
     event.preventDefault();
+    clearTimeout(typingTimer); // the link already has the typed search in it, so don't run the search again
     const params = new URL(link.href).searchParams;
     loadCards(params.get('filter') || 'upcoming', params.get('q') || '', 'push');
 });
@@ -89,6 +97,8 @@ document.addEventListener('click', (event) => {
 // Typing: wait until the user stops for 300ms, so we don't send a request for every letter.
 // replaceState, so the back button doesn't step back through every letter typed.
 searchInput.addEventListener('input', () => {
+    // Update the pill links right away, so a pill clicked before the search runs keeps the typed text
+    updatePillLinks(searchInput.value.trim());
     clearTimeout(typingTimer);
     typingTimer = setTimeout(() => {
         loadCards(filterInput.value, searchInput.value.trim(), 'replace');
