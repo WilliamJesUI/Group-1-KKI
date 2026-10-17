@@ -240,4 +240,4 @@ A few things to know:
 - `showToast()` works from any script, even one inside your `{% block content %}`.
 - Taps go through a toast to whatever is under it, so a toast never blocks a button on phones.
 - Toasts appear behind an open popup (popovers sit on top of everything). Show the toast after the popup closes.
-- People who turned on "reduce motion" get a plain fade instead of the slide. That's handled for you.
+- Toasts slide in from the right and slide back out when they leave, like the Figma prototype. People who turned on "reduce motion" get a plain fade instead. That's handled for you.
