@@ -136,7 +136,8 @@ class EventForm(ModelForm):
                 self.add_error("date", "This date and time has already passed. Please pick a later one.")
 
             if end:
-                if end < start:
+                # <= so an end time equal to the start time is refused too, like the message says
+                if end <= start:
                     self.add_error("end", "The end time has to be after the start time.")
                 else:
                     cleaned_data["end_time"] = timezone.make_aware(datetime.combine(date, end))

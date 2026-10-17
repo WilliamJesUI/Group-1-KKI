@@ -255,6 +255,14 @@ class CreateEventTest(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("end", response.json()["errors"])
 
+    def test_end_same_as_start_shows_error(self):
+        self.client.login(username="rina", password="tomatoes123")
+        self.data["end"] = "09:00"  # same as the start time
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["errors"]["end"][0]["message"], "The end time has to be after the start time.")
+        self.assertEqual(Event.objects.count(), 0)
+
     def test_past_date_shows_error(self):
         self.client.login(username="rina", password="tomatoes123")
         self.data["date"] = "2020-05-02"
