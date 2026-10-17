@@ -255,6 +255,34 @@ class CreateEventTest(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("end", response.json()["errors"])
 
+    def test_past_date_shows_error(self):
+        self.client.login(username="rina", password="tomatoes123")
+        self.data["date"] = "2020-05-02"
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json()["errors"]["date"][0]["message"],
+            "This date and time has already passed. Please pick a later one.",
+        )
+        self.assertEqual(Event.objects.count(), 0)
+
+    def test_earlier_today_shows_error(self):
+        # The date alone isn't enough, the time counts too
+        an_hour_ago = timezone.localtime() - timedelta(hours=1)
+        self.client.login(username="rina", password="tomatoes123")
+        self.data.update({"date": an_hour_ago.strftime("%Y-%m-%d"), "start": an_hour_ago.strftime("%H:%M"), "end": ""})
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("date", response.json()["errors"])
+
+    def test_year_one_shows_error_instead_of_crashing(self):
+        # 05:00 on 1 Jan of year 1 in Jakarta is still year 0 in UTC, which can't be saved (it used to be a 500)
+        self.client.login(username="rina", password="tomatoes123")
+        self.data.update({"date": "0001-01-01", "start": "05:00", "end": ""})
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("date", response.json()["errors"])
+
     def test_bad_cover_link_shows_error(self):
         self.client.login(username="rina", password="tomatoes123")
         self.data["cover_photo_url"] = "javascript:alert(1)"
@@ -508,6 +536,31 @@ class EditEventTest(TestCase):
         form = self.client.get(self.detail_url).context["form"]
         self.assertEqual(form.initial["start"].strftime("%H:%M"), "09:00")
         self.assertNotIn("end", form.initial)
+
+    def test_old_event_can_be_edited_without_changing_the_date(self):
+        # The event already happened. Its saved time even has seconds (the admin's "Now" button does that),
+        # but the form only has hours and minutes, so the date still counts as unchanged.
+        self.event.start_time = timezone.make_aware(datetime(2020, 5, 2, 9, 0, 30))
+        self.event.end_time = None
+        self.event.save()
+        self.client.login(username="rina", password="tomatoes123")
+        self.data.update({"date": "2020-05-02", "start": "09:00", "end": ""})
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 200)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.name, "Big Seed Swap")
+
+    def test_old_event_cannot_move_to_another_past_date(self):
+        self.event.start_time = timezone.make_aware(datetime(2020, 5, 2, 9, 0))
+        self.event.end_time = None
+        self.event.save()
+        self.client.login(username="rina", password="tomatoes123")
+        self.data.update({"date": "2020-05-03", "start": "09:00", "end": ""})
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("date", response.json()["errors"])
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.name, "Community Seed Swap")
 
     def test_host_form_on_list_page_still_creates(self):
         self.client.login(username="rina", password="tomatoes123")

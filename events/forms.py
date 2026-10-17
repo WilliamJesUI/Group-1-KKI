@@ -122,8 +122,19 @@ class EventForm(ModelForm):
 
         if date and start:
             # Turn the date and times into Jakarta time values for the model
-            cleaned_data["start_time"] = timezone.make_aware(datetime.combine(date, start))
+            start_time = timezone.make_aware(datetime.combine(date, start))
+            cleaned_data["start_time"] = start_time
             cleaned_data["end_time"] = None
+
+            # No new events in the past. Only checked when the start changed, so a host can still fix the
+            # text of an event that already happened. For a new event, self.instance.start_time is None.
+            old_start = self.instance.start_time
+            if old_start:
+                # The form only has hours and minutes, so ignore the seconds when comparing
+                old_start = old_start.replace(second=0, microsecond=0)
+            if start_time != old_start and start_time < timezone.now():
+                self.add_error("date", "This date and time has already passed. Please pick a later one.")
+
             if end:
                 if end < start:
                     self.add_error("end", "The end time has to be after the start time.")
