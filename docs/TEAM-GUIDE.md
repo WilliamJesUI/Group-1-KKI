@@ -65,6 +65,7 @@ Right now most tabs link to `#`. When your page exists, open `templates/base.htm
 Only do this once your URL actually exists. A `{% url %}` that points to a name that doesn't exist breaks every page on the site.
 
 Sarah: the **Log in** and **Register** buttons in the navbar also link to `#` for now. Swap them for your auth URLs when they're ready (and a Log out link next to the username would be nice).
+The navbar avatar shows the first letter of the user's first_name, or of their username if first_name is empty.
 
 ## 4. Colors
 
