@@ -210,9 +210,9 @@ For a full example of a fetch view and its JS, see `create_event_ajax` in `event
 
 ## 12. Toasts (little pop-up messages)
 
-Toasts are the small boxes that pop up in the bottom-right corner, like "Question posted", and disappear after 3 seconds. They match the Toast in Figma: green for success, pink for errors. `base.html` already has everything, so you don't need to add anything to your page.
+Toasts are the small boxes that pop up in the bottom-right corner and disappear after 3 seconds. Like the Toast in Figma, they have a bold title and an optional smaller message under it, green for success and pink for errors. `base.html` already has everything, so you don't need to add anything to your page.
 
-**From a view (most common).** Use Django's messages. The toast shows on the next page the user sees, so it works great right before a redirect:
+**From a view (most common).** Use Django's messages. Put the title and the message in one text with `\n` (a line break) between them. The toast shows on the next page the user sees, so it works great right before a redirect:
 
 ```python
 from django.contrib import messages
@@ -220,21 +220,24 @@ from django.contrib import messages
 def delete_question(request, question_id):
     ...
     question.delete()
-    messages.success(request, "Question deleted")
+    messages.success(request, "Question deleted\nIt's off the Community page now.")
     return redirect("community:show_questions")
 ```
 
-For an error, use `messages.error(request, "Couldn't save your answer")` and it turns pink.
+No `\n` is fine too, then the toast only has a title: `messages.success(request, "Question deleted")`. For an error, use `messages.error(request, "Couldn't save your answer\nPlease try again.")` and it turns pink.
 
-**From JavaScript.** Call `showToast()` (it's in `static/js/toast.js`, loaded on every page):
+**From JavaScript.** Call `showToast(title, message, type)` (it's in `static/js/toast.js`, loaded on every page). It's the same order as Tutorial 5, so the tutorial's `showToast('Success', 'New project added successfully!', 'success')` works as is:
 
 ```js
-showToast("Saved to your garden");
-showToast("Something went wrong", "error");
+showToast("Saved to your garden", "You can find it on your Garden page.");
+showToast("Something went wrong", "Please try again.", "error");
+showToast("Copied!");  // just a title
 ```
 
 A few things to know:
 - Don't print `{{ messages }}` in your own template. `base.html` already shows them, so you'd get them twice.
 - If your fetch view redirects the page with JS afterwards (`window.location.href = ...`), you can still use `messages.success` in the view. It shows up on the page you land on.
+- `showToast()` works from any script, even one inside your `{% block content %}`.
+- Taps go through a toast to whatever is under it, so a toast never blocks a button on phones.
 - Toasts appear behind an open popup (popovers sit on top of everything). Show the toast after the popup closes.
 - People who turned on "reduce motion" get a plain fade instead of the slide. That's handled for you.
