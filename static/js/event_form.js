@@ -32,6 +32,7 @@ async function publishEvent(event) {
     const submitButton = hostEventForm.querySelector('button[type="submit"]');
     submitButton.disabled = true;
     clearErrors();
+    let leavingPage = false;
 
     try {
         const response = await fetch(hostEventForm.action, {
@@ -42,7 +43,9 @@ async function publishEvent(event) {
         const result = await response.json().catch(() => ({}));
 
         if (response.ok) {
-            // Go to the new event's page
+            // Go to the new event's page. The button stays disabled while it loads,
+            // so a second click can't save the event twice.
+            leavingPage = true;
             window.location.href = result.url;
         } else if (result.errors) {
             showErrors(result.errors);
@@ -52,7 +55,9 @@ async function publishEvent(event) {
     } catch (error) {
         showErrors({ __all__: [{ message: 'Could not reach the server. Please try again.' }] });
     } finally {
-        submitButton.disabled = false;
+        if (!leavingPage) {
+            submitButton.disabled = false;
+        }
     }
 }
 
@@ -181,6 +186,14 @@ function setUpCoverBox() {
 if (hostEventForm) {
     hostEventForm.addEventListener('submit', publishEvent);
     setUpCoverBox();
+
+    // Pressing Back after saving can bring this page back exactly as it was left (persisted = true),
+    // with the button still disabled. Turn it back on so the form works again.
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted) {
+            hostEventForm.querySelector('button[type="submit"]').disabled = false;
+        }
+    });
 
     // Open the browser's date and time picker when the field is clicked
     hostEventForm.querySelectorAll('input[type="date"], input[type="time"]').forEach((input) => {
