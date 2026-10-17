@@ -65,7 +65,12 @@ async function sendRsvp(button) {
             });
             updateGoing(button.dataset.eventId, result);
             pop(button);
-            showToast(result.going ? "You're going" : 'RSVP cancelled'); // from static/js/toast.js
+            // showToast(title, message) comes from static/js/toast.js
+            if (result.going) {
+                showToast("You're going", "It's in My events now.");
+            } else {
+                showToast('RSVP cancelled', "It's no longer in My events.");
+            }
         } else {
             error.textContent = result.message || `Something went wrong (status ${response.status}).`;
             error.classList.remove('hidden');

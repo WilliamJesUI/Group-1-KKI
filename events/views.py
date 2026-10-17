@@ -163,8 +163,9 @@ def create_event_ajax(request):
         event = form.save(commit=False)
         event.host = request.user
         save_event_from_form(event, form)
-        # Shown as a toast on the event page, which event_form.js opens next
-        messages.success(request, "Event created")
+        # Shown as a toast on the event page, which event_form.js opens next.
+        # The text before \n is the toast's title, the rest is the smaller message under it (texts from Figma).
+        messages.success(request, "Event published\nYou can find it on the Events page.")
         return JsonResponse(
             {"message": "Event published.", "url": reverse("events:show_event", args=[event.id])},
             status=201,
@@ -186,7 +187,7 @@ def edit_event_ajax(request, event_id):
     if form.is_valid():
         event = form.save(commit=False)
         save_event_from_form(event, form)
-        messages.success(request, "Event updated")
+        messages.success(request, "Event updated\nYour changes are saved.")
         return JsonResponse({"message": "Event updated.", "url": reverse("events:show_event", args=[event.id])})
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
@@ -230,5 +231,5 @@ def delete_event(request, event_id):
     if request.user != event.host:
         raise PermissionDenied
     event.delete()
-    messages.success(request, "Event deleted")
+    messages.success(request, "Event deleted\nIt's off the Events page now.")
     return redirect("events:show_events")

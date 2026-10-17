@@ -1130,16 +1130,16 @@ class EventToastTest(TestCase):
         # The fetch response is JSON, the toast waits for the page event_form.js opens next
         self.assertNotContains(response, "data-toast-message", status_code=201)
         next_page = self.client.get(response.json()["url"])
-        self.assertContains(next_page, 'data-toast-message="Event created"')
+        self.assertContains(next_page, 'data-toast-message="Event published\nYou can find it on the Events page."')
 
     def test_edit_shows_toast(self):
         self.client.post(reverse("events:create_event_ajax"), self.data)
         event = Event.objects.get()
-        self.client.get(reverse("events:show_event", args=[event.id]))  # uses up the "Event created" toast
+        self.client.get(reverse("events:show_event", args=[event.id]))  # uses up the "Event published" toast
         response = self.client.post(reverse("events:edit_event_ajax", args=[event.id]), self.data)
         next_page = self.client.get(response.json()["url"])
-        self.assertContains(next_page, 'data-toast-message="Event updated"')
-        self.assertNotContains(next_page, "Event created")
+        self.assertContains(next_page, 'data-toast-message="Event updated\nYour changes are saved."')
+        self.assertNotContains(next_page, "Event published")
 
     def test_delete_shows_toast(self):
         event = Event.objects.create(
@@ -1147,7 +1147,8 @@ class EventToastTest(TestCase):
             start_time=timezone.now() + timedelta(days=3), host=self.host,
         )
         response = self.client.post(reverse("events:delete_event", args=[event.id]), follow=True)
-        self.assertContains(response, 'data-toast-message="Event deleted"')
+        # Django escapes the apostrophe in "It's" inside the attribute
+        self.assertContains(response, 'data-toast-message="Event deleted\nIt&#x27;s off the Events page now."')
 
     def test_toast_shows_only_once(self):
         response = self.client.post(reverse("events:create_event_ajax"), self.data)
