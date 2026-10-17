@@ -181,6 +181,8 @@ Photos are from Pexels only. Add the credit to docs/CREDITS.md (photographer nam
 
 Shared CSS, JS and images go in the `static/` folder at the project root. WhiteNoise is set up, so they also work on PWS. After you add new static files, PWS picks them up when it runs `collectstatic` during deploy.
 
+If our PWS address ever changes, update it in both `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` in settings.py, otherwise every POST (forms and fetch) fails with a 403 on PWS even though it works on localhost.
+
 ## 11. Sending data with fetch (AJAX)
 
 Django blocks POST requests that don't carry a CSRF token. For normal forms, `{% csrf_token %}` handles it. For `fetch`, use `getCookie()`. It's in `static/js/csrf.js` and `base.html` already loads it on every page, so don't copy it into your own JS files.
