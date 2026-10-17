@@ -215,6 +215,14 @@ class CreateEventTest(TestCase):
         self.assertEqual(response.json()["errors"]["name"][0]["message"], "Please give your event a name.")
         self.assertEqual(Event.objects.count(), 0)
 
+    def test_missing_date_shows_error(self):
+        self.client.login(username="rina", password="tomatoes123")
+        self.data["date"] = ""
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("date", response.json()["errors"])
+        self.assertEqual(Event.objects.count(), 0)
+
     def test_end_before_start_shows_error(self):
         self.client.login(username="rina", password="tomatoes123")
         self.data["end"] = "08:00"
@@ -467,6 +475,14 @@ class EditEventTest(TestCase):
         self.assertContains(response, 'value="09:00"')
         self.assertContains(response, 'value="12:00"')
         self.assertContains(response, "Current photo")
+
+    def test_edit_form_end_empty_when_no_end_time(self):
+        self.event.end_time = None
+        self.event.save()
+        self.client.login(username="rina", password="tomatoes123")
+        form = self.client.get(self.detail_url).context["form"]
+        self.assertEqual(form.initial["start"].strftime("%H:%M"), "09:00")
+        self.assertNotIn("end", form.initial)
 
     def test_host_form_on_list_page_still_creates(self):
         self.client.login(username="rina", password="tomatoes123")
