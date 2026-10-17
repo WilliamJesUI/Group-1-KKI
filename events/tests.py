@@ -797,7 +797,15 @@ class RsvpCardTest(TestCase):
     def test_card_title_links_to_detail(self):
         response = self.client.get(self.list_url)
         detail_url = reverse("events:show_event", args=[self.event.id])
-        self.assertContains(response, f'<a href="{detail_url}" class="after:absolute after:inset-0">')
+        self.assertContains(response, f'<a href="{detail_url}" class="after:absolute after:inset-0 focus-visible:outline-none">')
+
+    def test_buttons_and_cards_have_feedback(self):
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.get(self.list_url)
+        # Press: shrink to 0.97 in 100ms, but not for people who turned on reduced motion
+        self.assertContains(response, "active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100")
+        # Card hover from Figma: green border and offset shadow
+        self.assertContains(response, "hover:border-brand hover:shadow-[4px_4px_0_0_var(--color-ink)]")
 
     def test_list_sets_csrf_cookie(self):
         response = self.client.get(self.list_url)

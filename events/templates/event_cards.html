@@ -16,7 +16,8 @@ Needs: event_list (events, each with is_going set in the view) selected_filter a
     <div class="h-full transition-opacity duration-400 ease-out delay-(--stagger) starting:opacity-0 motion-reduce:delay-0"
          style="--stagger: {% if forloop.counter0 < 9 %}{% widthratio forloop.counter0 1 40 %}{% else %}360{% endif %}ms">
     {# relative: the title link's after:absolute after:inset-0 covers this whole card, so clicking anywhere opens the event #}
-    <div class="relative h-full overflow-hidden rounded-2xl border-2 border-ink bg-surface transition-shadow duration-150 ease-out hover:shadow-[4px_4px_0_0_var(--color-ink)]">
+    {# Hover (Figma "Event Card" Hover): green border + offset shadow. has-[h2_a:focus-visible]: gives keyboard users the same look when the title link is focused. #}
+    <div class="relative h-full overflow-hidden rounded-2xl border-2 border-ink bg-surface transition-[border-color,box-shadow] duration-150 ease-out hover:border-brand hover:shadow-[4px_4px_0_0_var(--color-ink)] has-[h2_a:focus-visible]:border-brand has-[h2_a:focus-visible]:shadow-[4px_4px_0_0_var(--color-ink)]">
         <div class="relative h-[180px] bg-brand-tint">
             {% if event.cover_src %}
             <img src="{{ event.cover_src }}" alt="Cover photo for {{ event.name }}" class="size-full object-cover">
@@ -33,7 +34,7 @@ Needs: event_list (events, each with is_going set in the view) selected_filter a
 
         <div class="flex flex-col gap-2 p-4">
             <h2 class="font-display text-xl leading-[1.3]">
-                <a href="{% url 'events:show_event' event.id %}" class="after:absolute after:inset-0">{{ event.name }}</a>
+                <a href="{% url 'events:show_event' event.id %}" class="after:absolute after:inset-0 focus-visible:outline-none">{{ event.name }}</a>
             </h2>
             <p class="flex items-center gap-2 text-xs text-ink-soft">
                 <img src="{% static 'img/icons/clock.svg' %}" alt="" width="16" height="16">
@@ -76,26 +77,26 @@ Needs: event_list (events, each with is_going set in the view) selected_filter a
     {% if selected_filter == "mine" and not user.is_authenticated %}
     <h2 class="font-display text-xl leading-[1.3]">Your events</h2>
     <p class="text-sm text-ink-soft">Log in to see the events you host or joined.</p>
-    <a href="#" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover">Log in</a>
+    <a href="#" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Log in</a>
     {% elif query %}
     <h2 class="font-display text-xl leading-[1.3]">No events found</h2>
     <p class="text-sm text-ink-soft">No events match "{{ query }}". Try another word.</p>
-    <a href="?filter={{ selected_filter }}" data-filter="{{ selected_filter }}" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover">Clear search</a>
+    <a href="?filter={{ selected_filter }}" data-filter="{{ selected_filter }}" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Clear search</a>
     {% elif selected_filter == "mine" %}
     <h2 class="font-display text-xl leading-[1.3]">No events yet</h2>
     <p class="text-sm text-ink-soft">You haven't hosted or joined any events yet.</p>
-    <a href="?filter=upcoming" data-filter="upcoming" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover">See upcoming events</a>
+    <a href="?filter=upcoming" data-filter="upcoming" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">See upcoming events</a>
     {% elif selected_filter == "month" %}
     <h2 class="font-display text-xl leading-[1.3]">No events found</h2>
     <p class="text-sm text-ink-soft">Nothing is planned for this month yet.</p>
-    <a href="?filter=upcoming" data-filter="upcoming" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover">See upcoming events</a>
+    <a href="?filter=upcoming" data-filter="upcoming" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">See upcoming events</a>
     {% else %}
     <h2 class="font-display text-xl leading-[1.3]">Nothing here yet</h2>
     <p class="text-sm text-ink-soft">Be the first to host an event in your neighborhood.</p>
     {% if user.is_authenticated %}
-    <button type="button" popovertarget="host-event-modal" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover">Host an event</button>
+    <button type="button" popovertarget="host-event-modal" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Host an event</button>
     {% else %}
-    <a href="#" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover">Log in to host an event</a>
+    <a href="#" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Log in to host an event</a>
     {% endif %}
     {% endif %}
 </div>
