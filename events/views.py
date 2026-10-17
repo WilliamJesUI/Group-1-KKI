@@ -28,11 +28,19 @@ def get_when_label(start_time):
     return ""
 
 
+# ensure_csrf_cookie: the RSVP buttons on the cards use fetch, which needs the csrftoken cookie
+@ensure_csrf_cookie
 def show_events(request):
-    # The soonest event that hasn't started yet, for the "Next up" card
-    # defer("cover_image") skips loading the photo bytes, the page only needs the cover URL
-    events = Event.objects.defer("cover_image")
-    next_event = events.filter(start_time__gte=timezone.now()).first()
+    # defer("cover_image") skips loading the photo bytes, the page only needs the cover URL.
+    # prefetch_related("attendees") loads the attendees of all events in one extra query,
+    # instead of one query per card for "N going" and the RSVP button.
+    events = list(Event.objects.defer("cover_image").prefetch_related("attendees"))
+    for event in events:
+        # Whether the logged-in user already RSVP'd, so the card's button starts as "Going"
+        event.is_going = request.user.is_authenticated and request.user in event.attendees.all()
+    # The soonest event that hasn't started yet, for the "Next up" card (events are sorted by start_time)
+    now = timezone.now()
+    next_event = next((event for event in events if event.start_time >= now), None)
     context = {
         "event_list": events,
         "next_event": next_event,

@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 from events.models import Event
@@ -38,7 +40,7 @@ class EventListTest(TestCase):
         self.assertContains(response, "Menteng Urban Farm")
         self.assertContains(response, "09:00-12:00 WIB")
         self.assertContains(response, "Nov")
-        self.assertContains(response, "1 going")
+        self.assertContains(response, f'<span data-going-count="{self.event.id}">1</span> going')
 
     def test_events_tab_is_active(self):
         response = self.client.get(reverse("events:show_events"))
@@ -700,3 +702,74 @@ class RsvpButtonTest(TestCase):
     def test_page_sets_csrf_cookie(self):
         response = self.client.get(self.url)
         self.assertIn("csrftoken", response.cookies)
+
+
+class RsvpCardTest(TestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(username="rina", password="tomatoes123")
+        self.guest = User.objects.create_user(username="ben", password="tomatoes123")
+        self.event = Event.objects.create(
+            name="Community Seed Swap", description="-", location="Menteng Urban Farm",
+            start_time=timezone.now() + timedelta(days=3), host=self.host,
+        )
+        self.list_url = reverse("events:show_events")
+        self.rsvp_url = reverse("events:rsvp_event_ajax", args=[self.event.id])
+
+    def test_card_button_not_going(self):
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.get(self.list_url)
+        # Once on the card and once in "Next up"
+        self.assertContains(response, f'data-rsvp-url="{self.rsvp_url}"', count=2)
+        self.assertContains(response, 'aria-pressed="false"', count=2)
+        self.assertNotContains(response, 'aria-pressed="true"')
+        self.assertContains(response, "js/event_rsvp.js")
+
+    def test_card_button_going(self):
+        self.event.attendees.add(self.guest)
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.get(self.list_url)
+        self.assertContains(response, 'aria-pressed="true"', count=2)
+        self.assertContains(response, f'<span data-going-count="{self.event.id}">1</span> going', count=2)
+
+    def test_host_sees_hosting_label_on_card(self):
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.get(self.list_url)
+        self.assertContains(response, "You're hosting")
+        self.assertNotContains(response, "data-rsvp-url")
+
+    def test_visitor_sees_login_link_on_card(self):
+        response = self.client.get(self.list_url)
+        self.assertContains(response, "Log in to RSVP")
+        self.assertNotContains(response, "data-rsvp-url")
+
+    def test_ended_label_on_card(self):
+        self.event.start_time = timezone.now() - timedelta(hours=1)
+        self.event.save()
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.get(self.list_url)
+        self.assertContains(response, "Ended")
+        self.assertNotContains(response, "data-rsvp-url")
+
+    def test_card_title_links_to_detail(self):
+        response = self.client.get(self.list_url)
+        detail_url = reverse("events:show_event", args=[self.event.id])
+        self.assertContains(response, f'<a href="{detail_url}" class="after:absolute after:inset-0">')
+
+    def test_list_sets_csrf_cookie(self):
+        response = self.client.get(self.list_url)
+        self.assertIn("csrftoken", response.cookies)
+
+    def test_more_events_do_not_add_queries(self):
+        # Thanks to prefetch_related, 1 event or 5 events take the same number of database queries
+        self.client.login(username="ben", password="tomatoes123")
+        with CaptureQueriesContext(connection) as one_event:
+            self.client.get(self.list_url)
+        for i in range(4):
+            event = Event.objects.create(
+                name=f"Herb Walk {i}", description="-", location="Taman Suropati",
+                start_time=timezone.now() + timedelta(days=i + 4), host=self.host,
+            )
+            event.attendees.add(self.guest)
+        with CaptureQueriesContext(connection) as five_events:
+            self.client.get(self.list_url)
+        self.assertEqual(len(five_events), len(one_event))

@@ -22,7 +22,8 @@
     </div>
 
     {% if next_event %}
-    <a href="{% url 'events:show_event' next_event.id %}" class="block w-full max-w-[300px] shrink-0 overflow-hidden rounded-2xl border-2 border-ink bg-surface shadow-[4px_4px_0_0_var(--color-ink)]">
+    {# Not one big link, because a button can't go inside a link. The title link stretches over the card instead (see the cards below). #}
+    <div class="relative w-full max-w-[300px] shrink-0 overflow-hidden rounded-2xl border-2 border-ink bg-surface shadow-[4px_4px_0_0_var(--color-ink)]">
         <div class="h-[110px] bg-brand-tint">
             {% if next_event.cover_src %}
             <img src="{{ next_event.cover_src }}" alt="Cover photo for {{ next_event.name }}" class="size-full object-cover">
@@ -34,18 +35,26 @@
         </div>
         <div class="flex flex-col gap-1 px-4 pt-3 pb-3.5">
             <p class="text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-brand">Next up{% if next_event_when %} · {{ next_event_when }}{% endif %}</p>
-            <h3 class="font-display text-xl leading-[1.3]">{{ next_event.name }}</h3>
+            <h3 class="font-display text-xl leading-[1.3]">
+                <a href="{% url 'events:show_event' next_event.id %}" class="after:absolute after:inset-0">{{ next_event.name }}</a>
+            </h3>
             <p class="text-xs text-ink-soft">{{ next_event.start_time|date:"j M" }} · {{ next_event.start_time|time:"H:i" }} · {{ next_event.location }}</p>
-            <p class="pt-2 text-xs font-bold">{{ next_event.attendees.count }} going</p>
+            <div class="flex items-center justify-between gap-3 pt-2">
+                <p class="text-xs font-bold"><span data-going-count="{{ next_event.id }}">{{ next_event.attendees.count }}</span> going</p>
+                <div class="relative z-10">
+                    {% include "event_rsvp_button.html" with event=next_event going=next_event.is_going %}
+                </div>
+            </div>
         </div>
-    </a>
+    </div>
     {% endif %}
 </section>
 
 {% if event_list %}
 <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
     {% for event in event_list %}
-    <a href="{% url 'events:show_event' event.id %}" class="block overflow-hidden rounded-2xl border-2 border-ink bg-surface transition-shadow duration-150 ease-out hover:shadow-[4px_4px_0_0_var(--color-ink)]">
+    {# relative: the title link's after:absolute after:inset-0 covers this whole card, so clicking anywhere opens the event #}
+    <div class="relative overflow-hidden rounded-2xl border-2 border-ink bg-surface transition-shadow duration-150 ease-out hover:shadow-[4px_4px_0_0_var(--color-ink)]">
         <div class="relative h-[180px] bg-brand-tint">
             {% if event.cover_src %}
             <img src="{{ event.cover_src }}" alt="Cover photo for {{ event.name }}" class="size-full object-cover">
@@ -61,7 +70,9 @@
         </div>
 
         <div class="flex flex-col gap-2 p-4">
-            <h2 class="font-display text-xl leading-[1.3]">{{ event.name }}</h2>
+            <h2 class="font-display text-xl leading-[1.3]">
+                <a href="{% url 'events:show_event' event.id %}" class="after:absolute after:inset-0">{{ event.name }}</a>
+            </h2>
             <p class="flex items-center gap-2 text-xs text-ink-soft">
                 <img src="{% static 'img/icons/clock.svg' %}" alt="" width="16" height="16">
                 {{ event.start_time|time:"H:i" }}{% if event.end_time and event.end_time != event.start_time %}-{{ event.end_time|time:"H:i" }}{% endif %} WIB
@@ -71,12 +82,18 @@
                 {{ event.location }}
             </p>
             <div class="h-px bg-line"></div>
-            <p class="flex items-center gap-2 text-[13px] font-extrabold">
-                <img src="{% static 'img/icons/users.svg' %}" alt="" width="16" height="16">
-                {{ event.attendees.count }} going
-            </p>
+            <div class="flex items-center justify-between gap-3">
+                <p class="flex items-center gap-2 text-[13px] font-extrabold">
+                    <img src="{% static 'img/icons/users.svg' %}" alt="" width="16" height="16">
+                    <span><span data-going-count="{{ event.id }}">{{ event.attendees.count }}</span> going</span>
+                </p>
+                {# relative z-10 puts the button above the stretched title link, so clicking it RSVPs instead of opening the event #}
+                <div class="relative z-10">
+                    {% include "event_rsvp_button.html" with event=event going=event.is_going %}
+                </div>
+            </div>
         </div>
-    </a>
+    </div>
     {% endfor %}
 </div>
 {% else %}
@@ -95,4 +112,5 @@
 {% url 'events:create_event_ajax' as create_url %}
 {% include "event_form_modal.html" with modal_title="Host an event" submit_label="Publish event" form_action=create_url %}
 {% endif %}
+<script src="{% static 'js/event_rsvp.js' %}"></script>
 {% endblock content %}
