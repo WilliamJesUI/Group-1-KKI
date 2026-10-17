@@ -27,6 +27,17 @@ function showErrors(errors) {
     }
 }
 
+// Disabling the button while saving sends keyboard focus back to the page.
+// Put it somewhere useful: on the first field with an error, or on the button if no field has one.
+function focusFirstError(submitButton) {
+    const firstInvalid = hostEventForm.querySelector('[aria-invalid="true"]');
+    if (firstInvalid) {
+        firstInvalid.focus();
+    } else {
+        submitButton.focus();
+    }
+}
+
 async function publishEvent(event) {
     event.preventDefault();
     const submitButton = hostEventForm.querySelector('button[type="submit"]');
@@ -57,6 +68,7 @@ async function publishEvent(event) {
     } finally {
         if (!leavingPage) {
             submitButton.disabled = false;
+            focusFirstError(submitButton);
         }
     }
 }

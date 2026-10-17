@@ -47,6 +47,8 @@ async function sendRsvp(button) {
     const body = new FormData();
     body.append('going', wantsToGo ? 'true' : 'false');
 
+    // Disabling the button sends keyboard focus back to the page, so remember if it had focus
+    const hadFocus = document.activeElement === button;
     button.disabled = true; // so a double click doesn't send twice
     error.classList.add('hidden');
     try {
@@ -73,6 +75,9 @@ async function sendRsvp(button) {
         error.classList.remove('hidden');
     } finally {
         button.disabled = false;
+        if (hadFocus) {
+            button.focus(); // so Tab keeps going from the RSVP button
+        }
     }
 }
 
