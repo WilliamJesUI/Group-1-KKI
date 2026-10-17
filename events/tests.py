@@ -1021,3 +1021,54 @@ class ToastTest(TestCase):
     def test_no_messages_no_toasts(self):
         response = self.client.get(reverse("events:show_events"))
         self.assertNotContains(response, "data-toast-message")
+
+
+class EventToastTest(TestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(username="rina", password="tomatoes123")
+        self.client.login(username="rina", password="tomatoes123")
+        self.data = {
+            "name": "Community Seed Swap", "date": "2026-11-07", "start": "09:00", "end": "",
+            "location": "Menteng Urban Farm", "description": "Bring seeds to share.",
+        }
+
+    def test_create_shows_toast_on_next_page(self):
+        response = self.client.post(reverse("events:create_event_ajax"), self.data)
+        # The fetch response is JSON, the toast waits for the page event_form.js opens next
+        self.assertNotContains(response, "data-toast-message", status_code=201)
+        next_page = self.client.get(response.json()["url"])
+        self.assertContains(next_page, 'data-toast-message="Event created"')
+
+    def test_edit_shows_toast(self):
+        self.client.post(reverse("events:create_event_ajax"), self.data)
+        event = Event.objects.get()
+        self.client.get(reverse("events:show_event", args=[event.id]))  # uses up the "Event created" toast
+        response = self.client.post(reverse("events:edit_event_ajax", args=[event.id]), self.data)
+        next_page = self.client.get(response.json()["url"])
+        self.assertContains(next_page, 'data-toast-message="Event updated"')
+        self.assertNotContains(next_page, "Event created")
+
+    def test_delete_shows_toast(self):
+        event = Event.objects.create(
+            name="Community Seed Swap", description="-", location="Menteng Urban Farm",
+            start_time=timezone.now() + timedelta(days=3), host=self.host,
+        )
+        response = self.client.post(reverse("events:delete_event", args=[event.id]), follow=True)
+        self.assertContains(response, 'data-toast-message="Event deleted"')
+
+    def test_toast_shows_only_once(self):
+        response = self.client.post(reverse("events:create_event_ajax"), self.data)
+        self.client.get(response.json()["url"])
+        again = self.client.get(response.json()["url"])
+        self.assertNotContains(again, "data-toast-message")
+
+    def test_failed_create_has_no_toast(self):
+        self.data["name"] = ""
+        self.client.post(reverse("events:create_event_ajax"), self.data)
+        self.assertNotContains(self.client.get(reverse("events:show_events")), "data-toast-message")
+
+    def test_rsvp_script_uses_toast(self):
+        # The RSVP toast is shown by event_rsvp.js, which needs toast.js on the page first
+        response = self.client.get(reverse("events:show_events"))
+        html = response.content.decode()
+        self.assertLess(html.index("js/toast.js"), html.index("js/event_rsvp.js"))

@@ -1,4 +1,5 @@
 from django.http import Http404, HttpResponse, JsonResponse
+from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
@@ -162,6 +163,8 @@ def create_event_ajax(request):
         event = form.save(commit=False)
         event.host = request.user
         save_event_from_form(event, form)
+        # Shown as a toast on the event page, which event_form.js opens next
+        messages.success(request, "Event created")
         return JsonResponse(
             {"message": "Event published.", "url": reverse("events:show_event", args=[event.id])},
             status=201,
@@ -183,6 +186,7 @@ def edit_event_ajax(request, event_id):
     if form.is_valid():
         event = form.save(commit=False)
         save_event_from_form(event, form)
+        messages.success(request, "Event updated")
         return JsonResponse({"message": "Event updated.", "url": reverse("events:show_event", args=[event.id])})
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
@@ -226,4 +230,5 @@ def delete_event(request, event_id):
     if request.user != event.host:
         raise PermissionDenied
     event.delete()
+    messages.success(request, "Event deleted")
     return redirect("events:show_events")
