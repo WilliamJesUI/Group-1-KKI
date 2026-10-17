@@ -77,6 +77,11 @@ def show_events(request):
         events = events.filter(name__icontains=query)
     events = mark_going(list(events), request.user)
 
+    # ?partial=1 comes from event_filters.js: send only the cards, it swaps them into the page
+    if request.GET.get("partial") == "1":
+        context = {"event_list": events, "selected_filter": selected_filter, "query": query}
+        return render(request, "event_cards.html", context)
+
     # The soonest event that hasn't started yet, for the "Next up" card. It ignores the filters.
     next_event = all_events.filter(start_time__gte=timezone.now()).first()
     if next_event:

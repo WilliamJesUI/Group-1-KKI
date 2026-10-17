@@ -61,7 +61,7 @@
                class="min-w-0 flex-1 bg-transparent text-sm leading-[1.5] placeholder:text-ink/50 focus:outline-none">
     </form>
 
-    <div class="flex flex-wrap items-center gap-[7px]">
+    <div id="event-filter-pills" class="flex flex-wrap items-center gap-[7px]">
         {# Filter pills (Figma "Filter Pill"). aria-current="page" marks the selected one, and aria-[current=page]:bg-brand-soft makes it green. #}
         {% for value, label in event_filters %}
         {% if value != "mine" or user.is_authenticated %}
@@ -73,7 +73,9 @@
     </div>
 </div>
 
-<div id="event-cards" class="pt-[18px]">
+{# event_filters.js swaps new cards in here. aria-busy="true" is set while loading, which fades them. #}
+{# min-h-[392px] is one row of cards (374px) plus the space above, so the page doesn't jump up when the results get shorter #}
+<div id="event-cards" class="min-h-[392px] pt-[18px] transition-opacity aria-busy:opacity-50">
     {% include "event_cards.html" %}
 </div>
 
@@ -82,4 +84,5 @@
 {% include "event_form_modal.html" with modal_title="Host an event" submit_label="Publish event" form_action=create_url %}
 {% endif %}
 <script src="{% static 'js/event_rsvp.js' %}"></script>
+<script src="{% static 'js/event_filters.js' %}"></script>
 {% endblock content %}

@@ -911,3 +911,51 @@ class EventSearchTest(TestCase):
         response = self.client.get(self.list_url + "?q=<b>hi</b>")
         self.assertNotContains(response, "<b>hi</b>")
         self.assertContains(response, "&lt;b&gt;hi&lt;/b&gt;")
+
+
+class PartialCardsTest(TestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(username="rina", password="tomatoes123")
+        self.guest = User.objects.create_user(username="ben", password="tomatoes123")
+        later = timezone.now() + timedelta(days=5)
+        self.seed_swap = Event.objects.create(
+            name="Community Seed Swap", description="-", location="Menteng Urban Farm", start_time=later, host=self.host,
+        )
+        self.basil = Event.objects.create(
+            name="Balcony Basil 101", description="-", location="Kemang", start_time=later, host=self.host,
+        )
+        self.list_url = reverse("events:show_events")
+
+    def test_partial_sends_only_the_cards(self):
+        response = self.client.get(self.list_url + "?partial=1")
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "event_cards.html")
+        self.assertTemplateNotUsed(response, "base.html")
+        self.assertNotContains(response, "<html")
+        self.assertNotContains(response, "Next up")
+        self.assertContains(response, "Community Seed Swap")
+
+    def test_partial_uses_filter_and_search(self):
+        response = self.client.get(self.list_url + "?filter=upcoming&q=basil&partial=1")
+        self.assertEqual(response.context["event_list"], [self.basil])
+        self.assertNotContains(response, "Community Seed Swap")
+
+    def test_partial_empty_message(self):
+        response = self.client.get(self.list_url + "?q=cactus&partial=1")
+        self.assertContains(response, "No events found")
+
+    def test_partial_rsvp_buttons(self):
+        self.seed_swap.attendees.add(self.guest)
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.get(self.list_url + "?q=seed&partial=1")
+        self.assertContains(response, 'aria-pressed="true"')
+
+    def test_partial_my_events_needs_login(self):
+        response = self.client.get(self.list_url + "?filter=mine&partial=1")
+        self.assertEqual(response.context["event_list"], [])
+        self.assertContains(response, "Log in to see the events you host or joined.")
+
+    def test_full_page_loads_filter_script(self):
+        response = self.client.get(self.list_url)
+        self.assertContains(response, "js/event_filters.js")
+        self.assertContains(response, 'id="event-filter-pills"')
