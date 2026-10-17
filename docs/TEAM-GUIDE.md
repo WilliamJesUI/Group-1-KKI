@@ -1,6 +1,6 @@
 # Team guide: shared stuff
 
-Hi all! This is everything that's already shared between our modules: the base template, the navbar, colors, fonts, icons and settings. If you change something shared, please update this file too.
+Hi all! This is everything that's already shared between our modules: the base template, the navbar, colors, fonts, icons, toasts and settings. If you change something shared, please update this file too.
 
 ## 1. Make a page that uses our layout
 
@@ -205,3 +205,34 @@ def show_questions(request):
 ```
 
 For a full example of a fetch view and its JS, see `create_event_ajax` in `events/views.py` and `static/js/event_form.js`.
+
+## 12. Toasts (little pop-up messages)
+
+Toasts are the small boxes that pop up in the bottom-right corner, like "Question posted", and disappear after 3 seconds. They match the Toast in Figma: green for success, pink for errors. `base.html` already has everything, so you don't need to add anything to your page.
+
+**From a view (most common).** Use Django's messages. The toast shows on the next page the user sees, so it works great right before a redirect:
+
+```python
+from django.contrib import messages
+
+def delete_question(request, question_id):
+    ...
+    question.delete()
+    messages.success(request, "Question deleted")
+    return redirect("community:show_questions")
+```
+
+For an error, use `messages.error(request, "Couldn't save your answer")` and it turns pink.
+
+**From JavaScript.** Call `showToast()` (it's in `static/js/toast.js`, loaded on every page):
+
+```js
+showToast("Saved to your garden");
+showToast("Something went wrong", "error");
+```
+
+A few things to know:
+- Don't print `{{ messages }}` in your own template. `base.html` already shows them, so you'd get them twice.
+- If your fetch view redirects the page with JS afterwards (`window.location.href = ...`), you can still use `messages.success` in the view. It shows up on the page you land on.
+- Toasts appear behind an open popup (popovers sit on top of everything). Show the toast after the popup closes.
+- People who turned on "reduce motion" get a plain fade instead of the slide. That's handled for you.
