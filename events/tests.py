@@ -215,6 +215,15 @@ class CreateEventTest(TestCase):
         self.assertEqual(response.json()["errors"]["name"][0]["message"], "Please give your event a name.")
         self.assertEqual(Event.objects.count(), 0)
 
+    def test_create_form_starts_empty(self):
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.get(reverse("events:show_events"))
+        form = response.context["form"]
+        self.assertNotIn("date", form.initial)
+        self.assertNotIn("start", form.initial)
+        self.assertNotIn("end", form.initial)
+        self.assertContains(response, '<input type="date" name="date" class=')
+
     def test_missing_date_shows_error(self):
         self.client.login(username="rina", password="tomatoes123")
         self.data["date"] = ""

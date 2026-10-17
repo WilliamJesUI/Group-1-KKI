@@ -92,8 +92,9 @@ class EventForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # When editing an existing event, fill the date and time boxes from its start_time and end_time
-        if self.instance.pk:
+        # When editing an existing event, fill the date and time boxes from its start_time and end_time.
+        # Checks start_time, not pk: our UUID id is made right away, so even a new, unsaved event has a pk.
+        if self.instance.start_time:
             start_time = timezone.localtime(self.instance.start_time)
             self.initial["date"] = start_time.date()
             self.initial["start"] = start_time.time()
