@@ -69,7 +69,13 @@ def show_events(request):
     selected_filter = request.GET.get("filter", "upcoming")
     if selected_filter not in dict(EVENT_FILTERS):
         selected_filter = "upcoming"
-    events = mark_going(list(filter_events(all_events, selected_filter, request.user)), request.user)
+    events = filter_events(all_events, selected_filter, request.user)
+    # ?q=seed searches inside the selected filter. icontains = "contains, ignoring upper/lower case".
+    # TODO: also search the theme plant once the shared Plant model is merged.
+    query = request.GET.get("q", "").strip()
+    if query:
+        events = events.filter(name__icontains=query)
+    events = mark_going(list(events), request.user)
 
     # The soonest event that hasn't started yet, for the "Next up" card. It ignores the filters.
     next_event = all_events.filter(start_time__gte=timezone.now()).first()
@@ -79,6 +85,7 @@ def show_events(request):
         "event_list": events,
         "event_filters": EVENT_FILTERS,
         "selected_filter": selected_filter,
+        "query": query,
         "next_event": next_event,
         "next_event_when": get_when_label(next_event.start_time) if next_event else "",
         # An empty form for the "Host an event" pop-up

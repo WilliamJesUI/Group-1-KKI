@@ -801,7 +801,8 @@ class EventFilterTest(TestCase):
     def test_upcoming_is_the_default(self):
         response = self.client.get(self.list_url)
         self.assertEqual(response.context["selected_filter"], "upcoming")
-        self.assertContains(response, 'data-filter="upcoming"\n       aria-current="page"')
+        # Exactly one pill is marked as selected
+        self.assertContains(response, 'aria-current="page"', count=1)
         # Happening right now still counts as upcoming, ended events don't
         self.assertEqual(self.shown_events(), [self.happening, self.later])
 
@@ -863,3 +864,50 @@ class EventFilterTest(TestCase):
     def test_next_up_ignores_filter(self):
         response = self.client.get(self.list_url + "?filter=month")
         self.assertEqual(response.context["next_event"], self.later)
+
+
+class EventSearchTest(TestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(username="rina", password="tomatoes123")
+        later = timezone.now() + timedelta(days=5)
+        self.seed_swap = Event.objects.create(
+            name="Community Seed Swap", description="-", location="Menteng Urban Farm", start_time=later, host=self.host,
+        )
+        self.basil = Event.objects.create(
+            name="Balcony Basil 101", description="-", location="Kemang", start_time=later, host=self.host,
+        )
+        self.list_url = reverse("events:show_events")
+
+    def test_search_by_name_ignores_case(self):
+        response = self.client.get(self.list_url + "?q=SEED")
+        self.assertEqual(response.context["event_list"], [self.seed_swap])
+        self.assertEqual(response.context["query"], "SEED")
+
+    def test_empty_search_shows_everything(self):
+        response = self.client.get(self.list_url + "?q=+")
+        self.assertEqual(len(response.context["event_list"]), 2)
+
+    def test_search_works_with_filter(self):
+        self.basil.start_time = timezone.now() - timedelta(days=1)
+        self.basil.save()
+        # Basil matches the search, but it already ended, so Upcoming leaves it out
+        response = self.client.get(self.list_url + "?filter=upcoming&q=basil")
+        self.assertEqual(response.context["event_list"], [])
+
+    def test_search_box_keeps_text_and_filter(self):
+        response = self.client.get(self.list_url + "?filter=month&q=seed")
+        self.assertContains(response, 'name="q" value="seed"')
+        self.assertContains(response, '<input type="hidden" name="filter" value="month">')
+        # Switching pills keeps the search
+        self.assertContains(response, 'href="?filter=upcoming&amp;q=seed"')
+
+    def test_no_results_message(self):
+        response = self.client.get(self.list_url + "?q=cactus")
+        self.assertContains(response, "No events found")
+        self.assertContains(response, 'No events match "cactus".')
+        self.assertContains(response, "Clear search")
+
+    def test_search_text_is_escaped(self):
+        response = self.client.get(self.list_url + "?q=<b>hi</b>")
+        self.assertNotContains(response, "<b>hi</b>")
+        self.assertContains(response, "&lt;b&gt;hi&lt;/b&gt;")

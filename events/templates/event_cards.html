@@ -2,7 +2,7 @@
 {% comment %}
 The grid of event cards, or a message when there are none.
 Used by event_list.html, and sent on its own when the filters ask for new cards.
-Needs: event_list (events, each with is_going set in the view) and selected_filter (for the empty message).
+Needs: event_list (events, each with is_going set in the view) selected_filter and query (for the empty message).
 {% endcomment %}
 {% if event_list %}
 <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -57,6 +57,10 @@ Needs: event_list (events, each with is_going set in the view) and selected_filt
     <h2 class="font-display text-xl leading-[1.3]">Your events</h2>
     <p class="text-sm text-ink-soft">Log in to see the events you host or joined.</p>
     <a href="#" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover">Log in</a>
+    {% elif query %}
+    <h2 class="font-display text-xl leading-[1.3]">No events found</h2>
+    <p class="text-sm text-ink-soft">No events match "{{ query }}". Try another word.</p>
+    <a href="?filter={{ selected_filter }}" data-filter="{{ selected_filter }}" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover">Clear search</a>
     {% elif selected_filter == "mine" %}
     <h2 class="font-display text-xl leading-[1.3]">No events yet</h2>
     <p class="text-sm text-ink-soft">You haven't hosted or joined any events yet.</p>
