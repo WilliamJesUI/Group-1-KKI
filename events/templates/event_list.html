@@ -50,7 +50,18 @@
     {% endif %}
 </section>
 
-<div id="event-cards">
+<div class="flex flex-wrap items-center justify-end gap-[7px] pt-1">
+    {# Filter pills (Figma "Filter Pill"). aria-current="page" marks the selected one, and aria-[current=page]:bg-brand-soft makes it green. #}
+    {% for value, label in event_filters %}
+    {% if value != "mine" or user.is_authenticated %}
+    <a href="?filter={{ value }}" data-filter="{{ value }}"
+       {% if value == selected_filter %}aria-current="page"{% endif %}
+       class="rounded-full border-2 border-ink bg-surface px-4 py-2 text-xs font-bold leading-[1.2] hover:bg-brand-tint aria-[current=page]:bg-brand-soft">{{ label }}</a>
+    {% endif %}
+    {% endfor %}
+</div>
+
+<div id="event-cards" class="pt-[18px]">
     {% include "event_cards.html" %}
 </div>
 

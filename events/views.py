@@ -1,5 +1,6 @@
 from django.http import Http404, HttpResponse, JsonResponse
 from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -28,21 +29,56 @@ def get_when_label(start_time):
     return ""
 
 
+# The filter pills above the cards: (value in the URL, label on the pill)
+EVENT_FILTERS = [("upcoming", "Upcoming"), ("month", "This month"), ("mine", "My events")]
+
+
+def filter_events(events, selected_filter, user):
+    if selected_filter == "month":
+        # localdate() is today in Jakarta time, so "this month" is the Jakarta month
+        today = timezone.localdate()
+        return events.filter(start_time__year=today.year, start_time__month=today.month)
+    if selected_filter == "mine":
+        if not user.is_authenticated:
+            return events.none()
+        # Q(...) | Q(...) means "or". distinct() stops an event showing twice if it matches both.
+        return events.filter(Q(host=user) | Q(attendees=user)).distinct()
+    # Upcoming: everything that hasn't ended yet, same rule as Event.status().
+    # Starts later, or has an end time that's still ahead (so events happening right now stay in).
+    now = timezone.now()
+    return events.filter(Q(start_time__gt=now) | Q(end_time__gt=now))
+
+
+def mark_going(events, user):
+    # Whether the logged-in user already RSVP'd to each event, so the RSVP button starts as "Going".
+    # Uses the attendees from prefetch_related, so it doesn't need extra queries.
+    for event in events:
+        event.is_going = user.is_authenticated and user in event.attendees.all()
+    return events
+
+
 # ensure_csrf_cookie: the RSVP buttons on the cards use fetch, which needs the csrftoken cookie
 @ensure_csrf_cookie
 def show_events(request):
     # defer("cover_image") skips loading the photo bytes, the page only needs the cover URL.
     # prefetch_related("attendees") loads the attendees of all events in one extra query,
     # instead of one query per card for "N going" and the RSVP button.
-    events = list(Event.objects.defer("cover_image").prefetch_related("attendees"))
-    for event in events:
-        # Whether the logged-in user already RSVP'd, so the card's button starts as "Going"
-        event.is_going = request.user.is_authenticated and request.user in event.attendees.all()
-    # The soonest event that hasn't started yet, for the "Next up" card (events are sorted by start_time)
-    now = timezone.now()
-    next_event = next((event for event in events if event.start_time >= now), None)
+    all_events = Event.objects.defer("cover_image").prefetch_related("attendees")
+
+    # ?filter=month in the URL picks a filter. Anything unknown falls back to Upcoming.
+    selected_filter = request.GET.get("filter", "upcoming")
+    if selected_filter not in dict(EVENT_FILTERS):
+        selected_filter = "upcoming"
+    events = mark_going(list(filter_events(all_events, selected_filter, request.user)), request.user)
+
+    # The soonest event that hasn't started yet, for the "Next up" card. It ignores the filters.
+    next_event = all_events.filter(start_time__gte=timezone.now()).first()
+    if next_event:
+        mark_going([next_event], request.user)
     context = {
         "event_list": events,
+        "event_filters": EVENT_FILTERS,
+        "selected_filter": selected_filter,
         "next_event": next_event,
         "next_event_when": get_when_label(next_event.start_time) if next_event else "",
         # An empty form for the "Host an event" pop-up

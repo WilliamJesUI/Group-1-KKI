@@ -744,10 +744,12 @@ class RsvpCardTest(TestCase):
         self.assertNotContains(response, "data-rsvp-url")
 
     def test_ended_label_on_card(self):
+        # Ended events aren't in Upcoming, but they stay in My events
         self.event.start_time = timezone.now() - timedelta(hours=1)
         self.event.save()
+        self.event.attendees.add(self.guest)
         self.client.login(username="ben", password="tomatoes123")
-        response = self.client.get(self.list_url)
+        response = self.client.get(self.list_url + "?filter=mine")
         self.assertContains(response, "Ended")
         self.assertNotContains(response, "data-rsvp-url")
 
@@ -774,3 +776,90 @@ class RsvpCardTest(TestCase):
         with CaptureQueriesContext(connection) as five_events:
             self.client.get(self.list_url)
         self.assertEqual(len(five_events), len(one_event))
+
+
+class EventFilterTest(TestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(username="rina", password="tomatoes123")
+        self.guest = User.objects.create_user(username="ben", password="tomatoes123")
+        now = timezone.now()
+        self.past = self.make_event("Old Compost Day", now - timedelta(days=60))
+        self.happening = self.make_event("Herb Walk", now - timedelta(hours=1), now + timedelta(hours=1))
+        self.later = self.make_event("Seed Swap", now + timedelta(days=60))
+        self.list_url = reverse("events:show_events")
+
+    def make_event(self, name, start_time, end_time=None, host=None):
+        return Event.objects.create(
+            name=name, description="-", location="Menteng Urban Farm",
+            start_time=start_time, end_time=end_time, host=host or self.host,
+        )
+
+    def shown_events(self, query=""):
+        response = self.client.get(self.list_url + query)
+        return response.context["event_list"]
+
+    def test_upcoming_is_the_default(self):
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.context["selected_filter"], "upcoming")
+        self.assertContains(response, 'data-filter="upcoming"\n       aria-current="page"')
+        # Happening right now still counts as upcoming, ended events don't
+        self.assertEqual(self.shown_events(), [self.happening, self.later])
+
+    def test_upcoming_without_end_time_drops_after_start(self):
+        started = self.make_event("Started Swap", timezone.now() - timedelta(minutes=5))
+        self.assertNotIn(started, self.shown_events("?filter=upcoming"))
+
+    def test_unknown_filter_falls_back_to_upcoming(self):
+        response = self.client.get(self.list_url + "?filter=banana")
+        self.assertEqual(response.context["selected_filter"], "upcoming")
+
+    def test_this_month(self):
+        # Middle of this month in Jakarta, so the test works on any day
+        today = timezone.localdate()
+        mid_month = timezone.make_aware(datetime(today.year, today.month, 15, 9, 0))
+        this_month = self.make_event("Mid Month Swap", mid_month)
+        events = self.shown_events("?filter=month")
+        self.assertIn(this_month, events)
+        self.assertNotIn(self.past, events)
+        self.assertNotIn(self.later, events)
+
+    def test_this_month_uses_jakarta_time(self):
+        # 1st of this month at 03:00 Jakarta is still the previous month in UTC (20:00 the day before)
+        today = timezone.localdate()
+        early = self.make_event("Early Bird Swap", timezone.make_aware(datetime(today.year, today.month, 1, 3, 0)))
+        self.assertIn(early, self.shown_events("?filter=month"))
+
+    def test_my_events(self):
+        self.later.attendees.add(self.guest)
+        mine = self.make_event("My Own Swap", timezone.now() + timedelta(days=5), host=self.guest)
+        self.client.login(username="ben", password="tomatoes123")
+        # Hosted or RSVP'd, including events that already ended
+        self.past.attendees.add(self.guest)
+        self.assertEqual(self.shown_events("?filter=mine"), [self.past, mine, self.later])
+
+    def test_my_events_pill_only_when_logged_in(self):
+        response = self.client.get(self.list_url)
+        self.assertNotContains(response, 'data-filter="mine"')
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.get(self.list_url)
+        self.assertContains(response, 'data-filter="mine"')
+
+    def test_my_events_needs_login(self):
+        self.later.attendees.add(self.guest)
+        response = self.client.get(self.list_url + "?filter=mine")
+        self.assertEqual(response.context["event_list"], [])
+        self.assertContains(response, "Log in to see the events you host or joined.")
+
+    def test_my_events_empty_message(self):
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.get(self.list_url + "?filter=mine")
+        self.assertContains(response, "You haven't hosted or joined any events yet.")
+
+    def test_this_month_empty_message(self):
+        Event.objects.all().delete()
+        response = self.client.get(self.list_url + "?filter=month")
+        self.assertContains(response, "No events found")
+
+    def test_next_up_ignores_filter(self):
+        response = self.client.get(self.list_url + "?filter=month")
+        self.assertEqual(response.context["next_event"], self.later)
