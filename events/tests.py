@@ -125,7 +125,7 @@ class EventDetailTest(TestCase):
         self.assertContains(response, "Bring the seeds you saved from last season.")
         self.assertContains(response, "Rina Wulandari")
         self.assertContains(response, "Hosted 1 event<")
-        self.assertContains(response, "1 going")
+        self.assertContains(response, f'<span data-going-count="{self.event.id}">1</span> going')
         self.assertContains(response, ">BE</span>")
         self.assertEqual(response.context["bring_list"], ["Seeds in labelled envelopes", "A reusable bag"])
 
@@ -157,7 +157,7 @@ class EventDetailTest(TestCase):
         for i in range(6):
             self.event.attendees.add(User.objects.create_user(username=f"guest{i}", password="x"))
         response = self.client.get(self.url)
-        self.assertContains(response, "7 going")
+        self.assertContains(response, f'<span data-going-count="{self.event.id}">7</span> going')
         self.assertContains(response, "+3")
 
 
@@ -641,3 +641,62 @@ class RsvpTest(TestCase):
         response = self.client.post(self.url, {"going": "false"})
         self.assertEqual(response.status_code, 400)
         self.assertIn(self.guest, self.event.attendees.all())
+
+
+class RsvpButtonTest(TestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(username="rina", password="tomatoes123")
+        self.guest = User.objects.create_user(username="ben", password="tomatoes123")
+        self.event = Event.objects.create(
+            name="Community Seed Swap", description="-", location="Menteng Urban Farm",
+            start_time=timezone.now() + timedelta(days=3), host=self.host,
+        )
+        self.url = reverse("events:show_event", args=[self.event.id])
+        self.rsvp_url = reverse("events:rsvp_event_ajax", args=[self.event.id])
+
+    def test_button_not_going(self):
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.get(self.url)
+        self.assertContains(response, f'data-rsvp-url="{self.rsvp_url}"')
+        self.assertContains(response, 'aria-pressed="false"')
+        self.assertContains(response, "js/event_rsvp.js")
+
+    def test_button_going(self):
+        self.event.attendees.add(self.guest)
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.get(self.url)
+        self.assertContains(response, 'aria-pressed="true"')
+        self.assertContains(response, f'<span data-going-count="{self.event.id}">1</span> going')
+
+    def test_host_sees_hosting_label(self):
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.get(self.url)
+        self.assertContains(response, "You're hosting")
+        self.assertNotContains(response, "data-rsvp-url")
+
+    def test_visitor_sees_login_link(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, "Log in to RSVP")
+        self.assertNotContains(response, "data-rsvp-url")
+
+    def test_happening_now_label(self):
+        self.event.start_time = timezone.now() - timedelta(hours=1)
+        self.event.end_time = timezone.now() + timedelta(hours=1)
+        self.event.save()
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.get(self.url)
+        self.assertContains(response, "Happening now")
+        self.assertNotContains(response, "data-rsvp-url")
+
+    def test_ended_label(self):
+        self.event.start_time = timezone.now() - timedelta(hours=1)
+        self.event.save()
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.get(self.url)
+        self.assertContains(response, "Ended")
+        self.assertNotContains(response, "Happening now")
+        self.assertNotContains(response, "data-rsvp-url")
+
+    def test_page_sets_csrf_cookie(self):
+        response = self.client.get(self.url)
+        self.assertIn("csrftoken", response.cookies)

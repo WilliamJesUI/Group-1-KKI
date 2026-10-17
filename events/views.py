@@ -3,6 +3,7 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 from events.forms import EventForm
 from events.models import Event
@@ -42,6 +43,8 @@ def show_events(request):
     return render(request, "event_list.html", context)
 
 
+# ensure_csrf_cookie: the RSVP button uses fetch, which needs the csrftoken cookie even on pages without a form
+@ensure_csrf_cookie
 def show_event(request, event_id):
     event = get_object_or_404(Event.objects.defer("cover_image"), pk=event_id)
     going_count = event.attendees.count()
@@ -56,6 +59,8 @@ def show_event(request, event_id):
         # Split the text box into a list, skipping empty lines
         "bring_list": [line.strip() for line in event.what_to_bring.splitlines() if line.strip()],
         "is_host": request.user == event.host,
+        # Whether the logged-in user already RSVP'd, so the button starts as "Going"
+        "is_going": request.user.is_authenticated and event.attendees.filter(pk=request.user.pk).exists(),
     }
     if context["is_host"]:
         # The edit pop-up, already filled in with this event's details

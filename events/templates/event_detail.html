@@ -71,9 +71,9 @@
 
         <aside class="flex w-full flex-col gap-4 lg:w-[368px] lg:shrink-0">
             <div class="flex flex-col gap-3.5 rounded-2xl border-2 border-ink bg-surface p-6">
-                <p class="font-display text-2xl leading-[1.25]">{{ going_count }} going</p>
-                {% if attendee_initials %}
-                <div class="flex">
+                {# data-going-count and data-attendee-avatars let event_rsvp.js update these after an RSVP #}
+                <p class="font-display text-2xl leading-[1.25]"><span data-going-count="{{ event.id }}">{{ going_count }}</span> going</p>
+                <div data-attendee-avatars="{{ event.id }}" class="flex{% if not attendee_initials %} hidden{% endif %}">
                     {% for initials in attendee_initials %}
                     <span class="-mr-2 flex size-10 items-center justify-center rounded-full border-2 border-ink text-xs font-bold {% cycle 'bg-lilac' 'bg-pink' 'bg-butter' 'bg-brand-soft' %}">{{ initials }}</span>
                     {% endfor %}
@@ -81,8 +81,8 @@
                     <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink bg-lilac text-xs font-bold">+{{ more_going }}</span>
                     {% endif %}
                 </div>
-                {% endif %}
                 <p class="text-xs text-ink-soft">Open to everyone</p>
+                {% include "event_rsvp_button.html" with event=event going=is_going %}
             </div>
 
             {% if is_host %}
@@ -104,4 +104,5 @@
 {% include "event_form_modal.html" with modal_title="Edit event" submit_label="Save changes" form_action=edit_url %}
 {% include "event_delete_modal.html" %}
 {% endif %}
+<script src="{% static 'js/event_rsvp.js' %}"></script>
 {% endblock content %}
