@@ -13,6 +13,34 @@ function makeAvatar(text, colorClass, overlap) {
     return avatar;
 }
 
+// Make an avatar circle like the ones on the event cards (event_cards.html).
+// .card-avatar and its colors are defined in event_list.html, so they're styled right away.
+function makeCardAvatar(text, colorClass) {
+    const avatar = document.createElement('span');
+    avatar.className = `card-avatar ${colorClass}`;
+    avatar.textContent = text;
+    return avatar;
+}
+
+// Card footers: up to 2 avatars (lilac, pink), a green "+N" for everyone else, or "0 going" when nobody is going
+function updateCardAvatars(eventId, result) {
+    document.querySelectorAll(`[data-card-avatars="${eventId}"]`).forEach((row) => {
+        row.replaceChildren(); // remove the old avatars
+        result.attendee_initials.slice(0, 2).forEach((initials, i) => {
+            row.append(makeCardAvatar(initials, i === 0 ? 'card-avatar-lilac' : 'card-avatar-pink'));
+        });
+        const more = result.going_count - 2;
+        if (more > 0) {
+            row.append(makeCardAvatar(`+${more}`, 'card-avatar-more'));
+        }
+        row.classList.toggle('hidden', result.going_count === 0);
+    });
+    document.querySelectorAll(`[data-going-label="${eventId}"]`).forEach((label) => {
+        // "N going" is shown when nobody is going yet, otherwise it's only read out by screen readers
+        label.classList.toggle('sr-only', result.going_count > 0);
+    });
+}
+
 // Update every "N going" and avatar row on the page for this event
 function updateGoing(eventId, result) {
     document.querySelectorAll(`[data-going-count="${eventId}"]`).forEach((count) => {
@@ -28,6 +56,7 @@ function updateGoing(eventId, result) {
         }
         row.classList.toggle('hidden', result.attendee_initials.length === 0);
     });
+    updateCardAvatars(eventId, result);
 }
 
 // The Figma "pop": 1 -> 1.2 -> 1 in 300ms. Skipped for people who turned on reduced motion.

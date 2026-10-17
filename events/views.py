@@ -1,7 +1,8 @@
 from django.http import Http404, HttpResponse, JsonResponse
 from django.contrib import messages
+from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -51,10 +52,14 @@ def filter_events(events, selected_filter, user):
 
 
 def mark_going(events, user):
-    # Whether the logged-in user already RSVP'd to each event, so the RSVP button starts as "Going".
+    # For each event: whether the logged-in user already RSVP'd (so the RSVP button starts as "Going"),
+    # and the avatars for the card footer (Figma: up to 2 people's initials, then "+N" for everyone else).
     # Uses the attendees from prefetch_related, so it doesn't need extra queries.
     for event in events:
-        event.is_going = user.is_authenticated and user in event.attendees.all()
+        attendees = event.attendees.all()
+        event.is_going = user.is_authenticated and user in attendees
+        event.card_initials = [get_initials(attendee) for attendee in attendees[:2]]
+        event.card_more_going = max(len(attendees) - 2, 0)
     return events
 
 
@@ -62,9 +67,12 @@ def mark_going(events, user):
 @ensure_csrf_cookie
 def show_events(request):
     # defer("cover_image") skips loading the photo bytes, the page only needs the cover URL.
-    # prefetch_related("attendees") loads the attendees of all events in one extra query,
-    # instead of one query per card for "N going" and the RSVP button.
-    all_events = Event.objects.defer("cover_image").prefetch_related("attendees")
+    # prefetch_related loads the attendees of all events in one extra query, instead of one query per card
+    # for the avatars, "N going" and the RSVP button. Prefetch(...) sorts them by id, the same order the event
+    # page and the RSVP answer use, so the avatars don't jump around after an RSVP.
+    all_events = Event.objects.defer("cover_image").prefetch_related(
+        Prefetch("attendees", queryset=User.objects.order_by("pk"))
+    )
 
     # ?filter=month in the URL picks a filter. Anything unknown falls back to Upcoming.
     selected_filter = request.GET.get("filter", "upcoming")
@@ -109,7 +117,7 @@ def show_event(request, event_id):
         "event": event,
         "going_count": going_count,
         # Only the first 4 attendees get an avatar, the rest are shown as "+N"
-        "attendee_initials": [get_initials(user) for user in event.attendees.all()[:4]],
+        "attendee_initials": [get_initials(user) for user in event.attendees.order_by("pk")[:4]],
         "more_going": going_count - 4,
         "host_initials": get_initials(event.host),
         "host_event_count": event.host.hosted_events.count(),
@@ -220,7 +228,7 @@ def rsvp_event_ajax(request, event_id):
         "going": event.attendees.filter(pk=request.user.pk).exists(),
         "going_count": going_count,
         # For redrawing the avatar row on the event page
-        "attendee_initials": [get_initials(user) for user in event.attendees.all()[:4]],
+        "attendee_initials": [get_initials(user) for user in event.attendees.order_by("pk")[:4]],
         "more_going": max(going_count - 4, 0),
     })
 

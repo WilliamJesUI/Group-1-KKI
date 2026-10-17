@@ -1203,3 +1203,70 @@ class PwsCsrfTest(TestCase):
         # A blocked POST would be a 403.
         self.assertEqual(response.status_code, 400)
         self.assertIn("name", response.json()["errors"])
+
+
+class CardAvatarTest(TestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(username="rina", password="tomatoes123")
+        self.event = Event.objects.create(
+            name="Community Seed Swap", description="-", location="Menteng Urban Farm",
+            start_time=timezone.now() + timedelta(days=3), host=self.host,
+        )
+        self.list_url = reverse("events:show_events")
+
+    def add_people(self, names):
+        # Each name becomes a user who RSVP'd, created in this order (so their ids go up in this order)
+        for name in names:
+            first, last = name.split()
+            person = User.objects.create_user(username=first.lower(), first_name=first, last_name=last, password="tomatoes123")
+            self.event.attendees.add(person)
+
+    def card(self, response):
+        return [event for event in response.context["event_list"] if event == self.event][0]
+
+    def test_nobody_going_shows_text(self):
+        response = self.client.get(self.list_url)
+        self.assertEqual(self.card(response).card_initials, [])
+        # "0 going" is visible (not sr-only), and there are no avatars
+        self.assertContains(response, f'<p data-going-label="{self.event.id}" class="flex items-center gap-2 text-[13px] font-extrabold">')
+        self.assertNotContains(response, '<span class="card-avatar')
+
+    def test_one_person_one_avatar(self):
+        self.add_people(["Sari Kusuma"])
+        response = self.client.get(self.list_url)
+        self.assertContains(response, '<span class="card-avatar card-avatar-lilac">SK</span>')
+        self.assertNotContains(response, '<span class="card-avatar card-avatar-more">')
+
+    def test_two_avatars_then_plus_the_rest(self):
+        # Like Figma: 2 initials (lilac, pink), then a green "+N" for everyone else
+        self.add_people(["Sari Kusuma", "Budi Hartono", "Citra Dewi", "Dimas Putra", "Eka Lestari"])
+        response = self.client.get(self.list_url)
+        self.assertContains(response, '<span class="card-avatar card-avatar-lilac">SK</span>')
+        self.assertContains(response, '<span class="card-avatar card-avatar-pink">BH</span>')
+        self.assertContains(response, '<span class="card-avatar card-avatar-more">+3</span>')
+        self.assertNotContains(response, ">CD</span>")
+        # "5 going" is still on the card for screen readers
+        self.assertContains(response, f'<p data-going-label="{self.event.id}" class="flex items-center gap-2 text-[13px] font-extrabold sr-only">')
+        self.assertContains(response, f'<span data-going-count="{self.event.id}">5</span> going')
+
+    def test_rsvp_answer_uses_the_same_people_as_the_card(self):
+        # The card and the RSVP answer both go by id, so the avatars don't jump around after an RSVP
+        self.add_people(["Sari Kusuma", "Budi Hartono", "Citra Dewi"])
+        User.objects.create_user(username="ben", password="tomatoes123")
+        self.client.login(username="ben", password="tomatoes123")
+        card_initials = self.card(self.client.get(self.list_url)).card_initials
+        rsvp = self.client.post(reverse("events:rsvp_event_ajax", args=[self.event.id]), {"going": "true"})
+        self.assertEqual(rsvp.json()["attendee_initials"][:2], card_initials)
+        self.assertEqual(card_initials, ["SK", "BH"])
+
+    def test_next_up_card_keeps_its_text(self):
+        # Only the cards in the grid get avatars, "Next up" still says "N going"
+        self.add_people(["Sari Kusuma"])
+        response = self.client.get(self.list_url)
+        self.assertContains(response, f'<p class="text-xs font-bold"><span data-going-count="{self.event.id}">1</span> going</p>')
+
+    def test_avatar_styles_are_on_the_page(self):
+        # event_rsvp.js draws new avatars after an RSVP, so their styles have to be on the page from the start
+        response = self.client.get(self.list_url)
+        self.assertContains(response, ".card-avatar {")
+        self.assertContains(response, ".card-avatar-more {")
