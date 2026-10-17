@@ -58,24 +58,46 @@ More info and examples: docs/TEAM-GUIDE.md
                 @apply bg-brand text-white hover:bg-brand;
             }
 
-            /* Toasts (Figma "Toast"), made by static/js/toast.js. Green = success, .toast-error = pink. */
+            /* Toasts (Figma "Toast"), made by static/js/toast.js: a bold title and an optional message under it.
+               Green = success, .toast-error = pink. Taps go through toasts to the page (pointer-events-none on #toast-area). */
             .toast {
-                @apply pointer-events-auto rounded-2xl border-2 border-brand bg-brand-tint px-4 py-3 text-[15px] font-extrabold leading-[1.2] text-ink;
+                @apply flex flex-col gap-1 rounded-2xl border-2 border-brand bg-brand-tint px-4 py-3 text-ink;
             }
             .toast-error {
                 @apply border-danger bg-pink;
+            }
+            .toast-title {
+                @apply text-[15px] font-extrabold leading-[1.2];
+            }
+            .toast-message {
+                @apply text-xs leading-[1.4] text-ink-soft;
             }
         }
     </style>
 
     {# getCookie() for AJAX requests. Loaded here in <head> so it's ready before any script on the page. #}
     <script src="{% static 'js/csrf.js' %}"></script>
-    {# showToast("...") for pop-up notifications. Also in <head>, so your scripts can use it anywhere. #}
+    {# showToast("Title", "Message") for pop-up notifications. Also in <head>, so your scripts can use it anywhere. #}
     <script src="{% static 'js/toast.js' %}"></script>
     {% block meta %} {% endblock meta %}
 </head>
 
 <body class="min-h-screen bg-page font-sans text-ink">
+    {% comment %}
+    Toasts appear in this box, bottom-right (it's "fixed", so where it sits in the HTML doesn't change where you see it).
+    It's at the top of the page so showToast() also works from a script inside your content block.
+    aria-live="polite" makes screen readers read each new toast out. pointer-events-none lets taps go through to the page.
+    {% endcomment %}
+    <div id="toast-area" aria-live="polite" class="pointer-events-none fixed right-4 bottom-4 z-50 flex w-[320px] max-w-[calc(100%-2rem)] flex-col gap-3"></div>
+    {% comment %}
+    Django messages from your views. Put the title and the message on two lines with \n:
+      messages.success(request, "Event published\nYou can find it on the Events page.")
+    toast.js splits it at the first line break. One line is fine too, then it's just a title.
+    {% endcomment %}
+    {% for message in messages %}
+    <span hidden data-toast-message="{{ message }}" data-toast-type="{% if message.level_tag == 'error' %}error{% else %}success{% endif %}"></span>
+    {% endfor %}
+
     {# "app" is the app_name from the urls.py of the page you're on. It decides which tab is highlighted. #}
     {% with app=request.resolver_match.app_name %}
     <header class="border-b-2 border-ink bg-surface">
@@ -133,13 +155,6 @@ More info and examples: docs/TEAM-GUIDE.md
     <main class="mx-auto max-w-[1180px] px-4 py-8 sm:px-6">
         {% block content %} {% endblock content %}
     </main>
-
-    {# Toasts appear here, bottom-right. aria-live="polite" makes screen readers read each new toast out. #}
-    <div id="toast-area" aria-live="polite" class="pointer-events-none fixed right-4 bottom-4 z-50 flex w-[320px] max-w-[calc(100%-2rem)] flex-col gap-3"></div>
-    {# Django messages from your views (messages.success(request, "...")). toast.js turns each one into a toast. #}
-    {% for message in messages %}
-    <span hidden data-toast-message="{{ message }}" data-toast-type="{% if message.level_tag == 'error' %}error{% else %}success{% endif %}"></span>
-    {% endfor %}
 
     {# Opens and closes the navbar menu on phones #}
     <script src="{% static 'js/navbar.js' %}"></script>

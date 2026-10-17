@@ -1,16 +1,29 @@
-// Toast notifications (Figma "Toast"): a small box in the bottom-right that hides itself after 3 seconds.
-// Use from any page:  showToast('Event created')  or  showToast('Could not save', 'error')
-// Django messages (messages.success(request, '...')) are shown as toasts automatically, see base.html.
+// Toast notifications (Figma "Toast"): a small box in the bottom-right with a bold title and an optional
+// smaller message under it. It hides itself after 3 seconds.
+// Use from any page, in the same order as Tutorial 5:
+//   showToast('Event published', 'You can find it on the Events page.')
+//   showToast('Could not save', 'Please try again.', 'error')
+// Django messages are shown as toasts automatically, see base.html.
 // More info: docs/TEAM-GUIDE.md
 
 const TOAST_VISIBLE_MS = 3000;
 
-function showToast(message, type = 'success') {
+// Makes one line of the toast. textContent, not innerHTML, so the text can't inject HTML.
+function makeToastLine(className, text) {
+    const line = document.createElement('p');
+    line.className = className; // .toast-title and .toast-message are defined in base.html
+    line.textContent = text;
+    return line;
+}
+
+function showToast(title, message = '', type = 'success') {
     const area = document.getElementById('toast-area');
     const toast = document.createElement('div');
-    // .toast and .toast-error are defined in base.html
     toast.className = type === 'error' ? 'toast toast-error' : 'toast';
-    toast.textContent = message; // textContent, not innerHTML, so the message can't inject HTML
+    toast.append(makeToastLine('toast-title', title));
+    if (message) {
+        toast.append(makeToastLine('toast-message', message));
+    }
     area.append(toast);
 
     // Slide up 8px and fade in (250ms). With reduced motion: fade only, no sliding.
@@ -34,9 +47,16 @@ function showToast(message, type = 'success') {
 
 // Show the Django messages that base.html put on the page as data-toast-message attributes.
 // Reading them from HTML attributes (instead of writing them into a script) means Django has already escaped them.
+// A message can be "Title\nMessage": the first line break splits it. Without one, the whole text is the title.
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-toast-message]').forEach((item) => {
-        showToast(item.dataset.toastMessage, item.dataset.toastType);
+        const text = item.dataset.toastMessage;
+        const lineBreak = text.indexOf('\n');
+        if (lineBreak === -1) {
+            showToast(text, '', item.dataset.toastType);
+        } else {
+            showToast(text.slice(0, lineBreak), text.slice(lineBreak + 1), item.dataset.toastType);
+        }
         item.remove();
     });
 });

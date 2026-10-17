@@ -1104,6 +1104,17 @@ class ToastTest(TestCase):
         response = self.client.get(reverse("events:show_events"))
         self.assertNotContains(response, "data-toast-message")
 
+    def test_two_line_message_keeps_its_line_break(self):
+        # toast.js splits the text at the first line break into a title and a message
+        messages = [Message(message_constants.SUCCESS, "Event published\nYou can find it on the Events page.")]
+        html = render_to_string("base.html", {"messages": messages})
+        self.assertIn('data-toast-message="Event published\nYou can find it on the Events page."', html)
+
+    def test_toast_area_comes_before_page_content(self):
+        # So showToast() also works from a script inside a page's content block
+        html = self.client.get(reverse("events:show_events")).content.decode()
+        self.assertLess(html.index('id="toast-area"'), html.index("<main"))
+
 
 class EventToastTest(TestCase):
     def setUp(self):
