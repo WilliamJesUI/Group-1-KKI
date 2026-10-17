@@ -61,7 +61,11 @@ async function loadCards(filter, query, history) {
             cards.innerHTML = html;
         }
     } catch (err) {
-        window.location.href = url; // fall back to a normal page load
+        // Fall back to a normal page load, but only for the newest request. An older one was already
+        // replaced, and reloading it would jump back to a filter the user already left.
+        if (requestId === latestRequest) {
+            window.location.href = url;
+        }
     } finally {
         if (requestId === latestRequest) {
             cards.removeAttribute('aria-busy');
