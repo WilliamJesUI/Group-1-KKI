@@ -5,7 +5,7 @@ from django.contrib.messages.storage.base import Message
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.template.loader import render_to_string
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
@@ -1097,3 +1097,23 @@ class CardFadeTest(TestCase):
         # Cards 10 and 11 don't wait any longer than 360ms
         self.assertContains(response, 'style="--stagger: 360ms"', count=2)
         self.assertNotContains(response, "--stagger: 400ms")
+
+
+class PwsCsrfTest(TestCase):
+    def test_post_from_pws_passes_csrf_check(self):
+        # On PWS the browser sends Origin: https://..., but Django only sees plain http behind PWS.
+        # CSRF_TRUSTED_ORIGINS in settings.py is what lets these POSTs through instead of a 403.
+        host = "william-jesiel-growyourgarden.pws.cs.ui.ac.id"
+        User.objects.create_user(username="rina", password="tomatoes123")
+        client = Client(enforce_csrf_checks=True)  # the normal test client skips CSRF checks, this one doesn't
+        client.login(username="rina", password="tomatoes123")
+        page = client.get(reverse("events:show_events"), HTTP_HOST=host)
+        token = page.cookies["csrftoken"].value
+        response = client.post(
+            reverse("events:create_event_ajax"), {},
+            HTTP_HOST=host, HTTP_ORIGIN=f"https://{host}", HTTP_X_CSRFTOKEN=token,
+        )
+        # 400 means the view checked the (empty) form, so the CSRF check let the POST through.
+        # A blocked POST would be a 403.
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("name", response.json()["errors"])
