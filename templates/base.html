@@ -99,9 +99,10 @@ More info and examples: docs/TEAM-GUIDE.md
                 </nav>
 
                 {# Logged in: letter avatar + name. Logged out: Log in / Register (links are "#" until the auth pages exist). #}
+                {# The avatar letter and the name both use first_name, or username when first_name is empty, so they always match. #}
                 {% if user.is_authenticated %}
                 <div class="mt-4 flex items-center gap-3 border-t border-line pt-4 lg:mt-0 lg:border-0 lg:pt-0">
-                    <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink bg-brand-soft font-extrabold">{{ user.username|first|upper }}</span>
+                    <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink bg-brand-soft font-extrabold">{{ user.first_name|default:user.username|first|upper }}</span>
                     <span class="flex flex-col">
                         <span class="text-[13px] font-extrabold leading-tight">{{ user.first_name|default:user.username }}</span>
                         <span class="text-xs text-ink-soft">@{{ user.username }}</span>

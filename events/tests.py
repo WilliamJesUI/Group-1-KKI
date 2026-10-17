@@ -47,6 +47,19 @@ class EventListTest(TestCase):
         response = self.client.get(reverse("events:show_events"))
         self.assertContains(response, f'href="{reverse("events:show_events")}" class="nav-tab nav-tab-active">Events')
 
+    def test_navbar_avatar_uses_first_name(self):
+        User.objects.create_user(username="u27", first_name="Dewi", password="tomatoes123")
+        self.client.login(username="u27", password="tomatoes123")
+        response = self.client.get(reverse("events:show_events"))
+        self.assertContains(response, 'bg-brand-soft font-extrabold">D</span>')
+        self.assertNotContains(response, 'bg-brand-soft font-extrabold">U</span>')
+
+    def test_navbar_avatar_falls_back_to_username(self):
+        # ben has no first name, so the avatar uses the username
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.get(reverse("events:show_events"))
+        self.assertContains(response, 'bg-brand-soft font-extrabold">B</span>')
+
     def test_only_start_time_when_no_end_time(self):
         self.event.end_time = None
         self.event.save()
