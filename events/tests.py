@@ -22,8 +22,8 @@ class EventListTest(TestCase):
             name="Community Seed Swap",
             description="Bring seeds to share.",
             location="Menteng Urban Farm",
-            start_time=timezone.make_aware(datetime(2026, 11, 7, 9, 0)),
-            end_time=timezone.make_aware(datetime(2026, 11, 7, 12, 0)),
+            start_time=timezone.make_aware(datetime(2030, 11, 9, 9, 0)),
+            end_time=timezone.make_aware(datetime(2030, 11, 9, 12, 0)),
             host=self.host,
         )
         self.event.attendees.add(self.guest)
@@ -127,8 +127,8 @@ class EventDetailTest(TestCase):
             description="Bring the seeds you saved from last season.",
             what_to_bring="Seeds in labelled envelopes\n\nA reusable bag",
             location="Menteng Urban Farm",
-            start_time=timezone.make_aware(datetime(2026, 11, 7, 9, 0)),
-            end_time=timezone.make_aware(datetime(2026, 11, 7, 12, 0)),
+            start_time=timezone.make_aware(datetime(2030, 11, 9, 9, 0)),
+            end_time=timezone.make_aware(datetime(2030, 11, 9, 12, 0)),
             host=self.host,
         )
         self.event.attendees.add(self.guest)
@@ -139,7 +139,7 @@ class EventDetailTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "event_detail.html")
         self.assertContains(response, "Community Seed Swap")
-        self.assertContains(response, "Saturday, 7 November 2026")
+        self.assertContains(response, "Saturday, 9 November 2030")
         self.assertContains(response, "09:00-12:00 WIB")
         self.assertContains(response, "Bring the seeds you saved from last season.")
         self.assertContains(response, "Rina Wulandari")
@@ -186,7 +186,7 @@ class CreateEventTest(TestCase):
         self.url = reverse("events:create_event_ajax")
         self.data = {
             "name": "Community Seed Swap",
-            "date": "2026-11-07",
+            "date": "2030-11-09",
             "start": "09:00",
             "end": "12:00",
             "location": "Menteng Urban Farm",
@@ -212,7 +212,7 @@ class CreateEventTest(TestCase):
         event = Event.objects.get()
         self.assertEqual(event.host, self.user)
         self.assertEqual(event.what_to_bring.splitlines(), ["Seeds", "A bag"])
-        self.assertEqual(timezone.localtime(event.start_time).strftime("%Y-%m-%d %H:%M"), "2026-11-07 09:00")
+        self.assertEqual(timezone.localtime(event.start_time).strftime("%Y-%m-%d %H:%M"), "2030-11-09 09:00")
         self.assertEqual(timezone.localtime(event.end_time).strftime("%H:%M"), "12:00")
         self.assertEqual(response.json()["url"], reverse("events:show_event", args=[event.id]))
 
@@ -339,7 +339,7 @@ class CoverUploadTest(TestCase):
         self.client.login(username="rina", password="tomatoes123")
         self.url = reverse("events:create_event_ajax")
         self.data = {
-            "name": "Community Seed Swap", "date": "2026-11-07", "start": "09:00", "end": "",
+            "name": "Community Seed Swap", "date": "2030-11-09", "start": "09:00", "end": "",
             "location": "Menteng Urban Farm", "description": "Bring seeds to share.",
         }
 
@@ -411,15 +411,15 @@ class EditEventTest(TestCase):
         self.other = User.objects.create_user(username="ben", password="tomatoes123")
         self.event = Event.objects.create(
             name="Community Seed Swap", description="Bring seeds.", location="Menteng Urban Farm",
-            start_time=timezone.make_aware(datetime(2026, 11, 7, 9, 0)),
-            end_time=timezone.make_aware(datetime(2026, 11, 7, 12, 0)),
+            start_time=timezone.make_aware(datetime(2030, 11, 9, 9, 0)),
+            end_time=timezone.make_aware(datetime(2030, 11, 9, 12, 0)),
             cover_image=self.PNG_BYTES, cover_image_type="image/png",
             host=self.host,
         )
         self.url = reverse("events:edit_event_ajax", args=[self.event.id])
         self.detail_url = reverse("events:show_event", args=[self.event.id])
         self.data = {
-            "name": "Big Seed Swap", "date": "2026-11-08", "start": "10:00", "end": "",
+            "name": "Big Seed Swap", "date": "2030-11-10", "start": "10:00", "end": "",
             "location": "Taman Suropati", "description": "Bring more seeds.",
         }
 
@@ -451,7 +451,7 @@ class EditEventTest(TestCase):
         self.event.refresh_from_db()
         self.assertEqual(self.event.name, "Big Seed Swap")
         self.assertEqual(self.event.location, "Taman Suropati")
-        self.assertEqual(timezone.localtime(self.event.start_time).strftime("%Y-%m-%d %H:%M"), "2026-11-08 10:00")
+        self.assertEqual(timezone.localtime(self.event.start_time).strftime("%Y-%m-%d %H:%M"), "2030-11-10 10:00")
         self.assertIsNone(self.event.end_time)
         self.assertEqual(self.event.host, self.host)
         self.assertEqual(Event.objects.count(), 1)
@@ -496,7 +496,7 @@ class EditEventTest(TestCase):
         self.assertContains(response, "Save changes")
         self.assertContains(response, f'action="{self.url}"')
         self.assertContains(response, 'value="Community Seed Swap"')
-        self.assertContains(response, 'value="2026-11-07"')
+        self.assertContains(response, 'value="2030-11-09"')
         self.assertContains(response, 'value="09:00"')
         self.assertContains(response, 'value="12:00"')
         self.assertContains(response, "Current photo")
@@ -1036,7 +1036,7 @@ class EventToastTest(TestCase):
         self.host = User.objects.create_user(username="rina", password="tomatoes123")
         self.client.login(username="rina", password="tomatoes123")
         self.data = {
-            "name": "Community Seed Swap", "date": "2026-11-07", "start": "09:00", "end": "",
+            "name": "Community Seed Swap", "date": "2030-11-09", "start": "09:00", "end": "",
             "location": "Menteng Urban Farm", "description": "Bring seeds to share.",
         }
 
