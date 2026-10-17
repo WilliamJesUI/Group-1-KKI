@@ -524,3 +524,120 @@ class DeleteEventTest(TestCase):
         self.assertContains(response, 'Delete "Community Seed Swap"?')
         self.assertContains(response, 'popovertarget="delete-event-modal"')
         self.assertContains(response, f'action="{self.url}"')
+
+
+class EventStatusTest(TestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(username="rina", password="tomatoes123")
+
+    def make_event(self, start_in, end_in=None):
+        now = timezone.now()
+        return Event.objects.create(
+            name="Herb Walk", description="-", location="Taman Suropati", host=self.host,
+            start_time=now + start_in,
+            end_time=now + end_in if end_in is not None else None,
+        )
+
+    def test_open_before_start(self):
+        self.assertEqual(self.make_event(timedelta(hours=1), timedelta(hours=3)).status(), "open")
+
+    def test_happening_between_start_and_end(self):
+        self.assertEqual(self.make_event(timedelta(hours=-1), timedelta(hours=1)).status(), "happening")
+
+    def test_ended_after_end(self):
+        self.assertEqual(self.make_event(timedelta(hours=-3), timedelta(hours=-1)).status(), "ended")
+
+    def test_no_end_time_ends_at_start(self):
+        self.assertEqual(self.make_event(timedelta(hours=1)).status(), "open")
+        self.assertEqual(self.make_event(timedelta(minutes=-1)).status(), "ended")
+
+
+class RsvpTest(TestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(username="rina", password="tomatoes123")
+        self.guest = User.objects.create_user(username="ben", password="tomatoes123")
+        self.event = Event.objects.create(
+            name="Community Seed Swap", description="-", location="Menteng Urban Farm",
+            start_time=timezone.now() + timedelta(days=3), host=self.host,
+        )
+        self.url = reverse("events:rsvp_event_ajax", args=[self.event.id])
+
+    def test_must_be_logged_in(self):
+        response = self.client.post(self.url, {"going": "true"})
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(self.event.attendees.count(), 0)
+
+    def test_get_not_allowed(self):
+        self.client.login(username="ben", password="tomatoes123")
+        self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    def test_unknown_event_returns_404(self):
+        self.client.login(username="ben", password="tomatoes123")
+        url = reverse("events:rsvp_event_ajax", args=["00000000-0000-0000-0000-000000000000"])
+        self.assertEqual(self.client.post(url, {"going": "true"}).status_code, 404)
+
+    def test_rsvp_and_cancel(self):
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.post(self.url, {"going": "true"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["going"], True)
+        self.assertEqual(response.json()["going_count"], 1)
+        self.assertEqual(response.json()["attendee_initials"], ["BE"])
+        self.assertIn(self.guest, self.event.attendees.all())
+
+        response = self.client.post(self.url, {"going": "false"})
+        self.assertEqual(response.json()["going"], False)
+        self.assertEqual(response.json()["going_count"], 0)
+        self.assertNotIn(self.guest, self.event.attendees.all())
+
+    def test_rsvp_twice_stays_going(self):
+        # Like clicking RSVP in two open tabs: still going, and counted once
+        self.client.login(username="ben", password="tomatoes123")
+        self.client.post(self.url, {"going": "true"})
+        response = self.client.post(self.url, {"going": "true"})
+        self.assertEqual(response.json()["going"], True)
+        self.assertEqual(response.json()["going_count"], 1)
+
+    def test_more_going_count(self):
+        for i in range(5):
+            self.event.attendees.add(User.objects.create_user(username=f"guest{i}", password="x"))
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.post(self.url, {"going": "true"})
+        self.assertEqual(response.json()["going_count"], 6)
+        self.assertEqual(len(response.json()["attendee_initials"]), 4)
+        self.assertEqual(response.json()["more_going"], 2)
+
+    def test_host_cannot_rsvp(self):
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.post(self.url, {"going": "true"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["message"], "You're the host, so you're already going.")
+        self.assertEqual(self.event.attendees.count(), 0)
+
+    def test_closed_while_happening(self):
+        self.event.start_time = timezone.now() - timedelta(hours=1)
+        self.event.end_time = timezone.now() + timedelta(hours=1)
+        self.event.save()
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.post(self.url, {"going": "true"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["message"], "RSVPs are closed, this event has already started.")
+        self.assertEqual(self.event.attendees.count(), 0)
+
+    def test_closed_after_end(self):
+        self.event.start_time = timezone.now() - timedelta(hours=3)
+        self.event.end_time = timezone.now() - timedelta(hours=1)
+        self.event.save()
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.post(self.url, {"going": "true"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["message"], "RSVPs are closed, this event has ended.")
+
+    def test_cannot_cancel_after_start(self):
+        self.event.attendees.add(self.guest)
+        self.event.start_time = timezone.now() - timedelta(minutes=5)
+        self.event.save()
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.post(self.url, {"going": "false"})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn(self.guest, self.event.attendees.all())

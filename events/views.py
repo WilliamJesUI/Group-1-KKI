@@ -126,6 +126,38 @@ def edit_event_ajax(request, event_id):
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 
+
+@require_POST
+def rsvp_event_ajax(request, event_id):
+    # Not @login_required: fetch needs a JSON error it can read, not a redirect
+    if not request.user.is_authenticated:
+        return JsonResponse({"message": "Please log in to RSVP."}, status=403)
+    event = get_object_or_404(Event.objects.defer("cover_image"), pk=event_id)
+
+    # The button is hidden for these cases, but anyone could still send the request, so check here too
+    if event.host == request.user:
+        return JsonResponse({"message": "You're the host, so you're already going."}, status=400)
+    if event.status() == "happening":
+        return JsonResponse({"message": "RSVPs are closed, this event has already started."}, status=400)
+    if event.status() == "ended":
+        return JsonResponse({"message": "RSVPs are closed, this event has ended."}, status=400)
+
+    # The button sends what the user wants (going=true or going=false) instead of "flip it",
+    # so clicking in two open tabs can't accidentally undo an RSVP
+    if request.POST.get("going") == "true":
+        event.attendees.add(request.user)
+    else:
+        event.attendees.remove(request.user)
+
+    going_count = event.attendees.count()
+    return JsonResponse({
+        "going": event.attendees.filter(pk=request.user.pk).exists(),
+        "going_count": going_count,
+        # For redrawing the avatar row on the event page
+        "attendee_initials": [get_initials(user) for user in event.attendees.all()[:4]],
+        "more_going": max(going_count - 4, 0),
+    })
+
 @require_POST
 def delete_event(request, event_id):
     event = get_object_or_404(Event, pk=event_id)

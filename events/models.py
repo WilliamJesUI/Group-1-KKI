@@ -2,6 +2,7 @@ import uuid
 from django.contrib.auth.models import User
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone
 
 
 class Event(models.Model):
@@ -31,6 +32,16 @@ class Event(models.Model):
 
     def __str__(self):
         return self.name
+
+    def status(self):
+        # "open" before it starts (RSVPs allowed), "happening" between start and end, "ended" after.
+        # Without an end time, the event counts as ended as soon as it starts.
+        now = timezone.now()
+        if now < self.start_time:
+            return "open"
+        if self.end_time and now < self.end_time:
+            return "happening"
+        return "ended"
 
     def cover_src(self):
         # What to put in <img src="...">: the uploaded photo first, then the link, otherwise nothing
