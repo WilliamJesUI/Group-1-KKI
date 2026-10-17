@@ -118,7 +118,7 @@ def show_event(request, event_id):
         "going_count": going_count,
         # Only the first 4 attendees get an avatar, the rest are shown as "+N"
         "attendee_initials": [get_initials(user) for user in event.attendees.order_by("pk")[:4]],
-        "more_going": going_count - 4,
+        "more_going": max(going_count - 4, 0),
         "host_initials": get_initials(event.host),
         "host_event_count": event.host.hosted_events.count(),
         # Split the text box into a list, skipping empty lines
@@ -174,10 +174,7 @@ def create_event_ajax(request):
         # Shown as a toast on the event page, which event_form.js opens next.
         # The text before \n is the toast's title, the rest is the smaller message under it (texts from Figma).
         messages.success(request, "Event published\nYou can find it on the Events page.")
-        return JsonResponse(
-            {"message": "Event published.", "url": reverse("events:show_event", args=[event.id])},
-            status=201,
-        )
+        return JsonResponse({"url": reverse("events:show_event", args=[event.id])}, status=201)
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 
@@ -196,9 +193,8 @@ def edit_event_ajax(request, event_id):
         event = form.save(commit=False)
         save_event_from_form(event, form)
         messages.success(request, "Event updated\nYour changes are saved.")
-        return JsonResponse({"message": "Event updated.", "url": reverse("events:show_event", args=[event.id])})
+        return JsonResponse({"url": reverse("events:show_event", args=[event.id])})
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
-
 
 
 @require_POST
@@ -227,10 +223,11 @@ def rsvp_event_ajax(request, event_id):
     return JsonResponse({
         "going": event.attendees.filter(pk=request.user.pk).exists(),
         "going_count": going_count,
-        # For redrawing the avatar row on the event page
+        # For redrawing the avatars on the event page and on the cards
         "attendee_initials": [get_initials(user) for user in event.attendees.order_by("pk")[:4]],
         "more_going": max(going_count - 4, 0),
     })
+
 
 @require_POST
 def delete_event(request, event_id):

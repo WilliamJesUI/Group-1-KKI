@@ -147,6 +147,8 @@ class EventDetailTest(TestCase):
         self.assertContains(response, f'<span data-going-count="{self.event.id}">1</span> going')
         self.assertContains(response, ">BE</span>")
         self.assertEqual(response.context["bring_list"], ["Seeds in labelled envelopes", "A reusable bag"])
+        # 1 person going: no "+N", and never a negative number
+        self.assertEqual(response.context["more_going"], 0)
 
     def test_list_links_to_detail(self):
         response = self.client.get(reverse("events:show_events"))
