@@ -26,12 +26,14 @@ function showToast(title, message = '', type = 'success') {
     }
     area.append(toast);
 
-    // Slide up 8px and fade in (250ms). With reduced motion: fade only, no sliding.
+    // Like the Figma prototype: the toast starts invisible and 48px to the right, then slides into place
+    // and fades in (250ms, ease-out). When it leaves, it slides back out to the right and fades (ease-in).
+    // With reduced motion: fade only, no sliding.
     // Browsers without animate() just show and hide the toast without animation.
     const canAnimate = typeof toast.animate === 'function';
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const hidden = reduceMotion ? { opacity: 0 } : { opacity: 0, transform: 'translateY(8px)' };
-    const shown = reduceMotion ? { opacity: 1 } : { opacity: 1, transform: 'translateY(0)' };
+    const hidden = reduceMotion ? { opacity: 0 } : { opacity: 0, transform: 'translateX(48px)' };
+    const shown = reduceMotion ? { opacity: 1 } : { opacity: 1, transform: 'translateX(0)' };
     if (canAnimate) {
         toast.animate([hidden, shown], { duration: 250, easing: 'ease-out' });
     }
