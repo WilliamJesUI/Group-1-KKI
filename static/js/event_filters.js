@@ -35,14 +35,6 @@ function showSelected(filter, query) {
     }
 }
 
-// Fade the new cards in over 180ms. Skipped for people who turned on reduced motion.
-function fadeIn(element) {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        return;
-    }
-    element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
-}
-
 // history: 'push' adds a new step for the back button, 'replace' changes the current one, 'none' leaves it alone
 async function loadCards(filter, query, history) {
     const url = buildUrl(filter, query);
@@ -64,8 +56,9 @@ async function loadCards(filter, query, history) {
         }
         const html = await response.text();
         if (requestId === latestRequest) {
-            cards.innerHTML = html; // HTML made by Django's template, so the text in it is already escaped
-            fadeIn(cards);
+            // HTML made by Django's template, so the text in it is already escaped.
+            // The new cards fade in by themselves (starting:opacity-0 in event_cards.html).
+            cards.innerHTML = html;
         }
     } catch (err) {
         window.location.href = url; // fall back to a normal page load

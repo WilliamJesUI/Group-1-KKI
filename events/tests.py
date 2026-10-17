@@ -1072,3 +1072,20 @@ class EventToastTest(TestCase):
         response = self.client.get(reverse("events:show_events"))
         html = response.content.decode()
         self.assertLess(html.index("js/toast.js"), html.index("js/event_rsvp.js"))
+
+
+class CardFadeTest(TestCase):
+    def test_cards_wait_40ms_more_each_up_to_360ms(self):
+        host = User.objects.create_user(username="rina", password="tomatoes123")
+        for i in range(11):
+            Event.objects.create(
+                name=f"Seed Swap {i}", description="-", location="Menteng Urban Farm",
+                start_time=timezone.now() + timedelta(days=i + 1), host=host,
+            )
+        response = self.client.get(reverse("events:show_events"))
+        self.assertContains(response, 'style="--stagger: 0ms"', count=1)
+        self.assertContains(response, 'style="--stagger: 40ms"', count=1)
+        self.assertContains(response, 'style="--stagger: 320ms"', count=1)
+        # Cards 10 and 11 don't wait any longer than 360ms
+        self.assertContains(response, 'style="--stagger: 360ms"', count=2)
+        self.assertNotContains(response, "--stagger: 400ms")

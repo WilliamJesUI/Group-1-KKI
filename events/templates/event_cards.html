@@ -7,8 +7,16 @@ Needs: event_list (events, each with is_going set in the view) selected_filter a
 {% if event_list %}
 <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
     {% for event in event_list %}
+    {% comment %}
+    Page-load fade from the Figma Motion table: each card fades in over 400ms, 40ms after the one before.
+    starting:opacity-0 is where the fade starts when the card appears (on page load, and when the filters swap in new cards).
+    --stagger is this card's wait: 0ms, 40ms, 80ms... capped at 360ms so cards further down don't wait too long.
+    motion-reduce:delay-0 keeps the fade but drops the one-after-another wait for people who turned on reduced motion.
+    {% endcomment %}
+    <div class="h-full transition-opacity duration-400 ease-out delay-(--stagger) starting:opacity-0 motion-reduce:delay-0"
+         style="--stagger: {% if forloop.counter0 < 9 %}{% widthratio forloop.counter0 1 40 %}{% else %}360{% endif %}ms">
     {# relative: the title link's after:absolute after:inset-0 covers this whole card, so clicking anywhere opens the event #}
-    <div class="relative overflow-hidden rounded-2xl border-2 border-ink bg-surface transition-shadow duration-150 ease-out hover:shadow-[4px_4px_0_0_var(--color-ink)]">
+    <div class="relative h-full overflow-hidden rounded-2xl border-2 border-ink bg-surface transition-shadow duration-150 ease-out hover:shadow-[4px_4px_0_0_var(--color-ink)]">
         <div class="relative h-[180px] bg-brand-tint">
             {% if event.cover_src %}
             <img src="{{ event.cover_src }}" alt="Cover photo for {{ event.name }}" class="size-full object-cover">
@@ -47,6 +55,7 @@ Needs: event_list (events, each with is_going set in the view) selected_filter a
                 </div>
             </div>
         </div>
+    </div>
     </div>
     {% endfor %}
 </div>
