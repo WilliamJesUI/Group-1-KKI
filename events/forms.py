@@ -18,6 +18,7 @@ TEXTAREA_CLASS = (
 PICKER_CLASS = "min-w-0 flex-1 bg-transparent text-sm focus:outline-none [&::-webkit-calendar-picker-indicator]:hidden"
 
 MAX_COVER_SIZE = 2 * 1024 * 1024  # 2 MB
+COVER_LINK_ERROR = "Please paste a full image link, starting with https://"
 
 
 def detect_image_type(data):
@@ -87,7 +88,7 @@ class EventForm(ModelForm):
             "name": {"required": "Please give your event a name."},
             "location": {"required": "Please add a location."},
             "description": {"required": "Please tell people what the event is about."},
-            "cover_photo_url": {"invalid": "Please paste a full image link, starting with https://"},
+            "cover_photo_url": {"invalid": COVER_LINK_ERROR},
         }
 
     def __init__(self, *args, **kwargs):
@@ -113,6 +114,14 @@ class EventForm(ModelForm):
             raise forms.ValidationError("Please pick a JPG, PNG or WebP photo.")
         # Hand the bytes and the type to the view, which saves them on the event
         return {"data": data, "type": image_type}
+
+    def clean_cover_photo_url(self):
+        url = self.cleaned_data.get("cover_photo_url")
+        # A URLField alone also accepts http:// and ftp:// links, and adds http:// to links without one.
+        # Only https:// is allowed: our site runs on https, and browsers block or warn about http images there.
+        if url and not url.startswith("https://"):
+            raise forms.ValidationError(COVER_LINK_ERROR)
+        return url
 
     def clean(self):
         cleaned_data = super().clean()

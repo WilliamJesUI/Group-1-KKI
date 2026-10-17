@@ -298,6 +298,19 @@ class CreateEventTest(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("cover_photo_url", response.json()["errors"])
 
+    def test_cover_link_must_start_with_https(self):
+        self.client.login(username="rina", password="tomatoes123")
+        for link in ["http://images.pexels.com/photo.jpg", "ftp://example.com/photo.jpg", "images.pexels.com/photo.jpg"]:
+            with self.subTest(link=link):
+                self.data["cover_photo_url"] = link
+                response = self.client.post(self.url, self.data)
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(
+                    response.json()["errors"]["cover_photo_url"][0]["message"],
+                    "Please paste a full image link, starting with https://",
+                )
+        self.assertEqual(Event.objects.count(), 0)
+
     def test_form_only_shown_when_logged_in(self):
         response = self.client.get(reverse("events:show_events"))
         self.assertNotContains(response, 'id="host-event-modal"')
