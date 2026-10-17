@@ -50,63 +50,9 @@
     {% endif %}
 </section>
 
-{% if event_list %}
-<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-    {% for event in event_list %}
-    {# relative: the title link's after:absolute after:inset-0 covers this whole card, so clicking anywhere opens the event #}
-    <div class="relative overflow-hidden rounded-2xl border-2 border-ink bg-surface transition-shadow duration-150 ease-out hover:shadow-[4px_4px_0_0_var(--color-ink)]">
-        <div class="relative h-[180px] bg-brand-tint">
-            {% if event.cover_src %}
-            <img src="{{ event.cover_src }}" alt="Cover photo for {{ event.name }}" class="size-full object-cover">
-            {% else %}
-            <div class="flex size-full items-center justify-center">
-                <img src="{% static 'img/icons/image.svg' %}" alt="" width="24" height="24" class="opacity-40">
-            </div>
-            {% endif %}
-            <div class="absolute bottom-3 left-3.5 flex flex-col items-center rounded-xl border-2 border-ink bg-surface px-3 py-2">
-                <span class="font-display text-xl leading-[1.3]">{{ event.start_time|date:"d" }}</span>
-                <span class="text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-brand">{{ event.start_time|date:"M" }}</span>
-            </div>
-        </div>
-
-        <div class="flex flex-col gap-2 p-4">
-            <h2 class="font-display text-xl leading-[1.3]">
-                <a href="{% url 'events:show_event' event.id %}" class="after:absolute after:inset-0">{{ event.name }}</a>
-            </h2>
-            <p class="flex items-center gap-2 text-xs text-ink-soft">
-                <img src="{% static 'img/icons/clock.svg' %}" alt="" width="16" height="16">
-                {{ event.start_time|time:"H:i" }}{% if event.end_time and event.end_time != event.start_time %}-{{ event.end_time|time:"H:i" }}{% endif %} WIB
-            </p>
-            <p class="flex items-center gap-2 text-xs text-ink-soft">
-                <img src="{% static 'img/icons/map-pin.svg' %}" alt="" width="16" height="16">
-                {{ event.location }}
-            </p>
-            <div class="h-px bg-line"></div>
-            <div class="flex items-center justify-between gap-3">
-                <p class="flex items-center gap-2 text-[13px] font-extrabold">
-                    <img src="{% static 'img/icons/users.svg' %}" alt="" width="16" height="16">
-                    <span><span data-going-count="{{ event.id }}">{{ event.attendees.count }}</span> going</span>
-                </p>
-                {# relative z-10 puts the button above the stretched title link, so clicking it RSVPs instead of opening the event #}
-                <div class="relative z-10">
-                    {% include "event_rsvp_button.html" with event=event going=event.is_going %}
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
+<div id="event-cards">
+    {% include "event_cards.html" %}
 </div>
-{% else %}
-<div class="mx-auto flex max-w-xs flex-col items-center gap-4 rounded-[20px] border-2 border-ink bg-surface p-6 text-center">
-    <h2 class="font-display text-xl leading-[1.3]">Nothing here yet</h2>
-    <p class="text-sm text-ink-soft">Be the first to host an event in your neighborhood.</p>
-    {% if user.is_authenticated %}
-    <button type="button" popovertarget="host-event-modal" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover">Host an event</button>
-    {% else %}
-    <a href="#" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover">Log in to host an event</a>
-    {% endif %}
-</div>
-{% endif %}
 
 {% if user.is_authenticated %}
 {% url 'events:create_event_ajax' as create_url %}

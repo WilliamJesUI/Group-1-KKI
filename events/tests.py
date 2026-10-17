@@ -35,6 +35,7 @@ class EventListTest(TestCase):
         response = self.client.get(reverse("events:show_events"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "event_list.html")
+        self.assertTemplateUsed(response, "event_cards.html")
         self.assertTemplateUsed(response, "base.html")
         self.assertContains(response, "Community Seed Swap")
         self.assertContains(response, "Menteng Urban Farm")
