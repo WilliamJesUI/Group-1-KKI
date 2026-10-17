@@ -65,6 +65,7 @@ Right now most tabs link to `#`. When your page exists, open `templates/base.htm
 Only do this once your URL actually exists. A `{% url %}` that points to a name that doesn't exist breaks every page on the site.
 
 Sarah: the **Log in** and **Register** buttons in the navbar also link to `#` for now. Swap them for your auth URLs when they're ready (and a Log out link next to the username would be nice).
+
 The navbar avatar shows the first letter of the user's first_name, or of their username if first_name is empty.
 
 ## 4. Colors
@@ -160,7 +161,7 @@ Long links and words that people type (like a pasted Google Form link) wrap onto
 
 Icons from the Figma icon set (Lucide) are in `static/img/icons/`:
 
-`calendar`, `check`, `chevron-right`, `clock`, `image`, `map-pin`, `menu`, `users`, `x`
+`calendar`, `check`, `chevron-right`, `clock`, `image`, `map-pin`, `menu`, `search`, `upload`, `users`, `x`
 
 ```html
 {% load static %}
@@ -195,7 +196,7 @@ const response = await fetch(url, {
     headers: { 'X-CSRFToken': getCookie('csrftoken') },
     body: new FormData(form),
 });
-const result = await response.json();
+const result = await response.json().catch(() => ({}));  // {} if the server didn't send JSON, like a 500 error page
 ```
 
 One gotcha: Django only creates the `csrftoken` cookie once a page with `{% csrf_token %}` has been shown. If your page has no form at all (just buttons that use fetch), add `@ensure_csrf_cookie` to the view that shows the page:
