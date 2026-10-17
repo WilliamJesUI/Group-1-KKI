@@ -154,6 +154,8 @@ Tailwind classes without a prefix apply to phones. Add `sm:` for 640px and up, a
 <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 ```
 
+Long links and words that people type (like a pasted Google Form link) wrap onto the next line by themselves, because `<main>` in `base.html` has `wrap-anywhere`, so they won't make your page scroll sideways on a phone.
+
 ## 8. Icons and images
 
 Icons from the Figma icon set (Lucide) are in `static/img/icons/`:
