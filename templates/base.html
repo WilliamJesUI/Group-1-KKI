@@ -59,6 +59,9 @@ More info and examples: docs/TEAM-GUIDE.md
             }
         }
     </style>
+
+    {# getCookie() for AJAX requests. Loaded here in <head> so it's ready before any script on the page. #}
+    <script src="{% static 'js/csrf.js' %}"></script>
     {% block meta %} {% endblock meta %}
 </head>
 

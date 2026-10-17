@@ -179,3 +179,28 @@ Photos are from Pexels only. Add the credit to docs/CREDITS.md (photographer nam
 ## 10. Static files and deployment
 
 Shared CSS, JS and images go in the `static/` folder at the project root. WhiteNoise is set up, so they also work on PWS. After you add new static files, PWS picks them up when it runs `collectstatic` during deploy.
+
+## 11. Sending data with fetch (AJAX)
+
+Django blocks POST requests that don't carry a CSRF token. For normal forms, `{% csrf_token %}` handles it. For `fetch`, use `getCookie()`. It's in `static/js/csrf.js` and `base.html` already loads it on every page, so don't copy it into your own JS files.
+
+```js
+const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+    body: new FormData(form),
+});
+const result = await response.json();
+```
+
+One gotcha: Django only creates the `csrftoken` cookie once a page with `{% csrf_token %}` has been shown. If your page has no form at all (just buttons that use fetch), add `@ensure_csrf_cookie` to the view that shows the page:
+
+```python
+from django.views.decorators.csrf import ensure_csrf_cookie
+
+@ensure_csrf_cookie
+def show_questions(request):
+    ...
+```
+
+For a full example of a fetch view and its JS, see `create_event_ajax` in `events/views.py` and `static/js/event_form.js`.

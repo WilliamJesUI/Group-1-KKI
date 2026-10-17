@@ -1,22 +1,6 @@
 // "Host an event" pop-up: sends the form with fetch and shows errors without reloading the page
 const hostEventForm = document.getElementById('host-event-form');
 
-// Read a cookie value, used to get the CSRF token
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
 // Remove the red borders and messages from the last attempt
 function clearErrors() {
     hostEventForm.querySelectorAll('[data-error-for]').forEach((message) => {
@@ -52,7 +36,7 @@ async function publishEvent(event) {
     try {
         const response = await fetch(hostEventForm.action, {
             method: 'POST',
-            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }, // getCookie comes from static/js/csrf.js
             body: new FormData(hostEventForm),
         });
         const result = await response.json().catch(() => ({}));
