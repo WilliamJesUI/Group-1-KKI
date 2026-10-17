@@ -1,7 +1,10 @@
 from datetime import datetime, timedelta
 from django.contrib.auth.models import User
+from django.contrib.messages import constants as message_constants
+from django.contrib.messages.storage.base import Message
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
+from django.template.loader import render_to_string
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
@@ -997,3 +1000,24 @@ class PartialCardsTest(TestCase):
         response = self.client.get(self.list_url)
         self.assertContains(response, "js/event_filters.js")
         self.assertContains(response, 'id="event-filter-pills"')
+
+
+class ToastTest(TestCase):
+    def test_toast_area_and_script_on_page(self):
+        response = self.client.get(reverse("events:show_events"))
+        self.assertContains(response, 'id="toast-area" aria-live="polite"')
+        self.assertContains(response, "js/toast.js")
+
+    def test_messages_become_escaped_data_attributes(self):
+        messages = [
+            Message(message_constants.SUCCESS, 'Seed "Swap" <b>saved</b>'),
+            Message(message_constants.ERROR, "Something went wrong"),
+        ]
+        html = render_to_string("base.html", {"messages": messages})
+        # Django escapes the text, so quotes and tags can't break out of the attribute
+        self.assertIn('data-toast-message="Seed &quot;Swap&quot; &lt;b&gt;saved&lt;/b&gt;" data-toast-type="success"', html)
+        self.assertIn('data-toast-message="Something went wrong" data-toast-type="error"', html)
+
+    def test_no_messages_no_toasts(self):
+        response = self.client.get(reverse("events:show_events"))
+        self.assertNotContains(response, "data-toast-message")
