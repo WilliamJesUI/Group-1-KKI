@@ -199,6 +199,19 @@ if (hostEventForm) {
     hostEventForm.addEventListener('submit', publishEvent);
     setUpCoverBox();
 
+    // A photo dropped anywhere outside the drop box would make the browser open it in this tab,
+    // and everything typed in the form would be gone. So while the form is on the page, refuse those drops.
+    // Only drags with files are stopped (dragging text into a field still works), and the drop box
+    // already handled its own drops (defaultPrevented), so those are left alone.
+    ['dragover', 'drop'].forEach((type) => {
+        window.addEventListener(type, (event) => {
+            if (!event.defaultPrevented && event.dataTransfer && event.dataTransfer.types.includes('Files')) {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'none'; // shows the "can't drop here" cursor
+            }
+        });
+    });
+
     // Pressing Back after saving can bring this page back exactly as it was left (persisted = true),
     // with the button still disabled. Turn it back on so the form works again.
     window.addEventListener('pageshow', (event) => {
