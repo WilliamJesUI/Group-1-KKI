@@ -152,7 +152,10 @@ More info and examples: docs/TEAM-GUIDE.md
     {% endwith %}
 
     {# Your page goes here. The container and side padding are already set, so you don't need your own. #}
-    <main class="mx-auto max-w-[1180px] px-4 py-8 sm:px-6">
+    {# wrap-anywhere lets very long words and links (like a pasted Google Form link) wrap onto the next line, #}
+    {# so they can't make the whole page scroll sideways on a phone. It also works inside flex rows, where #}
+    {# wrap-break-word doesn't (there the text would still stick out). #}
+    <main class="mx-auto max-w-[1180px] px-4 py-8 wrap-anywhere sm:px-6">
         {% block content %} {% endblock content %}
     </main>
 
