@@ -4,7 +4,8 @@ Shared layout for every page. Start your template with {% extends 'base.html' %}
   title   = text in the browser tab, e.g. "Events - Grow Your Garden"
   meta    = extra stuff for <head> (rarely needed)
   content = your page, already inside the centered 1180px container
-The navbar is in header.html, which this file includes.
+  header  = the navbar (header.html). Leave it empty to hide the navbar, like on the Log in and Register pages:
+            {% block header %}{% endblock header %}
 More info and examples: docs/TEAM-GUIDE.md
 {% endcomment %}
 <!DOCTYPE html>
@@ -99,7 +100,8 @@ More info and examples: docs/TEAM-GUIDE.md
     <span hidden data-toast-message="{{ message }}" data-toast-type="{% if message.level_tag == 'error' %}error{% else %}success{% endif %}"></span>
     {% endfor %}
 
-    {% include "header.html" %}
+    {# The navbar (header.html). A page without a navbar, like Log in or Register, can empty this block. #}
+    {% block header %}{% include "header.html" %}{% endblock header %}
 
     {# Your page goes here. The container and side padding are already set, so you don't need your own. #}
     {# wrap-anywhere lets very long words and links (like a pasted Google Form link) wrap onto the next line, #}

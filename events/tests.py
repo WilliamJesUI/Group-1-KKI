@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AnonymousUser, User
 from django.contrib.messages import constants as message_constants
 from django.contrib.messages.storage.base import Message
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
+from django.template import engines
 from django.template.loader import render_to_string
-from django.test import Client, TestCase
+from django.test import Client, RequestFactory, TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
@@ -1277,3 +1278,21 @@ class CardAvatarTest(TestCase):
         response = self.client.get(self.list_url)
         self.assertContains(response, ".card-avatar {")
         self.assertContains(response, ".card-avatar-more {")
+
+
+class HideNavbarTest(TestCase):
+    def test_empty_header_block_hides_the_navbar(self):
+        # Like a Log in page: it extends base.html but leaves the header block empty
+        page = engines["django"].from_string(
+            '{% extends "base.html" %}'
+            "{% block header %}{% endblock header %}"
+            "{% block content %}<h1>Log in</h1>{% endblock content %}"
+        )
+        request = RequestFactory().get("/")
+        request.user = AnonymousUser()
+        html = page.render({}, request)
+        # The ids navbar.js looks for are gone, but the page itself and the toasts still work
+        self.assertNotIn('id="nav-toggle"', html)
+        self.assertNotIn('id="nav-menu"', html)
+        self.assertIn("<h1>Log in</h1>", html)
+        self.assertIn('id="toast-area"', html)
