@@ -25,7 +25,7 @@ The blocks you can fill:
 | `meta` | Extra things for `<head>`. You probably won't need it. |
 | `content` | Your page. It's already inside a centered 1180px container with side padding, so don't add your own. |
 
-Tip: put your templates in `yourapp/templates/` (like `events/templates/event_list.html`). Template names are shared across all apps, so give them names that won't clash. `event_list.html` is fine, `list.html` could clash with someone else's.
+Tip: put your templates in `yourapp/templates/` (like `events/templates/event_list.html`). Template names are shared across all apps, so give them names that won't clash. `event_list.html` is fine, `list.html` could clash with someone else's. Also, `base.html` and `header.html` in the root `templates/` folder are taken, and those always win: if you make your own `header.html` (say for the Figma Page Header), Django quietly gives you the navbar instead. Call it something like `community_header.html`.
 
 ## 2. Get your navbar tab highlighted
 
@@ -56,7 +56,7 @@ That's it. Every page in your app now highlights your tab, and your views don't 
 
 ## 3. Link your navbar tab
 
-Right now most tabs link to `#`. When your page exists, open `templates/base.html`, find your tab inside `<nav>` and swap `#` for your URL:
+Right now most tabs link to `#`. When your page exists, open `templates/header.html`, find your tab inside `<nav>` and swap `#` for your URL:
 
 ```html
 <a href="{% url 'community:show_questions' %}" class="nav-tab {% if app == 'community' %}nav-tab-active{% endif %}">Community</a>
@@ -64,7 +64,7 @@ Right now most tabs link to `#`. When your page exists, open `templates/base.htm
 
 Only do this once your URL actually exists. A `{% url %}` that points to a name that doesn't exist breaks every page on the site.
 
-Sarah: the **Log in** and **Register** buttons in the navbar also link to `#` for now. Swap them for your auth URLs when they're ready (and a Log out link next to the username would be nice).
+Sarah: the **Log in** and **Register** buttons in the navbar also link to `#` for now. They're in `templates/header.html` too, right after the `<nav>`. Swap them for your auth URLs when they're ready (and a Log out link next to the username would be nice).
 
 The navbar avatar shows the first letter of the user's first_name, or of their username if first_name is empty.
 
