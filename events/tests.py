@@ -50,6 +50,11 @@ class EventListTest(TestCase):
         response = self.client.get(reverse("events:show_events"))
         self.assertContains(response, f'href="{reverse("events:show_events")}" class="nav-tab nav-tab-active">Events')
 
+    def test_navbar_comes_from_header_html(self):
+        response = self.client.get(reverse("events:show_events"))
+        self.assertTemplateUsed(response, "header.html")
+        self.assertContains(response, 'id="nav-toggle"', count=1)
+
     def test_navbar_avatar_uses_first_name(self):
         User.objects.create_user(username="u27", first_name="Dewi", password="tomatoes123")
         self.client.login(username="u27", password="tomatoes123")
