@@ -32,6 +32,11 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "william-jesiel-growyourgarden.pws.cs.ui.ac.id"]
 
+# PWS serves the site over https but hands requests to Django as plain http, so Django needs to be told
+# this https address is ours. Without it every POST (forms and fetch) gets a 403 on PWS.
+# If the PWS address changes, update it here and in ALLOWED_HOSTS.
+CSRF_TRUSTED_ORIGINS = ["https://william-jesiel-growyourgarden.pws.cs.ui.ac.id"]
+
 PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 
 
@@ -45,6 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'garden',
+    'events',
 ]
 
 MIDDLEWARE = [
@@ -129,7 +135,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Jakarta'
 
 USE_I18N = True
 

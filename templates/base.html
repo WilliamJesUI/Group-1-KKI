@@ -1,4 +1,13 @@
 {% load static %}
+{% comment %}
+Shared layout for every page. Start your template with {% extends 'base.html' %} and fill these blocks:
+  title   = text in the browser tab, e.g. "Events - Grow Your Garden"
+  meta    = extra stuff for <head> (rarely needed)
+  content = your page, already inside the centered 1180px container
+  header  = the navbar (header.html). Leave it empty to hide the navbar, like on the Log in and Register pages:
+            {% block header %}{% endblock header %}
+More info and examples: docs/TEAM-GUIDE.md
+{% endcomment %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -42,7 +51,7 @@
             --color-gold: #928935;
         }
 
-        /* Navbar tabs, so the same classes are not repeated six times */
+        /* Navbar tabs, so the same classes are not repeated six times. Only used in the navbar (header.html). */
         @layer components {
             .nav-tab {
                 @apply rounded-full px-3 py-3 lg:py-2 text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-ink hover:bg-brand-soft-hover;
@@ -50,61 +59,59 @@
             .nav-tab-active {
                 @apply bg-brand text-white hover:bg-brand;
             }
+
+            /* Toasts (Figma "Toast"), made by static/js/toast.js: a bold title and an optional message under it.
+               Green = success, .toast-error = pink. Taps go through toasts to the page (pointer-events-none on #toast-area). */
+            .toast {
+                @apply flex flex-col gap-1 rounded-2xl border-2 border-brand bg-brand-tint px-4 py-3 text-ink;
+            }
+            .toast-error {
+                @apply border-danger bg-pink;
+            }
+            .toast-title {
+                @apply text-[15px] font-extrabold leading-[1.2];
+            }
+            .toast-message {
+                @apply text-xs leading-[1.4] text-ink-soft;
+            }
         }
     </style>
+
+    {# getCookie() for AJAX requests. Loaded here in <head> so it's ready before any script on the page. #}
+    <script src="{% static 'js/csrf.js' %}"></script>
+    {# showToast("Title", "Message") for pop-up notifications. Also in <head>, so your scripts can use it anywhere. #}
+    <script src="{% static 'js/toast.js' %}"></script>
     {% block meta %} {% endblock meta %}
 </head>
 
 <body class="min-h-screen bg-page font-sans text-ink">
-    {% with app=request.resolver_match.app_name %}
-    <header class="border-b-2 border-ink bg-surface">
-        <div class="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-x-4 px-4 py-4 sm:px-6 lg:h-[86px] lg:flex-nowrap lg:py-0">
-            <a href="/" class="flex items-center gap-3">
-                <img src="{% static 'img/logo-tomato.png' %}" alt="Grow Your Garden logo" class="size-12">
-                <span class="flex flex-col">
-                    <span class="font-display text-xl leading-[1.3]">Grow Your</span>
-                    <span class="text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-brand">Garden</span>
-                </span>
-            </a>
+    {% comment %}
+    Toasts appear in this box, bottom-right (it's "fixed", so where it sits in the HTML doesn't change where you see it).
+    It's at the top of the page so showToast() also works from a script inside your content block.
+    aria-live="polite" makes screen readers read each new toast out. pointer-events-none lets taps go through to the page.
+    {% endcomment %}
+    <div id="toast-area" aria-live="polite" class="pointer-events-none fixed right-4 bottom-4 z-50 flex w-[320px] max-w-[calc(100%-2rem)] flex-col gap-3"></div>
+    {% comment %}
+    Django messages from your views. Put the title and the message on two lines with \n:
+      messages.success(request, "Event published\nYou can find it on the Events page.")
+    toast.js splits it at the first line break. One line is fine too, then it's just a title.
+    {% endcomment %}
+    {% for message in messages %}
+    <span hidden data-toast-message="{{ message }}" data-toast-type="{% if message.level_tag == 'error' %}error{% else %}success{% endif %}"></span>
+    {% endfor %}
 
-            <button id="nav-toggle" type="button" class="group rounded-full p-2 hover:bg-brand-tint lg:hidden" aria-label="Open menu" aria-expanded="false" aria-controls="nav-menu">
-                <img src="{% static 'img/icons/menu.svg' %}" alt="" width="24" height="24" class="group-aria-expanded:hidden">
-                <img src="{% static 'img/icons/x.svg' %}" alt="" width="24" height="24" class="hidden group-aria-expanded:block">
-            </button>
+    {# The navbar (header.html). A page without a navbar, like Log in or Register, can empty this block. #}
+    {% block header %}{% include "header.html" %}{% endblock header %}
 
-            <div id="nav-menu" class="invisible flex max-h-0 w-full flex-col overflow-hidden opacity-0 transition-all duration-250 ease-out motion-reduce:transition-opacity data-open:visible data-open:max-h-[40rem] data-open:opacity-100 lg:visible lg:max-h-none lg:w-auto lg:flex-1 lg:flex-row lg:items-center lg:justify-between lg:overflow-visible lg:pl-10 lg:opacity-100 lg:transition-none">
-                <nav class="mt-4 flex flex-col gap-1 border-t border-line pt-4 lg:mt-0 lg:flex-row lg:rounded-full lg:border-2 lg:border-ink lg:bg-brand-soft lg:px-2 lg:py-1">
-                    <a href="#" class="nav-tab {% if app == 'garden' %}nav-tab-active{% endif %}">Garden</a>
-                    <a href="#" class="nav-tab {% if app == 'events' %}nav-tab-active{% endif %}">Events</a>
-                    <a href="#" class="nav-tab {% if app == 'encyclopedia' %}nav-tab-active{% endif %}">Encyclopedia</a>
-                    <a href="#" class="nav-tab {% if app == 'community' %}nav-tab-active{% endif %}">Community</a>
-                    <a href="#" class="nav-tab {% if app == 'achievements' %}nav-tab-active{% endif %}">Achievements</a>
-                    <a href="#" class="nav-tab {% if app == 'profile' %}nav-tab-active{% endif %}">Profile</a>
-                </nav>
-
-                {% if user.is_authenticated %}
-                <div class="mt-4 flex items-center gap-3 border-t border-line pt-4 lg:mt-0 lg:border-0 lg:pt-0">
-                    <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink bg-brand-soft font-extrabold">{{ user.username|first|upper }}</span>
-                    <span class="flex flex-col">
-                        <span class="text-[13px] font-extrabold leading-tight">{{ user.first_name|default:user.username }}</span>
-                        <span class="text-xs text-ink-soft">@{{ user.username }}</span>
-                    </span>
-                </div>
-                {% else %}
-                <div class="mt-4 flex items-center gap-3 border-t border-line pt-4 lg:mt-0 lg:gap-2 lg:border-0 lg:pt-0">
-                    <a href="#" class="flex-1 rounded-full border-2 border-ink bg-surface px-4 py-2 text-center text-[13px] font-extrabold hover:bg-brand-tint lg:flex-none">Log in</a>
-                    <a href="#" class="flex-1 rounded-full border-2 border-ink bg-brand px-4 py-2 text-center text-[13px] font-extrabold text-white hover:bg-brand-hover lg:flex-none">Register</a>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </header>
-    {% endwith %}
-
-    <main class="mx-auto max-w-[1180px] px-4 py-8 sm:px-6">
+    {# Your page goes here. The container and side padding are already set, so you don't need your own. #}
+    {# wrap-anywhere lets very long words and links (like a pasted Google Form link) wrap onto the next line, #}
+    {# so they can't make the whole page scroll sideways on a phone. It also works inside flex rows, where #}
+    {# wrap-break-word doesn't (there the text would still stick out). #}
+    <main class="mx-auto max-w-[1180px] px-4 py-8 wrap-anywhere sm:px-6">
         {% block content %} {% endblock content %}
     </main>
 
+    {# Opens and closes the navbar menu on phones #}
     <script src="{% static 'js/navbar.js' %}"></script>
 </body>
 </html>

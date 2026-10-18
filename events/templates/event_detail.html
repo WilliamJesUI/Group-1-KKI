@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ event.name }} - Grow Your Garden{% endblock title %}
+
+{% block content %}
+<div class="flex flex-col gap-7">
+    <a href="{% url 'events:show_events' %}" class="flex w-fit items-center gap-1.5 text-[13px] font-extrabold text-brand hover:underline">
+        <img src="{% static 'img/icons/chevron-right.svg' %}" alt="" width="18" height="18" class="rotate-180">
+        Back to events
+    </a>
+
+    <div class="relative h-[220px] overflow-hidden rounded-[20px] border-2 border-ink bg-brand-tint sm:h-[380px]">
+        {% if event.cover_src %}
+        <img src="{{ event.cover_src }}" alt="Cover photo for {{ event.name }}" class="size-full object-cover">
+        {% else %}
+        <div class="flex size-full items-center justify-center">
+            <img src="{% static 'img/icons/image.svg' %}" alt="" width="24" height="24" class="opacity-40">
+        </div>
+        {% endif %}
+        <div class="absolute bottom-6 left-[22px] flex flex-col items-center rounded-[14px] border-2 border-ink bg-surface px-4 py-2.5 leading-[1.2]">
+            <span class="font-display text-[32px]">{{ event.start_time|date:"d" }}</span>
+            <span class="text-[11px] font-black uppercase tracking-[0.08em] text-brand">{{ event.start_time|date:"M" }}</span>
+        </div>
+    </div>
+
+    <div class="flex flex-col gap-8 lg:flex-row lg:items-start">
+        <div class="flex min-w-0 flex-1 flex-col gap-4">
+            <h1 class="font-display text-[32px] leading-[1.1] sm:text-[40px]">{{ event.name }}</h1>
+            <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-soft">
+                <p class="flex items-center gap-2">
+                    <img src="{% static 'img/icons/calendar.svg' %}" alt="" width="18" height="18">
+                    {{ event.start_time|date:"l, j F Y" }}
+                </p>
+                <p class="flex items-center gap-2">
+                    <img src="{% static 'img/icons/clock.svg' %}" alt="" width="18" height="18">
+                    {{ event.start_time|time:"H:i" }}{% if event.end_time and event.end_time != event.start_time %}-{{ event.end_time|time:"H:i" }}{% endif %} WIB
+                </p>
+                <p class="flex items-center gap-2">
+                    <img src="{% static 'img/icons/map-pin.svg' %}" alt="" width="18" height="18">
+                    {{ event.location }}
+                </p>
+            </div>
+
+            <div class="h-px bg-line"></div>
+
+            <h2 class="font-display text-2xl leading-[1.25]">About this event</h2>
+            <p class="text-ink-soft">{{ event.description|linebreaksbr }}</p>
+
+            {% if bring_list %}
+            <h2 class="font-display text-xl leading-[1.3]">What to bring</h2>
+            <ul class="flex flex-col gap-4">
+                {% for item in bring_list %}
+                <li class="flex items-center gap-2.5 text-sm">
+                    <img src="{% static 'img/icons/check.svg' %}" alt="" width="18" height="18">
+                    {{ item }}
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            <h2 class="font-display text-xl leading-[1.3]">Hosted by</h2>
+            <div class="flex items-center gap-3">
+                <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink bg-brand-soft text-xs font-bold">{{ host_initials }}</span>
+                <span class="flex flex-col gap-0.5">
+                    <span class="text-[13px] font-extrabold leading-tight">{{ event.host.get_full_name|default:event.host.username }}</span>
+                    <span class="text-xs text-ink-soft">Hosted {{ host_event_count }} event{{ host_event_count|pluralize }}</span>
+                </span>
+            </div>
+        </div>
+
+        <aside class="flex w-full flex-col gap-4 lg:w-[368px] lg:shrink-0">
+            <div class="flex flex-col gap-3.5 rounded-2xl border-2 border-ink bg-surface p-6">
+                {# data-going-count and data-attendee-avatars let event_rsvp.js update these after an RSVP #}
+                <p class="font-display text-2xl leading-[1.25]"><span data-going-count="{{ event.id }}">{{ going_count }}</span> going</p>
+                <div data-attendee-avatars="{{ event.id }}" class="flex{% if not attendee_initials %} hidden{% endif %}">
+                    {% for initials in attendee_initials %}
+                    <span class="-mr-2 flex size-10 items-center justify-center rounded-full border-2 border-ink text-xs font-bold {% cycle 'bg-lilac' 'bg-pink' 'bg-butter' 'bg-brand-soft' %}">{{ initials }}</span>
+                    {% endfor %}
+                    {% if more_going > 0 %}
+                    <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink bg-lilac text-xs font-bold">+{{ more_going }}</span>
+                    {% endif %}
+                </div>
+                <p class="text-xs text-ink-soft">Open to everyone</p>
+                {% include "event_rsvp_button.html" with event=event going=is_going %}
+            </div>
+
+            {% if is_host %}
+            <div class="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-brand-tint p-6">
+                <p class="text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-brand">You're the host</p>
+                <p class="text-xs text-ink-soft">Only you see this box.</p>
+                <div class="flex flex-wrap gap-2.5">
+                    <button type="button" popovertarget="host-event-modal" class="rounded-full border-2 border-ink bg-surface px-6 py-3 text-[15px] font-extrabold hover:bg-brand-tint transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Edit event</button>
+                    <button type="button" popovertarget="delete-event-modal" class="rounded-full border-2 border-ink bg-danger px-6 py-3 text-[15px] font-extrabold text-white hover:bg-danger-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Delete event</button>
+                </div>
+            </div>
+            {% endif %}
+        </aside>
+    </div>
+</div>
+
+{% if is_host %}
+{% url 'events:edit_event_ajax' event.id as edit_url %}
+{% include "event_form_modal.html" with modal_title="Edit event" submit_label="Save changes" form_action=edit_url %}
+{% include "event_delete_modal.html" %}
+{% endif %}
+<script src="{% static 'js/event_rsvp.js' %}"></script>
+{% endblock content %}

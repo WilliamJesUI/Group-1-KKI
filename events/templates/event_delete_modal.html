@@ -1,0 +1,27 @@
+{# "Delete event" confirm pop-up from Figma. Opened by the button with popovertarget="delete-event-modal". #}
+{% comment %}
+Open/close animation from the Figma Motion table: fade in + rise 8px, backdrop dims to 50%, 250ms (ease-out opening, ease-in closing).
+  open:          = the look while the pop-up is open
+  starting:open: = the look it starts from when it opens, so it can fade/rise into the open look
+  transition-discrete = also animate the closing, before the browser hides it
+  motion-safe:   = the 8px rise only happens when reduced motion is off (Figma: fades only)
+Browsers that don't know starting: or transition-discrete simply skip the animation. The pop-up still opens and closes normally.
+{% endcomment %}
+<div id="delete-event-modal"
+     popover="auto"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="delete-event-title"
+     class="m-auto w-[420px] max-w-[calc(100%-2rem)] rounded-[20px] border-2 border-ink bg-surface p-6 text-ink opacity-0 transition-all transition-discrete duration-250 ease-in open:opacity-100 open:ease-out starting:open:opacity-0 motion-safe:translate-y-2 motion-safe:open:translate-y-0 motion-safe:starting:open:translate-y-2 backdrop:bg-ink/50 backdrop:opacity-0 backdrop:transition-all backdrop:transition-discrete backdrop:duration-250 backdrop:ease-in open:backdrop:opacity-100 open:backdrop:ease-out starting:open:backdrop:opacity-0">
+    <div class="flex flex-col gap-4">
+        <h2 id="delete-event-title" class="font-display text-2xl leading-[1.25]">Delete "{{ event.name }}"?</h2>
+        <p class="text-sm text-ink-soft">This can't be undone. Everyone who RSVP'd will lose it from their list.</p>
+        <div class="flex justify-end gap-3">
+            <button type="button" popovertarget="delete-event-modal" popovertargetaction="hide" class="rounded-full border-2 border-ink bg-surface px-6 py-3 text-[15px] font-extrabold hover:bg-brand-tint transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Cancel</button>
+            <form method="post" action="{% url 'events:delete_event' event.id %}">
+                {% csrf_token %}
+                <button type="submit" class="rounded-full border-2 border-ink bg-danger px-6 py-3 text-[15px] font-extrabold text-white hover:bg-danger-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Yes, delete</button>
+            </form>
+        </div>
+    </div>
+</div>

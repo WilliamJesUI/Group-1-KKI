@@ -1,0 +1,31 @@
+{% load static %}
+{% comment %}
+RSVP button (Figma "RSVP Toggle"), or a label when RSVP isn't possible.
+Include with: event = the event, going = True if the logged-in user already RSVP'd.
+static/js/event_rsvp.js makes the button work.
+{% endcomment %}
+{% with status=event.status %}
+<div data-rsvp class="flex flex-col items-start gap-1">
+    {% if user.is_authenticated and event.host_id == user.id %}
+    <span class="rounded-full border-2 border-ink bg-brand-tint px-4 py-2 text-[13px] font-extrabold text-brand">You're hosting</span>
+    {% elif status == "happening" %}
+    <span class="rounded-full border-2 border-ink bg-butter px-4 py-2 text-[13px] font-extrabold">Happening now</span>
+    {% elif status == "ended" %}
+    <span class="rounded-full border-2 border-line bg-page px-4 py-2 text-[13px] font-extrabold text-ink-soft">Ended</span>
+    {% elif user.is_authenticated %}
+    {# aria-pressed="true" means "I'm going". The classes below switch the look between RSVP and Going. #}
+    <button type="button"
+            data-rsvp-url="{% url 'events:rsvp_event_ajax' event.id %}"
+            data-event-id="{{ event.id }}"
+            aria-pressed="{% if going %}true{% else %}false{% endif %}"
+            class="group flex items-center gap-1 rounded-full border-2 border-ink bg-ink px-4 py-2 text-[13px] font-extrabold text-white hover:bg-ink-hover disabled:opacity-40 aria-pressed:bg-brand-soft aria-pressed:text-brand aria-pressed:hover:bg-brand-soft-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">
+        <img src="{% static 'img/icons/check.svg' %}" alt="" width="16" height="16" class="hidden group-aria-pressed:block">
+        <span class="group-aria-pressed:hidden">RSVP</span>
+        <span class="hidden group-aria-pressed:inline">Going</span>
+    </button>
+    {% else %}
+    <a href="#" class="rounded-full border-2 border-ink bg-ink px-4 py-2 text-[13px] font-extrabold text-white hover:bg-ink-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Log in to RSVP</a>
+    {% endif %}
+    <p data-rsvp-error class="hidden text-xs text-danger-text"></p>
+</div>
+{% endwith %}
