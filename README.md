@@ -57,4 +57,4 @@
 
 ## 6. Project Links
 *   **Figma Design:** [https://www.figma.com/design/Rgarm0NKaaezYTwWCWxCSb/Untitled?node-id=0-1&t=0N0NtdJeEtON4oHQ-1](https://www.figma.com/design/Rgarm0NKaaezYTwWCWxCSb/Untitled?node-id=0-1&t=0N0NtdJeEtON4oHQ-1)
-*   **PWS Deployment:** [pws link]
+*   **PWS Deployment:** [https://william-jesiel-growyourgarden.pws.cs.ui.ac.id](https://william-jesiel-growyourgarden.pws.cs.ui.ac.id)
