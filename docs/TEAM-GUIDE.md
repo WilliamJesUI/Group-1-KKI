@@ -24,6 +24,13 @@ The blocks you can fill:
 | `title` | Text in the browser tab. If you skip it, it says "Grow Your Garden". |
 | `meta` | Extra things for `<head>`. You probably won't need it. |
 | `content` | Your page. It's already inside a centered 1180px container with side padding, so don't add your own. |
+| `header` | The navbar. You only touch it to hide the navbar, like on the Log in and Register pages (see below). |
+
+To hide the navbar on a page, leave the `header` block empty:
+
+```html
+{% block header %}{% endblock header %}
+```
 
 Tip: put your templates in `yourapp/templates/` (like `events/templates/event_list.html`). Template names are shared across all apps, so give them names that won't clash. `event_list.html` is fine, `list.html` could clash with someone else's. Also, `base.html` and `header.html` in the root `templates/` folder are taken, and those always win: if you make your own `header.html` (say for the Figma Page Header), Django quietly gives you the navbar instead. Call it something like `community_header.html`.
 
