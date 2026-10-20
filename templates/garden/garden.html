@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Garden - Grow Your Garden{% endblock title %}
+
+{% block content %}
+<div class="pt-2 pb-6">
+    <h1 class="font-display text-[32px] leading-tight">Garden</h1>
+    <p class="mt-1.5 text-ink-soft">See what's growing in your neighborhood</p>
+</div>
+
+<div class="flex flex-col lg:flex-row gap-8">
+    <div class="flex-1 flex flex-col gap-6">
+        
+        {% if user.is_authenticated %}
+        <div class="rounded-2xl border-2 border-ink bg-surface p-4">
+            <form id="create-post-form" method="POST" action="{% url 'garden:create_post_ajax' %}">
+                {% csrf_token %}
+                <div class="flex items-start gap-3">
+                    <span class="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-brand-soft font-extrabold">{{ user.first_name|default:user.username|first|upper }}</span>
+                    <div class="flex-1">
+                        {{ form.caption }}
+                        <div class="mt-3 flex items-center justify-between border-t border-line pt-3">
+                            <div class="flex gap-4">
+                                <button type="button" class="toggle-extra-fields flex items-center gap-1.5 text-xs font-bold text-ink-soft hover:text-ink">
+                                    <img src="{% static 'img/icons/image.svg' %}" alt="" width="16" height="16">
+                                    Photo & Category
+                                </button>
+                            </div>
+                            <button type="submit" class="rounded-full border-2 border-ink bg-brand px-4 py-1.5 text-xs font-extrabold text-white hover:bg-brand-hover transition disabled:opacity-50">Post</button>
+                        </div>
+                        <div class="mt-2 hidden flex-col gap-2 border-t border-line pt-2" id="extra-fields">
+                            {{ form.category }}
+                            {{ form.plant_tag }}
+                            {{ form.image_url }}
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        {% else %}
+        <div class="rounded-2xl border-2 border-ink bg-surface p-6 text-center">
+            <p class="text-sm font-bold text-ink-soft"><a href="#" class="text-brand hover:underline">Log in</a> to share what's growing in your garden.</p>
+        </div>
+        {% endif %}
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
+            <div>
+                <h2 class="font-display text-2xl">Community garden</h2>
+                <span class="text-xs text-ink-soft">Latest from the community</span>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{% url 'garden:show_garden' %}" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition {% if not selected_category %}bg-brand-soft{% else %}bg-surface hover:bg-brand-tint{% endif %}">All plants</a>
+                <a href="?category=vegetables" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition {% if selected_category == 'vegetables' %}bg-brand-soft{% else %}bg-surface hover:bg-brand-tint{% endif %}">Vegetables</a>
+                <a href="?category=herbs" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition {% if selected_category == 'herbs' %}bg-brand-soft{% else %}bg-surface hover:bg-brand-tint{% endif %}">Herbs</a>
+                <a href="?category=flowers" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition {% if selected_category == 'flowers' %}bg-brand-soft{% else %}bg-surface hover:bg-brand-tint{% endif %}">Flowers</a>
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-6" id="post-feed">
+            {% for post in posts %}
+            <article class="rounded-2xl border-2 border-ink bg-surface p-4" id="post-{{ post.id }}">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink bg-lilac text-xs font-bold">{{ post.author.first_name|default:post.author.username|first|upper }}</span>
+                        <div>
+                            <p class="text-[13px] font-extrabold">{{ post.author.first_name|default:post.author.username }}</p>
+                            <p class="text-xs text-ink-soft">@{{ post.author.username }} · {{ post.created_at|timesince }} ago</p>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if post.caption %}<p class="text-sm mb-3 whitespace-pre-wrap">{{ post.caption }}</p>{% endif %}
+                
+                <div class="mb-3">
+                    <span class="inline-block rounded-md border border-ink/20 bg-brand-tint px-2 py-1 text-[10px] font-black uppercase tracking-wider text-brand">{{ post.get_category_display }}</span>
+                    {% if post.plant_tag %}
+                    <span class="inline-block rounded-md border border-ink/20 bg-page px-2 py-1 text-[10px] font-bold text-ink-soft ml-1">{{ post.plant_tag }}</span>
+                    {% endif %}
+                </div>
+                
+                {% if post.image_url %}
+                <div class="rounded-xl overflow-hidden border border-line mb-3">
+                    <img src="{{ post.image_url }}" alt="Garden photo" class="w-full max-h-[400px] object-cover">
+                </div>
+                {% endif %}
+                
+                <div class="flex items-center gap-4 text-sm mt-2">
+                    <button class="like-btn flex items-center gap-1.5 {% if post.is_liked %}text-danger{% else %}text-ink{% endif %}" data-url="{% url 'garden:toggle_like_ajax' post.id %}">
+                        <svg width="18" height="18" fill="{% if post.is_liked %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                        <span class="like-count font-bold">{{ post.likes.count }}</span>
+                    </button>
+                    <button class="flex items-center gap-1.5 text-ink-soft hover:text-ink">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        <span class="font-bold">{{ post.comments.count }}</span>
+                    </button>
+                </div>
+            </article>
+            {% empty %}
+            <div class="text-center py-10 border-2 border-dashed border-ink/20 rounded-2xl bg-surface">
+                <p class="text-ink-soft font-bold">No posts found in this category yet.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <aside class="w-full lg:w-[300px] flex flex-col gap-6 shrink-0">
+        <div class="rounded-2xl border-2 border-ink bg-surface p-5">
+            <h3 class="font-display text-xl mb-3">Plant of the week</h3>
+            
+            {% if plant_of_week %}
+                {% if plant_of_week.image_url %}
+                <div class="rounded-xl overflow-hidden border border-line mb-3 h-32">
+                    <img src="{{ plant_of_week.image_url }}" alt="{{ plant_of_week.name }}" class="w-full h-full object-cover">
+                </div>
+                {% endif %}
+                
+                {% if plant_of_week.badge_text %}
+                <span class="text-[10px] font-black uppercase tracking-wider text-brand mb-1 block">{{ plant_of_week.badge_text }}</span>
+                {% endif %}
+                
+                <h4 class="font-bold text-lg leading-tight mb-1">{{ plant_of_week.name }}</h4>
+                
+                {% if plant_of_week.scientific_name %}
+                <p class="text-xs text-ink-soft mb-3 italic">{{ plant_of_week.scientific_name }}</p>
+                {% endif %}
+                
+                {% if plant_of_week.description %}
+                <p class="text-xs text-ink-soft mb-4">{{ plant_of_week.description }}</p>
+                {% endif %}
+            {% else %}
+                <p class="text-xs text-ink-soft mb-4">No plant selected for this week yet.</p>
+            {% endif %}
+            
+            <button class="w-full rounded-full border-2 border-ink bg-brand-soft px-4 py-2 text-xs font-extrabold hover:bg-brand-soft-hover transition">View growing guide</button>
+        </div>
+
+        <div class="rounded-2xl border-2 border-ink bg-surface p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-display text-xl">Upcoming events</h3>
+                <a href="{% url 'events:show_events' %}" class="text-[10px] font-black uppercase tracking-wider text-ink-soft hover:text-ink">View all</a>
+            </div>
+            <div class="flex flex-col gap-3">
+                {% for event in upcoming_events %}
+                <a href="{% url 'events:show_event' event.id %}" class="flex items-center gap-3 border-b border-line pb-3 last:border-0 last:pb-0 group">
+                    <div class="flex flex-col items-center justify-center rounded-lg border border-ink bg-page px-2 py-1 shrink-0 group-hover:bg-brand-tint transition">
+                        <span class="font-display text-sm leading-none">{{ event.start_time|date:"d" }}</span>
+                        <span class="text-[9px] font-black uppercase tracking-wider text-brand">{{ event.start_time|date:"M" }}</span>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold leading-tight group-hover:underline">{{ event.name }}</p>
+                        <p class="text-[10px] text-ink-soft">{{ event.start_time|date:"D H:i" }}</p>
+                    </div>
+                </a>
+                {% empty %}
+                <p class="text-xs text-ink-soft">No upcoming events.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="rounded-2xl border-2 border-ink bg-brand-soft p-5">
+            <h3 class="flex items-center gap-2 text-sm font-extrabold mb-1">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                Today's garden tip
+            </h3>
+            <p class="text-xs text-ink-soft">Water the soil, not the leaves. Early morning is best.</p>
+        </div>
+    </aside>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script src="{% static 'js/garden.js' %}"></script>
+{% endblock %}
