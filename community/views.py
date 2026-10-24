@@ -39,10 +39,16 @@ def show_questions(request):
         return render(request, "question_cards.html", context)
     return render(request, "question_list.html", context)
 
-def show_question(request, question_id):
+def show_question_thread(request, question_id):
     question = Question.objects.all().get(id=question_id)
 
-    return HttpResponse(f"{question.title} {question.body}")
+    context = {
+        "question" : question,
+        "answer_list" : question.answers.all(),
+        "answer_form" : AnswerForm(),
+    }
+
+    return render(request, "question_thread.html", context)
 
 @require_POST
 def create_question_ajax(request):

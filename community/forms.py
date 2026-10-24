@@ -1,13 +1,22 @@
 from django import forms
-from .models import Question
+from .models import Question, Answer
 
 class QuestionForm(forms.ModelForm):
     class Meta:
         model = Question
         fields =    ["title", "body"]
         widgets = {
-            "title" : forms.TextInput(attrs={"placeholder": "e.g. Why are my tomato leaves curling?", 
+            "title" : forms.TextInput(attrs={"placeholder": "e.g. Why are my tomato leaves curling?", "autocomplete":"off",
                                        "class": "w-full rounded-full border-2 border-ink bg-white px-5 py-3",}),
             "body" : forms.Textarea(attrs={"rows" : 5, "placeholder" : "Describe what is happening to your plant...", 
                                            "class": "w-full rounded-[11px] border-2 border-ink bg-white px-5 py-3",}),
+        }
+
+class AnswerForm(forms.ModelForm):
+    class Meta:
+        model = Answer
+        fields = ["body"]
+        widgets = {
+            "body" : forms.Textarea(attrs={"rows" : 7, "placeholder" : "Share what worked for you...", 
+                                            "class": "w-full rounded-[11px] border-2 border-ink bg-white px-5 py-3",}),
         }
