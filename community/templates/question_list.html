@@ -52,7 +52,7 @@
             <h2 class="font-display text-[20px] leading-tight">Community so far</h2>
             <div class="grid grid-cols-2 gap-2 lg:grid-cols-2[1fr_1fr]">
                 <div class="px-4 py-4 bg-brand-tint rounded-[11px]">
-                    <p class="font-display text-[20px] leading-tight">67</p>
+                    <p class="font-display text-[20px] leading-tight">{{ question_list.count }}</p>
                     <p class="font-display text-[12px]">questions asked</p>
                 </div>
                 <div class="px-4 py-4 bg-brand-tint" rounded-[11px]>
@@ -71,21 +71,28 @@
     </aside>
 
     <div class="lg:col-start-1">
-        <div class="flex flex-wrap items-center gap-3">
-            <input type="search" placeholder="Search questions or plants…" class="min-w-0 flex-1 rounded-full border-2 border-ink bg-white px-5 py-3">
-            <a class="rounded-full border-2 border-ink bg-green-100 px-4 py-1.5 text-sm font-bold">Latest</a>
-            <a class="rounded-full border-2 border-ink bg-white px-4 py-1.5 text-sm font-bold">Popular</a>
-            <a class="rounded-full border-2 border-ink bg-white px-4 py-1.5 text-sm font-bold">Unanswered</a>
-        </div>
-
+        <form id="question-search-form" method="get">
+            <input type="hidden" name="filter" value="{{ selected_filter }}">
+            <div class="flex flex-wrap items-center gap-3">
+                <input id="question-search" name="q" type="search" placeholder="Search questions or plants…" class="min-w-0 flex-1 rounded-full border-2 border-ink bg-white px-5 py-3">
+                <div id="question-filter-pills" class="flex flex-wrap items-center gap-[7px]">
+                    {% for value, label in question_filters %}
+                    <a href="?filter={{ value }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}" data-filter="{{ value }}"
+                        {% if value == selected_filter %}aria-current="page"{% endif %}
+                        class="rounded-full border-2 border-ink bg-surface px-4 py-2 text-xs font-bold leading-[1.2] hover:bg-brand-tint aria-[current=page]:bg-brand-soft transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">{{ label }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </form> 
         <div id="question-cards" class="min-h-[392px] pt-[18px] transition-opacity aria-busy:opacity-50">
             {% include "question_cards.html" %}
         </div>
-    </div>
+    </div> 
+    {% include "question_form_modal.html" %}
 </div>
 
-
-{% include "question_form_modal.html" %}    
+  
 <script src="{% static 'js/csrf.js' %}"></script>
 <script src="{% static 'js/question_form.js' %}"></script>
+<script src="{% static 'js/question_filters.js' %}"></script>
 {% endblock content %}
