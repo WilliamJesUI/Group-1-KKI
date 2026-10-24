@@ -13,6 +13,9 @@ class Question(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return f"{self.title} {self.body} {self.created_at}"
+
 class Answer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="answers")
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="answers")
