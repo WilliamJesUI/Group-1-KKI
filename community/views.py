@@ -3,19 +3,28 @@ from django.http import HttpResponse, JsonResponse, Http404
 from django.urls import reverse
 from .forms import *
 from django.views.decorators.http import require_POST
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Exists, OuterRef
+
 
 # Create your views here.
 QUESTION_FILTERS = [("latest", "Latest"), ("popular", "Popular"), ("unanswered", "Unanswered")]
-SORTS = {
+ANSWER_FILTERS = [("most_helpful", "Most Helpful"), ("newest", "Newest")]
+
+QUESTION_SORTS = {
     "latest": ["-created_at"],
     "popular": ["-answer_count", "-created_at"],
     "unanswered": ["-created_at"],
 }
+ANSWER_SORTS = {
+    "most_helpful": ["-vote_count", "-created_at"],
+    "newest": ["-created_at"],
+}
+
+
 def show_questions(request):
     query = request.GET.get("q", "").strip()
     pill = request.GET.get("filter", "latest")
-    if pill not in SORTS:
+    if pill not in QUESTION_SORTS:
         pill = "latest"
 
     questions = (
@@ -25,7 +34,7 @@ def show_questions(request):
     )
     if pill == "unanswered":
         questions = questions.filter(answer_count=0)
-    questions = questions.order_by(*SORTS[pill])
+    questions = questions.order_by(*QUESTION_SORTS[pill])
 
     context = {
         "question_form": QuestionForm(),
@@ -40,14 +49,30 @@ def show_questions(request):
     return render(request, "question_list.html", context)
 
 def show_question_thread(request, question_id):
-    question = Question.objects.all().get(id=question_id)
+    question = get_object_or_404(Question, id=question_id)
+    pill = request.GET.get("filter", "most_helpful")
+    if pill not in ANSWER_SORTS:
+        pill = "most_helpful"
+
+    answers = (
+        question.answers
+        .select_related("author")
+        .prefetch_related("voters")
+        .annotate(vote_count=Count("voters"))
+        .order_by(*ANSWER_SORTS[pill])
+    )
 
     context = {
-        "question" : question,
-        "answer_list" : question.answers.all(),
-        "answer_form" : AnswerForm(),
+        "question": question,
+        "answer_list": answers,
+        "answer_form": AnswerForm(),
+        "answer_filters": ANSWER_FILTERS,
+        "selected_filter": pill,
+        "show_top": pill == "most_helpful",
     }
 
+    if request.GET.get("partial") == "1":
+        return render(request, "answer_cards.html", context)
     return render(request, "question_thread.html", context)
 
 @require_POST
@@ -72,9 +97,15 @@ def vote_question_ajax(request, question_id):
         question = Question.objects.all().get(id=question_id)
     except Question.DoesNotExist:
         return JsonResponse({"message": "Question not found."}, status=404)
-    
-    question.voters.add(request.user)
-    return JsonResponse({"message":"Voted successfully!", "score":str(question.voters.count()),}, status=201)
+
+    if question.voters.filter(id=request.user.id).exists():
+        question.voters.remove(request.user)
+        voted = False
+    else:
+        question.voters.add(request.user)
+        voted = True
+
+    return JsonResponse({"message":"Voted successfully!", "voted":voted,"score":str(question.voters.count()),}, status=201)
 
 @require_POST
 def create_answer_ajax(request, question_id):
@@ -102,12 +133,18 @@ def vote_answer_ajax(request, answer_id):
         return JsonResponse({"message": "Please log in to vote!"}, status=403)
 
     try:
-        answer = Answer.objects.all().get(id=answer_id)
+        answer = Answer.objects.get(id=answer_id)
     except Answer.DoesNotExist:
         return JsonResponse({"message": "Answer not found."}, status=404)
 
-    answer.voters.add(request.user)
-    return JsonResponse({"message":"Voted successfully!", "score":str(answer.voters.count()),}, status=201)
+    if answer.voters.filter(id=request.user.id).exists():
+        answer.voters.remove(request.user)
+        voted = False
+    else:
+        answer.voters.add(request.user)
+        voted = True
+
+    return JsonResponse({"voted": voted, "score": answer.voters.count()})
 
 @require_POST
 def unvote_answer_ajax(request, answer_id):

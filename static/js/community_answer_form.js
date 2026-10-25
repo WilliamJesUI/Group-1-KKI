@@ -25,6 +25,7 @@ async function createAnswer(event) {
         console.error('Error creating answer:', error);
     } finally {
         submitButton.disabled = false;
+        window.reloadAnswerCards();
     }
 }
 

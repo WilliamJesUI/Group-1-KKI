@@ -33,18 +33,36 @@
             <h2 class="font-display text-[20px] leading-tight">Related Questions</h2>
         </section>
     </aside>
-    <div>
-    {% if answer_list.count == 0 %}
-        <h2 class="font-display text-[24px] leading-tight mb-6">No Answers Yet!</h2>
-    {% else %}
-        <h2 class="font-display text-[24px] leading-tight mb-6">{{ question.answers.count }} answer{{ question.answer_count|pluralize }} </h2>
-        {% include 'answer_cards.html' %}
-    {% endif %}
 
-    {% include 'answer_form.html' %}
+    <div class="lg:col-start-1">
+        <div class="flex items-center justify-between gap-4">
+            {% with n=answer_list|length %}
+            <h2 data-answer-count-label data-empty-text="No Answers Yet!"
+                class="font-display text-[24px] leading-tight mb-6">
+                {% if n == 0 %}No Answers Yet!{% else %}{{ n }} answer{{ n|pluralize }}{% endif %}
+            </h2>
+            {% endwith %}
+            <form id="question-search-form" method="get" autocomplete="off" class="mb-6">
+                <input type="hidden" name="filter" value="{{ selected_filter }}">
+                <div class="flex flex-wrap items-center gap-3">
+                    <div id="answer-filter-pills" class="flex flex-wrap items-center gap-[7px]">
+                        {% for value, label in answer_filters %}
+                        <a href="?filter={{ value }}" data-filter="{{ value }}"
+                            {% if value == selected_filter %}aria-current="page"{% endif %}
+                            class="rounded-full border-2 border-ink bg-surface px-4 py-2 text-xs font-bold leading-[1.2] hover:bg-brand-tint aria-[current=page]:bg-brand-soft transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">{{ label }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div id="answer-cards">
+            {% include 'answer_cards.html' %}
+        </div>
+        {% include 'answer_form.html' %}
     </div>
 </div>
 
-<script src="{% static 'js/community_answer_form.js' %}"></script>
 <script src="{% static 'js/community_question_thread.js' %}"></script>
+<script src="{% static 'js/community_answer_form.js' %}"></script>
 {% endblock content %}
