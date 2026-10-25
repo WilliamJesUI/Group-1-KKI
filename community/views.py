@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, JsonResponse, Http404
 from django.urls import reverse
 from .forms import *
@@ -60,15 +60,68 @@ def create_question_ajax(request):
         question = form.save(commit=False)
         question.author = request.user
         save_question_from_form(question, form)
-        return JsonResponse({"url" : reverse("community:show_questions", args=[question.id])}, status=201)
+        return JsonResponse({"url" : reverse("community:show_questions")}, status=201)
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+
+
+@require_POST
+def vote_question_ajax(request, question_id):
+    if not request.user.is_authenticated:
+            return JsonResponse({"message": "Please log in to vote!"}, status=403)
+    try:
+        question = Question.objects.all().get(id=question_id)
+    except Question.DoesNotExist:
+        return JsonResponse({"message": "Question not found."}, status=404)
+    
+    question.voters.add(request.user)
+    return JsonResponse({"message":"Voted successfully!", "score":str(question.voters.count()),}, status=201)
+
+@require_POST
+def create_answer_ajax(request, question_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"message" : "Please log in to ask a question!"}, status=403)
+
+    try:
+        question = Question.objects.get(id=question_id)
+    except Question.DoesNotExist:
+        return JsonResponse({"message": "Question not found."}, status=404)
+
+    form = AnswerForm(request.POST)
+    if form.is_valid():
+        answer = form.save(commit=False)
+        answer.author = request.user
+        answer.question = question
+        save_answer_from_form(answer, form)
+        return JsonResponse({"url" : reverse("community:show_question_thread", args=[question.id])}, status=201)
+    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+
+
+@require_POST
+def vote_answer_ajax(request, answer_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"message": "Please log in to vote!"}, status=403)
+
+    try:
+        answer = Answer.objects.all().get(id=answer_id)
+    except Answer.DoesNotExist:
+        return JsonResponse({"message": "Answer not found."}, status=404)
+
+    answer.voters.add(request.user)
+    return JsonResponse({"message":"Voted successfully!", "score":str(answer.voters.count()),}, status=201)
+
+@require_POST
+def unvote_answer_ajax(request, answer_id):
+    if not request.user.is_authenticated:
+        return JsonResponse
 
 
 def save_question_from_form(question, form):
     question.title = form.cleaned_data["title"]
     question.body = form.cleaned_data["body"]
-    question.created_at = form.cleaned_data["created_at"]
-    question.updated_at = form.cleaned_data["updated_at"]
     question.save()
+
+def save_answer_from_form(answer, form):
+    answer.body = form.cleaned_data["body"]
+    answer.save()
         
     

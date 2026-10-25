@@ -37,11 +37,14 @@
     {% if answer_list.count == 0 %}
         <h2 class="font-display text-[24px] leading-tight mb-6">No Answers Yet!</h2>
     {% else %}
-        <h2 class="font-display text-[24px] leading-tight mb-6">{{ answer_list.count }} Answers </h2>
+        <h2 class="font-display text-[24px] leading-tight mb-6">{{ question.answers.count }} answer{{ question.answer_count|pluralize }} </h2>
+        {% include 'answer_cards.html' %}
     {% endif %}
 
     {% include 'answer_form.html' %}
     </div>
 </div>
 
+<script src="{% static 'js/community_answer_form.js' %}"></script>
+<script src="{% static 'js/community_question_thread.js' %}"></script>
 {% endblock content %}

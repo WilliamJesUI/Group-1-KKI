@@ -3,7 +3,7 @@
 
         <!-- vote box -->
         <div class="flex size-[64px] shrink-0 flex-col items-center justify-center rounded-xl border-2 border-ink bg-brand-tint text-center">
-          <span class="text-sm font-extrabold">{{ question.score|default:0 }}</span>
+          <span class="text-sm font-extrabold">{{ question.voters.count|default:0 }}</span>
           <span class="text-xs text-ink-soft">votes</span>
         </div>
 
@@ -22,14 +22,14 @@
           </h2>
 
           <!-- excerpt -->
-          <p class="mt-1 text-sm text-ink-soft">{{ question.body|truncatechars:110 }}</p>
+          <p class="mt-1 text-sm text-ink-soft">{{ question.body|truncatechars:70 }} </p>
 
           <!-- footer -->
           <div class="mt-3 flex items-center gap-3 text-sm font-semibold text-ink-soft">
             {% if question.plant %}
             <span class="rounded-md bg-brand-tint px-2.5 py-1 text-xs font-extrabold uppercase tracking-wide text-ink">{{ question.plant.name }}</span>
             {% endif %}
-            {% if question.answer.count > 0 %}
+            {% if question.answers.count > 0 %}
             <span>{{ question.answers.count }} answer{{ question.answer_count|pluralize }}</span>
             {% else %}
             <span>No answers yet...</span>

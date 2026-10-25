@@ -1,9 +1,9 @@
-<article class="relative h-full overflow-hidden rounded-2xl border-2 border-ink bg-surface transition-[border-color,box-shadow] duration-150 ease-out hover:border-brand hover:shadow-[4px_4px_0_0_var(--color-ink)] has-[h2_a:focus-visible]:border-brand has-[h2_a:focus-visible]:shadow-[4px_4px_0_0_var(--color-ink)]">
+<article data-answer-card class="relative h-full overflow-hidden rounded-2xl border-2 border-ink bg-surface transition-[border-color,box-shadow] duration-150 ease-out hover:border-brand hover:shadow-[4px_4px_0_0_var(--color-ink)] has-[h2_a:focus-visible]:border-brand has-[h2_a:focus-visible]:shadow-[4px_4px_0_0_var(--color-ink)]">
       <div class="flex gap-4 p-8">
 
         <!-- vote box -->
         <div class="flex size-[64px] shrink-0 flex-col items-center justify-center rounded-xl border-2 border-ink bg-brand-tint text-center">
-          <span class="text-sm font-extrabold">{{ question.score|default:0 }}</span>
+          <span data-count class="text-sm font-extrabold">{{ question.voters.count |default:0 }}</span>
           <span class="text-xs text-ink-soft">votes</span>
         </div>
 
@@ -23,10 +23,20 @@
 
           <!-- footer -->
           <div class="mt-3 flex items-center gap-3 text-sm font-semibold text-ink-soft">
+            <!-- helpful button -->
+            <button type="button"
+            data-vote-url="{% url 'community:vote_question_ajax' question.id %}"
+            aria-pressed="{% if question.user_has_voted %}true{% else %}false{% endif %}"
+            class="mt-3 inline-flex items-center gap-2 text-sm font-bold hover:text-brand aria-pressed:text-brand [&[aria-pressed=true]_svg]:fill-current">
+              <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/>
+              </svg>
+              Helpful
+            </button>
             {% if question.plant %}
             <span class="rounded-md bg-brand-tint px-2.5 py-1 text-xs font-extrabold uppercase tracking-wide text-ink">{{ question.plant.name }}</span>
             {% endif %}
-            {% if question.answer.count > 0 %}
+            {% if question.answers.count > 0 %}
             <span>{{ question.answers.count }} answer{{ question.answer_count|pluralize }}</span>
             {% else %}
             <span>No answers yet...</span>
