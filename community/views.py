@@ -3,21 +3,23 @@ from django.http import HttpResponse, JsonResponse, Http404
 from django.urls import reverse
 from .forms import *
 from django.views.decorators.http import require_POST
-from django.db.models import Count, Q, Exists, OuterRef
+from django.db.models import Count, Q, Exists, OuterRef, Count, Case, When, Value, IntegerField
 
 
 # Create your views here.
-QUESTION_FILTERS = [("latest", "Latest"), ("popular", "Popular"), ("unanswered", "Unanswered")]
-ANSWER_FILTERS = [("most_helpful", "Most Helpful"), ("newest", "Newest")]
+QUESTION_FILTERS = [("latest", "Latest"), ("popular", "Popular"), ("unanswered", "Unanswered"), ("mine", "Mine")]
+ANSWER_FILTERS = [("most_helpful", "Most Helpful"), ("newest", "Newest"), ("mine", "Mine")]
 
 QUESTION_SORTS = {
     "latest": ["-created_at"],
     "popular": ["-answer_count", "-created_at"],
     "unanswered": ["-created_at"],
+    "mine" : ["-created_at"],
 }
 ANSWER_SORTS = {
     "most_helpful": ["-vote_count", "-created_at"],
     "newest": ["-created_at"],
+    "mine": ["-created_at"],
 }
 
 
@@ -27,14 +29,32 @@ def show_questions(request):
     if pill not in QUESTION_SORTS:
         pill = "latest"
 
+    # "mine" needs a logged-in user, otherwise fall back to the default
+    if pill == "mine" and not request.user.is_authenticated:
+        pill = "latest"
+
     questions = (
         Question.objects
         .filter(title__icontains=query)
         .annotate(answer_count=Count("answers"))
     )
+
     if pill == "unanswered":
         questions = questions.filter(answer_count=0)
-    questions = questions.order_by(*QUESTION_SORTS[pill])
+
+    order = list(QUESTION_SORTS[pill])
+
+    if pill == "mine":
+        questions = questions.annotate(
+            mine_rank=Case(
+                When(author=request.user, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            )
+        )
+        order.insert(0, "mine_rank")   # my questions first, then newest
+
+    questions = questions.order_by(*order)
 
     context = {
         "question_form": QuestionForm(),
@@ -54,13 +74,29 @@ def show_question_thread(request, question_id):
     if pill not in ANSWER_SORTS:
         pill = "most_helpful"
 
+    if pill == "mine" and not request.user.is_authenticated:
+        pill = "most_helpful"
+
     answers = (
         question.answers
         .select_related("author")
         .prefetch_related("voters")
         .annotate(vote_count=Count("voters"))
-        .order_by(*ANSWER_SORTS[pill])
     )
+
+    order = list(ANSWER_SORTS[pill])
+
+    if pill == "mine":
+        answers = answers.annotate(
+            mine_rank=Case(
+                When(author=request.user, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField(),
+            )
+        )
+        order.insert(0, "mine_rank")   # my answers first, then the rest
+
+    answers = answers.order_by(*order)
 
     context = {
         "question": question,

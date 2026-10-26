@@ -47,9 +47,11 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <div id="answer-filter-pills" class="flex flex-wrap items-center gap-[7px]">
                         {% for value, label in answer_filters %}
+                        {% if value != "mine" or user.is_authenticated %}
                         <a href="?filter={{ value }}" data-filter="{{ value }}"
                             {% if value == selected_filter %}aria-current="page"{% endif %}
                             class="rounded-full border-2 border-ink bg-surface px-4 py-2 text-xs font-bold leading-[1.2] hover:bg-brand-tint aria-[current=page]:bg-brand-soft transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">{{ label }}</a>
+                        {% endif %}
                         {% endfor %}
                     </div>
                 </div>
