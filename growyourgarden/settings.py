@@ -155,3 +155,6 @@ WHITENOISE_USE_FINDERS = True
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Plant API token. Comes from .env on a laptop and from the PWS Environment tab online.
+TREFLE_TOKEN = os.getenv('TREFLE_TOKEN', '')
