@@ -4,6 +4,7 @@ from django.urls import reverse
 from .forms import *
 from django.views.decorators.http import require_POST
 from django.db.models import Count, Q, Exists, OuterRef, Count, Case, When, Value, IntegerField
+from django.contrib import messages 
 
 
 # Create your views here.
@@ -105,6 +106,7 @@ def show_question_thread(request, question_id):
         "answer_filters": ANSWER_FILTERS,
         "selected_filter": pill,
         "show_top": pill == "most_helpful",
+        "edit_form": QuestionForm(instance=question, auto_id="edit_%s"),
     }
 
     if request.GET.get("partial") == "1":
@@ -123,6 +125,61 @@ def create_question_ajax(request):
         save_question_from_form(question, form)
         return JsonResponse({"url" : reverse("community:show_questions")}, status=201)
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+
+@require_POST
+def update_question_ajax(request, question_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"message": "Please log in to edit."}, status=403)
+
+    try:
+        question = Question.objects.get(id=question_id)
+    except Question.DoesNotExist:
+        return JsonResponse({"message": "Question not found."}, status=404)
+
+    if question.author_id != request.user.id:
+        return JsonResponse({"message": "You can only edit your own questions."}, status=403)
+
+    if question.answers.exists():
+        return JsonResponse(
+            {"message": "This question already has answers, so it can't be edited."},
+            status=409,
+        )
+
+    form = QuestionForm(request.POST, instance=question)
+    if not form.is_valid():
+        first_error = next(iter(form.errors.values()))[0]
+        return JsonResponse(
+            {"message": first_error, "errors": form.errors.get_json_data()},
+            status=400,
+        )
+
+    form.save()
+    messages.success(request, "Question updated\nYour changes are saved.")
+    return JsonResponse({"url": reverse("community:show_question_thread", args=[question.id])})
+
+
+@require_POST
+def delete_question_ajax(request, question_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"message": "Please log in to delete."}, status=403)
+
+    try:
+        question = Question.objects.get(id=question_id)
+    except Question.DoesNotExist:
+        return JsonResponse({"message": "Question not found."}, status=404)
+
+    if question.author_id != request.user.id:
+        return JsonResponse({"message": "You can only delete your own questions."}, status=403)
+
+    if question.answers.count() > 0:
+        return JsonResponse(
+            {"message": "This question already has answers, so it can't be deleted."},
+            status=409,
+        )
+
+    question.delete()
+    messages.success(request, "Question deleted\nIt has been removed from the community.")
+    return JsonResponse({"url": reverse("community:show_questions")})
 
 
 @require_POST
@@ -162,6 +219,43 @@ def create_answer_ajax(request, question_id):
         return JsonResponse({"url" : reverse("community:show_question_thread", args=[question.id])}, status=201)
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
+
+@require_POST
+def update_answer_ajax(request, answer_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"message": "Please log in to edit."}, status=403)
+
+    try:
+        answer = Answer.objects.get(id=answer_id)
+    except Answer.DoesNotExist:
+        return JsonResponse({"message": "Answer not found."}, status=404)
+
+    if answer.author_id != request.user.id:
+        return JsonResponse({"message": "You can only edit your own answers."}, status=403)
+
+    form = AnswerForm(request.POST, instance=answer)
+    if not form.is_valid():
+        first_error = next(iter(form.errors.values()))[0]
+        return JsonResponse({"message": first_error, "errors": form.errors.get_json_data()}, status=400)
+
+    form.save()
+    return JsonResponse({"id": answer.id})
+
+@require_POST
+def delete_answer_ajax(request, answer_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"message": "Please log in to delete."}, status=403)
+
+    try:
+        answer = Answer.objects.get(id=answer_id)
+    except Answer.DoesNotExist:
+        return JsonResponse({"message": "Answer not found."}, status=404)
+
+    if answer.author_id != request.user.id:
+        return JsonResponse({"message": "You can only delete your own answers."}, status=403)
+
+    answer.delete()
+    return JsonResponse({"id": answer_id})
 
 @require_POST
 def vote_answer_ajax(request, answer_id):
