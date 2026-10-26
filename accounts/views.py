@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login
+from django.contrib.auth import login, logout
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
@@ -10,7 +10,7 @@ from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import FormView, TemplateView, UpdateView
 
-from accounts.forms import EditProfileForm, LoginForm, RegisterForm
+from accounts.forms import DeleteAccountForm, EditProfileForm, LoginForm, RegisterForm
 from accounts.models import Profile, ProfileImage
 
 
@@ -174,3 +174,24 @@ class ProfileImageView(View):
         # The link ends in ?v=<number> and the number changes with every new upload, so a day of caching is safe
         response["Cache-Control"] = "public, max-age=86400"
         return response
+
+
+class DeleteAccountView(LoginRequiredMixin, FormView):
+    # Step 1 (GET): a warning page. Step 2 (POST): the right password plus the tick, then the account is deleted.
+    template_name = "accounts/delete_account.html"
+    form_class = DeleteAccountForm
+    success_url = reverse_lazy("profile:login")
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+    def form_valid(self, form):
+        user = self.request.user
+        # Log out first (this clears the session), then delete. Deleting the User also deletes their Profile,
+        # uploaded photos and RSVPs, and the events they host, because those are linked with on_delete=CASCADE.
+        logout(self.request)
+        user.delete()
+        messages.success(self.request, "Account deleted\nYour account and profile are gone. You're always welcome back in the garden.")
+        return super().form_valid(form)

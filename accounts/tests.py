@@ -160,3 +160,54 @@ class ImageUploadTests(TestCase):
         self.edit(remove_picture="on")
         self.assertEqual(Profile.objects.get(user=self.user).profile_picture, "")
         self.assertFalse(ProfileImage.objects.exists())
+
+
+class AvatarTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("ala", "ala@example.com", PASSWORD)
+
+    def test_new_profile_gets_one_of_the_four_colors(self):
+        self.assertIn(self.user.profile.avatar_color, ["green", "pink", "lilac", "yellow"])
+
+    def test_color_never_changes_when_the_picture_is_added_and_removed(self):
+        color = self.user.profile.avatar_color
+        self.client.force_login(self.user)
+        data = {"bio": "", "location": "", "favorite_plant": "", "growing_style": ""}
+        self.client.post(reverse("profile:edit_profile"), {**data, "picture_url": "https://images.pexels.com/photos/1/a.jpg"})
+        self.client.post(reverse("profile:edit_profile"), {**data, "remove_picture": "on"})
+        self.assertEqual(Profile.objects.get(user=self.user).avatar_color, color)
+
+    def test_initials(self):
+        self.assertEqual(self.user.profile.initial, "AL")
+        self.user.first_name = "Ana Hill"
+        self.user.save()
+        self.assertEqual(Profile.objects.get(user=self.user).initial, "AH")
+
+
+class AccountDeletionTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("ben", "ben@example.com", PASSWORD)
+        self.client.force_login(self.user)
+
+    def test_delete_page_needs_login(self):
+        self.client.logout()
+        response = self.client.get(reverse("profile:delete_account"))
+        self.assertRedirects(response, reverse("profile:login") + "?next=" + reverse("profile:delete_account"))
+
+    def test_wrong_password_keeps_the_account(self):
+        response = self.client.post(reverse("profile:delete_account"), {"password": "wrong-password", "confirm": "on"})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(User.objects.filter(username="ben").exists())
+
+    def test_must_tick_the_box(self):
+        response = self.client.post(reverse("profile:delete_account"), {"password": PASSWORD})
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(User.objects.filter(username="ben").exists())
+
+    def test_delete_removes_user_profile_and_logs_out(self):
+        profile_id = self.user.profile.id
+        response = self.client.post(reverse("profile:delete_account"), {"password": PASSWORD, "confirm": "on"})
+        self.assertRedirects(response, reverse("profile:login"))
+        self.assertFalse(User.objects.filter(username="ben").exists())
+        self.assertFalse(Profile.objects.filter(id=profile_id).exists())
+        self.assertNotIn("_auth_user_id", self.client.session)

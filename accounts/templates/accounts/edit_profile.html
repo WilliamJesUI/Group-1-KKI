@@ -33,6 +33,32 @@
             <button type="submit" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover">Save changes</button>
         </div>
     </form>
+
+    <section class="mt-8 rounded-2xl border-2 border-ink bg-surface p-6 sm:p-8">
+        <h2 class="font-display text-xl">Account</h2>
+
+        <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm font-extrabold">Log out</p>
+                <p class="text-xs text-ink-soft">You'll need your username and password to come back.</p>
+            </div>
+            {# Logging out needs a POST form (Django 5 refuses a plain link) #}
+            <form method="post" action="{% url 'profile:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="rounded-full border-2 border-ink bg-surface px-6 py-2.5 text-[15px] font-extrabold hover:bg-brand-tint">Log out</button>
+            </form>
+        </div>
+
+        <hr class="my-5 border-line">
+
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm font-extrabold text-danger-text">Delete account</p>
+                <p class="text-xs text-ink-soft">Permanently removes your account, your profile and the events you host.</p>
+            </div>
+            <a href="{% url 'profile:delete_account' %}" class="rounded-full border-2 border-danger-text bg-surface px-6 py-2.5 text-center text-[15px] font-extrabold text-danger-text hover:bg-pink/40">Delete account</a>
+        </div>
+    </section>
 </div>
 
 <script>

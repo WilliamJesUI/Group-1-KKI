@@ -25,8 +25,8 @@ FILE_CLASS = "sr-only"
 MAX_IMAGE_SIZE = 2 * 1024 * 1024  # 2 MB
 ACCEPTED_TYPES = "image/jpeg,image/png,image/webp"
 
-# /profile/<username>/ is the public page, so /profile/edit/ would clash with a user called "edit"
-RESERVED_USERNAMES = {"edit"}
+# /profile/<username>/ is the public page, so /profile/edit/ and /profile/delete/ would clash with users with those names
+RESERVED_USERNAMES = {"edit", "delete"}
 
 
 class AriaInvalidMixin:
@@ -232,3 +232,27 @@ class EditProfileForm(AriaInvalidMixin, forms.ModelForm):
         if commit:
             profile.save()
         return profile
+
+
+class DeleteAccountForm(AriaInvalidMixin, forms.Form):
+    # Deleting an account can't be undone, so we ask for the password and a tick, in case the button was pressed by accident
+    password = forms.CharField(
+        label="Your password",
+        strip=False,
+        widget=forms.PasswordInput(attrs={"class": INPUT_CLASS, "placeholder": "Your password", "autocomplete": "current-password"}),
+    )
+    confirm = forms.BooleanField(
+        label="I understand this can't be undone",
+        error_messages={"required": "Please tick the box to confirm."},
+        widget=forms.CheckboxInput(attrs={"class": CHECKBOX_CLASS}),
+    )
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def clean_password(self):
+        password = self.cleaned_data["password"]
+        if not self.user.check_password(password):
+            raise forms.ValidationError("That password isn't right. Please try again.")
+        return password
