@@ -31,6 +31,9 @@ async function createQuestion(event) {
         submitButton.disabled = false;
         window.reloadQuestionCards();
         document.getElementById('ask-question-modal').hidePopover();
+        
+        const n = Number(document.getElementById('questions-asked-card').innerHTML);
+        document.getElementById('questions-asked-card').innerHTML = n + 1; 
     }
 }
 
