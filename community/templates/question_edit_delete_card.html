@@ -1,0 +1,15 @@
+<section id="question_edit_delete_card" {% if question.answers.exists %}hidden{% endif %} class="rounded-2xl border-2 border-ink bg-brand-tint p-5">
+    <p class="text-xs font-extrabold uppercase tracking-wider text-brand">You asked this</p>
+    <p class="mt-2 text-xs text-ink-soft">Only you see this box. You may not edit or delete once your question has an answer!</p>
+    <div class="mt-3 flex flex-wrap gap-3">
+        <button type="button" popovertarget="edit-question-modal"
+            class="rounded-full border-2 border-ink bg-white px-5 py-2.5 text-sm font-extrabold hover:bg-brand-tint transition duration-150 ease-out active:scale-[0.97]">
+            Edit question
+        </button>
+        <button type="button" id="delete-question-btn"
+            data-endpoint="{% url 'community:delete_question_ajax' question.id %}"
+            class="rounded-full border-2 border-ink bg-red-500 px-5 py-2.5 text-sm font-extrabold text-white hover:bg-red-600 disabled:opacity-40 transition duration-150 ease-out active:scale-[0.97]">
+            Delete question
+        </button>
+    </div>
+</section>
