@@ -24,7 +24,7 @@
             {% if profile.profile_picture %}
             <img src="{{ profile.profile_picture }}" alt="Profile picture of {{ display_name }}" class="size-full rounded-2xl border-2 border-ink object-cover">
             {% else %}
-            <span class="flex size-full items-center justify-center rounded-2xl border-2 border-ink bg-brand-soft font-display text-5xl">{{ profile.initial }}</span>
+            <span class="flex size-full items-center justify-center rounded-2xl border-2 border-ink {{ profile.avatar_bg_class }} font-display text-4xl">{{ profile.initials }}</span>
             {% endif %}
             {% if is_owner %}
             <a href="{% url 'profile:edit_profile' %}" aria-label="Change profile picture" class="absolute -right-2 -bottom-2 flex size-8 items-center justify-center rounded-full border-2 border-surface bg-brand text-white hover:bg-brand-hover">

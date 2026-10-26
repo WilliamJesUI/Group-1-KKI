@@ -1,7 +1,21 @@
+import random
+
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
+# The four colors of the initials avatar in Figma (shown when a user has no profile picture).
+# Each profile gets one at random when it is created and keeps it for good, even after a photo is added and removed.
+AVATAR_COLORS = [("green", "Green"), ("pink", "Pink"), ("lilac", "Lilac"), ("yellow", "Yellow")]
+# Tailwind background classes for those colors, from the theme in templates/base.html
+AVATAR_BG_CLASSES = {"green": "bg-brand-soft", "pink": "bg-pink", "lilac": "bg-lilac", "yellow": "bg-butter"}
+
+
+def random_avatar_color():
+    # A plain function (not a lambda), because migrations need to be able to refer to it by name
+    return random.choice([value for value, label in AVATAR_COLORS])
+
 
 GROWING_STYLE_CHOICES = [
     ("Balcony garden", "Balcony garden"),
@@ -29,6 +43,8 @@ class Profile(models.Model):
     # README: "select your favorite plant from the API database".
     favorite_plant = models.CharField(max_length=100, blank=True)
     growing_style = models.CharField(max_length=50, blank=True, choices=GROWING_STYLE_CHOICES)
+    # Color of the initials avatar. Picked at random once and never changed by the app.
+    avatar_color = models.CharField(max_length=10, choices=AVATAR_COLORS, default=random_avatar_color)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -41,9 +57,17 @@ class Profile(models.Model):
         return self.user.first_name or self.user.username
 
     @property
-    def initial(self):
-        # One letter for the avatar circle when there is no profile picture
-        return self.display_name[:1].upper()
+    def initials(self):
+        # Two letters for the avatar, like "AH" in Figma: the first letters of the first two words of the name
+        # ("Ana Hill" gives AH). A one-word name or username uses its first two letters ("ala" gives AL).
+        words = self.display_name.split()
+        if len(words) >= 2:
+            return (words[0][0] + words[1][0]).upper()
+        return self.display_name[:2].upper()
+
+    @property
+    def avatar_bg_class(self):
+        return AVATAR_BG_CLASSES.get(self.avatar_color, "bg-brand-soft")
 
 
 class ProfileImage(models.Model):

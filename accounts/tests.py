@@ -178,10 +178,10 @@ class AvatarTests(TestCase):
         self.assertEqual(Profile.objects.get(user=self.user).avatar_color, color)
 
     def test_initials(self):
-        self.assertEqual(self.user.profile.initial, "AL")
+        self.assertEqual(self.user.profile.initials, "AL")
         self.user.first_name = "Ana Hill"
         self.user.save()
-        self.assertEqual(Profile.objects.get(user=self.user).initial, "AH")
+        self.assertEqual(Profile.objects.get(user=self.user).initials, "AH")
 
 
 class AccountDeletionTests(TestCase):
