@@ -33,7 +33,7 @@ The .nav-tab and .nav-tab-active styles are in base.html, and static/js/navbar.j
                 <a href="#" class="nav-tab {% if app == 'encyclopedia' %}nav-tab-active{% endif %}">Encyclopedia</a>
                 <a href="#" class="nav-tab {% if app == 'community' %}nav-tab-active{% endif %}">Community</a>
                 <a href="#" class="nav-tab {% if app == 'achievements' %}nav-tab-active{% endif %}">Achievements</a>
-                <a href="#" class="nav-tab {% if app == 'profile' %}nav-tab-active{% endif %}">Profile</a>
+                <a href="{% url 'profile:show_profile' %}" class="nav-tab {% if app == 'profile' %}nav-tab-active{% endif %}">Profile</a>
             </nav>
 
             {# Logged in: letter avatar + name. Logged out: Log in / Register (links are "#" until the auth pages exist). #}
@@ -48,8 +48,8 @@ The .nav-tab and .nav-tab-active styles are in base.html, and static/js/navbar.j
             </div>
             {% else %}
             <div class="mt-4 flex items-center gap-3 border-t border-line pt-4 lg:mt-0 lg:gap-2 lg:border-0 lg:pt-0">
-                <a href="#" class="flex-1 rounded-full border-2 border-ink bg-surface px-4 py-2 text-center text-[13px] font-extrabold hover:bg-brand-tint lg:flex-none">Log in</a>
-                <a href="#" class="flex-1 rounded-full border-2 border-ink bg-brand px-4 py-2 text-center text-[13px] font-extrabold text-white hover:bg-brand-hover lg:flex-none">Register</a>
+                <a href="{% url 'profile:login' %}" class="flex-1 rounded-full border-2 border-ink bg-surface px-4 py-2 text-center text-[13px] font-extrabold hover:bg-brand-tint lg:flex-none">Log in</a>
+                <a href="{% url 'profile:register' %}" class="flex-1 rounded-full border-2 border-ink bg-brand px-4 py-2 text-center text-[13px] font-extrabold text-white hover:bg-brand-hover lg:flex-none">Register</a>
             </div>
             {% endif %}
         </div>

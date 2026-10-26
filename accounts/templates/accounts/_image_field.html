@@ -1,0 +1,46 @@
+{% comment %}
+One image the user can change: a preview of the current one, a dropzone for uploading a photo,
+a box for pasting a link, and a checkbox to remove it.
+Use it like: {% include "accounts/_image_field.html" with title="Profile picture" shape="square" current=form.current_picture is_upload=form.picture_is_upload file=form.picture_file url=form.picture_url remove=form.remove_picture %}
+The dropzone is wired up by the script at the bottom of edit_profile.html (it looks for [data-dropzone]).
+{% endcomment %}
+<fieldset class="flex flex-col gap-4 rounded-2xl border-2 border-line p-4 sm:p-5">
+    <legend class="px-2 text-[13px] font-extrabold">{{ title }} <span class="font-normal text-ink-soft">(optional)</span></legend>
+
+    {% if current %}
+    <div class="flex items-center gap-3">
+        {% if shape == "square" %}
+        <img src="{{ current }}" alt="Your current {{ title|lower }}" class="size-16 rounded-xl border-2 border-ink object-cover">
+        {% else %}
+        <img src="{{ current }}" alt="Your current {{ title|lower }}" class="h-16 w-40 rounded-xl border-2 border-ink object-cover">
+        {% endif %}
+        <p class="text-xs text-ink-soft">Current {{ title|lower }}{% if is_upload %} (uploaded photo){% else %} (link){% endif %}</p>
+    </div>
+    {% endif %}
+
+    <div class="flex flex-col gap-1.5">
+        {# The whole box is a label, so clicking it opens the file picker. The real input inside it is hidden (sr-only). #}
+        <label data-dropzone class="flex cursor-pointer flex-col items-center gap-2 rounded-3xl border-2 border-dashed border-ink bg-surface px-6 py-10 text-center transition-colors hover:bg-brand-tint focus-within:border-brand focus-within:ring-1 focus-within:ring-brand data-[dragover]:bg-brand-soft">
+            {{ file }}
+            <svg data-dz-icon class="size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            <img data-dz-preview hidden alt="" class="h-16 max-w-full rounded-xl border-2 border-ink object-cover {% if shape == 'square' %}w-16{% else %}w-40{% endif %}">
+            <span data-dz-title class="text-[15px] font-extrabold">Drop a photo or browse</span>
+            <span data-dz-hint class="text-sm text-ink-soft">JPG, PNG or WebP, up to 2 MB</span>
+        </label>
+        {% for error in file.errors %}<p class="text-xs text-danger-text">{{ error }}</p>{% endfor %}
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+        <label for="{{ url.id_for_label }}" class="text-[13px] font-extrabold">Or {{ url.label|lower }}</label>
+        {{ url }}
+        {% for error in url.errors %}<p class="text-xs text-danger-text">{{ error }}</p>{% endfor %}
+        <p class="text-xs text-ink-soft">If you upload a photo and paste a link, the uploaded photo is used.</p>
+    </div>
+
+    {% if current %}
+    <label class="flex items-center gap-3 text-sm">
+        {{ remove }}
+        {{ remove.label }}
+    </label>
+    {% endif %}
+</fieldset>

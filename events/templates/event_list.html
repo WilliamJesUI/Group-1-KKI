@@ -41,7 +41,7 @@ already seen on the page. These are ready from the start, so a new avatar never 
         {% if user.is_authenticated %}
         <button type="button" popovertarget="host-event-modal" class="mt-4 rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Host an event</button>
         {% else %}
-        <a href="#" class="mt-4 inline-block rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Log in to host an event</a>
+        <a href="{% url 'profile:login' %}?next={{ request.path|urlencode }}" class="mt-4 inline-block rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Log in to host an event</a>
         {% endif %}
     </div>
 
