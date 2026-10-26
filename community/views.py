@@ -63,6 +63,7 @@ def show_questions(request):
         "question_list": questions,
         "selected_filter": pill,
         "query": query,
+        "helpful_answer_count": Answer.objects.annotate(num_voters=Count("voters")).filter(num_voters__gt=0).count()
     }
 
     if request.GET.get("partial") == "1":
