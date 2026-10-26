@@ -1,4 +1,4 @@
-{% if user.is_authenticated and question.author_id == user.id and not question.answers.exists %}
+{% if user.is_authenticated and question.author_id == user.id %}
 <div id="edit-question-modal"
      popover="auto"
      role="dialog"

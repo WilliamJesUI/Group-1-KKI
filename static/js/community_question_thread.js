@@ -77,6 +77,9 @@ document.addEventListener('click', async (event) => {
                             ? (el.dataset.emptyText || 'No answers yet')
                             : `${n} answer${n === 1 ? '' : 's'}`;
                     });
+
+                    const ownerBox = document.getElementById("question_edit_delete_card");
+                    if (ownerBox) ownerBox.hidden = n > 0;
                 }
             }
         } catch (error) {

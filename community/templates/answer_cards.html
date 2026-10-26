@@ -1,4 +1,9 @@
 <div data-answer-count="{{ answer_list|length }}" hidden></div>
+
+<div class="h-full transition-opacity duration-400 ease-out delay-(--stagger) starting:opacity-0 motion-reduce:delay-0"
+       style="--stagger: {% if forloop.counter0 < 9 %}{% widthratio forloop.counter0 1 40 %}{% else %}67{% endif %}ms">
+
 {% for answer in answer_list %}
     {% include 'answer_card.html' %}
 {% endfor %}
+</div>

@@ -29,7 +29,7 @@
 
 
     <aside class="mt-5 mb-6 space-y-6 lg:sticky lg:top-6">
-        {% if user.is_authenticated and question.author_id == user.id and not question.answers.exists %}
+        {% if user.is_authenticated and question.author_id == user.id %}
             {% include 'question_edit_delete_card.html' %}
         {% endif %}
     </aside>
