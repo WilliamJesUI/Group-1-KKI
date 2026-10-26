@@ -1,0 +1,176 @@
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import login
+from django.contrib.auth import views as auth_views
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.models import User
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse_lazy
+from django.views import View
+from django.views.generic import FormView, TemplateView, UpdateView
+
+from accounts.forms import EditProfileForm, LoginForm, RegisterForm
+from accounts.models import Profile, ProfileImage
+
+
+class RegisterView(FormView):
+    template_name = "accounts/register.html"
+    form_class = RegisterForm
+    success_url = reverse_lazy("profile:show_profile")
+
+    def dispatch(self, request, *args, **kwargs):
+        # Someone who is already logged in has no reason to see the Register page
+        if request.user.is_authenticated:
+            return redirect("profile:show_profile")
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        # form.save() makes the User (the post_save signal in models.py then makes the Profile).
+        # We log them in straight away, so a new gardener lands on their profile instead of the login page.
+        user = form.save()
+        login(self.request, user)
+        messages.success(self.request, "Welcome to the garden\nYour account is ready. Add a bit about yourself with Edit profile.")
+        return redirect(self.get_success_url())
+
+
+class LoginView(auth_views.LoginView):
+    # Django's own LoginView checks the username and password and handles ?next=/some/page/ safely
+    template_name = "accounts/login.html"
+    authentication_form = LoginForm
+    redirect_authenticated_user = True
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = form.get_user()
+        messages.success(self.request, f"Welcome back\nGood to see you, {user.first_name or user.username}.")
+        return response
+
+
+class LogoutView(auth_views.LogoutView):
+    # Since Django 5.0 logging out only works with a POST request (a plain link would be a 405 error),
+    # so the navbar uses a small <form method="post"> with a csrf token, see templates/header.html.
+    next_page = reverse_lazy("profile:login")
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        # The session is already cleared here. The message travels in a cookie, so the login page can still show it.
+        messages.success(request, "Logged out\nSee you in the garden soon.")
+        return response
+
+
+def format_count(number):
+    # 1200 becomes "1.2k", 12 stays "12"
+    if number >= 1000:
+        return f"{number / 1000:.1f}".rstrip("0").rstrip(".") + "k"
+    return str(number)
+
+
+# Sample content copied from the Figma profile page, so the whole page can be checked before the Garden and
+# Achievements modules exist. It is shown only while PROFILE_DEMO_DATA = True in settings.py.
+# All photos are already credited in docs/CREDITS.md (Garden posts and Plants rows).
+DEMO_STATS = (12, 1200, 8, 6)
+DEMO_BADGES = [
+    {"name": "First sprout", "color": "green"},
+    {"name": "Green thumb", "color": "pink"},
+    {"name": "Event regular", "color": "lilac"},
+]
+DEMO_SNAPSHOTS = [
+    {"image_url": "https://images.pexels.com/photos/6314416/pexels-photo-6314416.jpeg?auto=compress&cs=tinysrgb&w=800", "likes": 128, "caption": "Balcony tomatoes"},
+    {"image_url": "https://images.pexels.com/photos/28125162/pexels-photo-28125162.jpeg?auto=compress&cs=tinysrgb&w=800", "likes": 94, "caption": "Sweet basil"},
+    {"image_url": "https://images.pexels.com/photos/5685910/pexels-photo-5685910.jpeg?auto=compress&cs=tinysrgb&w=800", "likes": 73, "caption": "Cherry tomatoes on the vine"},
+    {"image_url": "https://images.pexels.com/photos/1437424/pexels-photo-1437424.jpeg?auto=compress&cs=tinysrgb&w=800", "likes": 61, "caption": "Rooftop basil"},
+]
+
+
+def demo_data_on():
+    return getattr(settings, "PROFILE_DEMO_DATA", False)
+
+
+def get_profile_stats(user):
+    # The four numbers in the stats bar. The Garden, Achievements and Encyclopedia modules are not merged yet,
+    # so for now everything is 0. When a module lands, replace its 0 with a real count, for example:
+    #   garden_posts   = GardenPost.objects.filter(author=user).count()
+    #   appreciations  = Like.objects.filter(post__author=user).count()
+    #   achievements   = UserAchievement.objects.filter(user=user, is_verified=True).count()
+    #   plants_growing = UserPlant.objects.filter(user=user).count()
+    garden_posts = 0
+    appreciations = 0
+    achievements = 0
+    plants_growing = 0
+    if demo_data_on():
+        garden_posts, appreciations, achievements, plants_growing = DEMO_STATS
+    return [
+        (format_count(garden_posts), "Garden posts"),
+        (format_count(appreciations), "Appreciations"),
+        (format_count(achievements), "Achievements"),
+        (format_count(plants_growing), "Plants growing"),
+    ]
+
+
+def get_recent_badges(user):
+    # Up to 3 items for "Recent badges". The template reads badge.name and badge.color ("green", "pink" or "lilac").
+    # TODO: fill from the Achievement module, e.g. the user's 3 newest unlocked achievements.
+    return DEMO_BADGES if demo_data_on() else []
+
+
+def get_garden_snapshots(user):
+    # Up to 4 items for the "My garden" grid. The template reads snapshot.image_url, snapshot.likes
+    # and snapshot.caption (used as the alt text). TODO: fill from the Garden module, e.g. the user's 4 newest posts.
+    return DEMO_SNAPSHOTS if demo_data_on() else []
+
+
+class ProfileView(LoginRequiredMixin, TemplateView):
+    # /profile/ shows the logged-in user. /profile/<username>/ shows someone else (that is what "Share profile" copies).
+    template_name = "accounts/profile.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        username = self.kwargs.get("username")
+        profile_user = get_object_or_404(User, username=username) if username else self.request.user
+        # get_or_create also covers users who registered before the accounts app existed and have no Profile yet
+        profile, _ = Profile.objects.get_or_create(user=profile_user)
+        context.update({
+            "profile_user": profile_user,
+            "profile": profile,
+            "display_name": profile.display_name,
+            "is_owner": profile_user == self.request.user,
+            "stats": get_profile_stats(profile_user),
+            "badges": get_recent_badges(profile_user),
+            "snapshots": get_garden_snapshots(profile_user),
+        })
+        return context
+
+
+class EditProfileView(LoginRequiredMixin, UpdateView):
+    model = Profile
+    form_class = EditProfileForm
+    template_name = "accounts/edit_profile.html"
+    success_url = reverse_lazy("profile:show_profile")
+
+    def get_object(self, queryset=None):
+        # Always the logged-in user's own profile, so nobody can edit someone else's by changing the URL
+        profile, _ = Profile.objects.get_or_create(user=self.request.user)
+        return profile
+
+    def form_valid(self, form):
+        messages.success(self.request, "Profile updated\nYour changes are live.")
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Couldn't save your profile\nPlease check the highlighted fields.")
+        return super().form_invalid(form)
+
+
+class ProfileImageView(View):
+    # Serves a photo someone uploaded, from the database. urls.py makes two copies of this view:
+    # kind="avatar" for /profile/<username>/picture/ and kind="banner" for /profile/<username>/banner/.
+    kind = None
+
+    def get(self, request, username):
+        image = get_object_or_404(ProfileImage, profile__user__username=username, kind=self.kind)
+        # bytes() because some databases (PostgreSQL) hand back a memoryview
+        response = HttpResponse(bytes(image.data), content_type=image.content_type)
+        # The link ends in ?v=<number> and the number changes with every new upload, so a day of caching is safe
+        response["Cache-Control"] = "public, max-age=86400"
+        return response

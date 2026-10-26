@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ display_name }} (@{{ profile_user.username }}) - Grow Your Garden{% endblock title %}
+
+{% block content %}
+<h1 class="font-display text-[32px] leading-tight">Profile</h1>
+<p class="mt-1.5 text-ink-soft">{% if is_owner %}Your plants, posts and badges{% else %}{{ display_name }}’s plants, posts and badges{% endif %}</p>
+
+{# Header card: cover banner, avatar, name, bio, location and the two buttons #}
+<section class="mt-8 overflow-hidden rounded-2xl border-2 border-ink bg-surface">
+    <div class="h-[150px] border-b-2 border-ink bg-brand-soft">
+        {% if profile.cover_image %}
+        <img src="{{ profile.cover_image }}" alt="" class="size-full object-cover">
+        {% else %}
+        {# No cover image yet: just the name in big letters, like the letter avatar #}
+        <div class="flex size-full items-center justify-center px-6">
+            <span aria-hidden="true" class="max-w-full truncate font-display text-6xl uppercase tracking-wide text-brand/40 select-none">{{ display_name }}</span>
+        </div>
+        {% endif %}
+    </div>
+    <div class="flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
+        <div class="relative size-[108px] shrink-0">
+            {% if profile.profile_picture %}
+            <img src="{{ profile.profile_picture }}" alt="Profile picture of {{ display_name }}" class="size-full rounded-2xl border-2 border-ink object-cover">
+            {% else %}
+            <span class="flex size-full items-center justify-center rounded-2xl border-2 border-ink bg-brand-soft font-display text-5xl">{{ profile.initial }}</span>
+            {% endif %}
+            {% if is_owner %}
+            <a href="{% url 'profile:edit_profile' %}" aria-label="Change profile picture" class="absolute -right-2 -bottom-2 flex size-8 items-center justify-center rounded-full border-2 border-surface bg-brand text-white hover:bg-brand-hover">
+                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="min-w-0 flex-1">
+            <p class="text-[11px] font-black uppercase tracking-[0.08em] text-brand">@{{ profile_user.username }}</p>
+            <h2 class="font-display text-[32px] uppercase leading-tight">{{ display_name }}</h2>
+            {% if profile.bio %}<p class="mt-1 line-clamp-2 text-sm text-ink-soft">{{ profile.bio }}</p>{% endif %}
+            <p class="mt-2 flex flex-wrap items-center gap-x-1.5 text-[13px] text-ink-soft">
+                {% if profile.location %}
+                <img src="{% static 'img/icons/map-pin.svg' %}" alt="" width="16" height="16">
+                <span>{{ profile.location }}</span>
+                <span aria-hidden="true">·</span>
+                {% endif %}
+                <span>Joined {{ profile_user.date_joined|date:"F Y" }}</span>
+            </p>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+            {% if is_owner %}
+            <a href="{% url 'profile:edit_profile' %}" class="inline-flex items-center gap-2 rounded-full border-2 border-ink bg-brand-soft px-5 py-2.5 text-[11px] font-black uppercase tracking-[0.08em] hover:bg-brand-soft-hover">
+                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+                Edit profile
+            </a>
+            {% endif %}
+            {# The link is built in JS from the page's own address, because on PWS Django sees http while the site is https #}
+            <button type="button" id="share-profile" data-path="{% url 'profile:show_user_profile' profile_user.username %}" class="rounded-full border-2 border-ink bg-surface px-5 py-2.5 text-[11px] font-black uppercase tracking-[0.08em] hover:bg-brand-tint">Share profile</button>
+        </div>
+    </div>
+</section>
+
+<div class="mt-6 grid gap-6 lg:grid-cols-[1fr_322px] lg:items-start">
+    <div class="flex min-w-0 flex-col gap-8">
+        {# Stats bar. gap-0.5 on a dark background draws the dividers, so it also works with 2 columns on phones #}
+        <dl class="grid grid-cols-2 gap-0.5 overflow-hidden rounded-2xl border-2 border-ink bg-ink sm:grid-cols-4">
+            {% for value, label in stats %}
+            <div class="bg-surface px-4 py-4 text-center">
+                <dd class="font-display text-xl leading-tight">{{ value }}</dd>
+                <dt class="text-xs text-ink-soft">{{ label }}</dt>
+            </div>
+            {% endfor %}
+        </dl>
+
+        <section>
+            <div class="flex items-end justify-between gap-4">
+                <div>
+                    <h2 class="font-display text-2xl">{% if is_owner %}My garden{% else %}{{ display_name }}’s garden{% endif %}</h2>
+                    <p class="text-sm text-ink-soft">Snapshots from {% if is_owner %}your{% else %}their{% endif %} green space</p>
+                </div>
+                {% comment %}TODO: point this at the Garden page once it exists{% endcomment %}
+                <a href="#" class="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-[0.08em] text-brand hover:underline">
+                    View all <img src="{% static 'img/icons/chevron-right.svg' %}" alt="" width="16" height="16">
+                </a>
+            </div>
+
+            {% if snapshots %}
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                {% for snapshot in snapshots %}
+                <div class="relative aspect-[387/190] overflow-hidden rounded-2xl bg-brand-soft">
+                    <img src="{{ snapshot.image_url }}" alt="{{ snapshot.caption }}" class="size-full object-cover">
+                    <span class="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-lg bg-ink/70 px-2 py-1 text-xs font-bold text-white">
+                        <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                        {{ snapshot.likes }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="mt-4 rounded-2xl border-2 border-dashed border-line bg-surface px-6 py-10 text-center">
+                <p class="font-display text-xl">No garden posts yet</p>
+                <p class="mt-1 text-sm text-ink-soft">{% if is_owner %}Photos you post to the Garden page will show up here.{% else %}{{ display_name }} hasn’t posted any snapshots yet.{% endif %}</p>
+            </div>
+            {% endif %}
+        </section>
+    </div>
+
+    <aside class="flex flex-col gap-6">
+        <section class="rounded-2xl border-2 border-ink bg-surface p-5">
+            <h2 class="font-display text-xl">About</h2>
+            <p class="mt-3 text-[13px] leading-relaxed text-ink-soft">
+                {% if profile.bio %}{{ profile.bio|linebreaksbr }}{% elif is_owner %}You haven’t written a bio yet. <a href="{% url 'profile:edit_profile' %}" class="font-extrabold text-brand hover:underline">Add one</a>.{% else %}No bio yet.{% endif %}
+            </p>
+            <dl class="mt-4 divide-y divide-ink border-t border-ink text-[13px]">
+                <div class="py-3">
+                    <dt class="text-ink-soft">Favorite plant</dt>
+                    <dd class="mt-1 flex items-center gap-2 font-bold">
+                        <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+                        {{ profile.favorite_plant|default:"Not set yet" }}
+                    </dd>
+                </div>
+                <div class="pt-3">
+                    <dt class="text-ink-soft">Growing style</dt>
+                    <dd class="mt-1 flex items-center gap-2 font-bold">
+                        <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                        {{ profile.growing_style|default:"Not set yet" }}
+                    </dd>
+                </div>
+            </dl>
+        </section>
+
+        <section class="rounded-2xl border-2 border-ink bg-surface p-5">
+            <div class="flex items-center justify-between gap-4">
+                <h2 class="font-display text-xl">Recent badges</h2>
+                {% comment %}TODO: point this at the Achievements page once it exists{% endcomment %}
+                <a href="#" class="text-[11px] font-black uppercase tracking-[0.08em] text-brand hover:underline">View all</a>
+            </div>
+            {% if badges %}
+            <ul class="mt-4 flex gap-3">
+                {% for badge in badges %}
+                <li title="{{ badge.name }}" class="flex size-11 items-center justify-center rounded-xl {% if badge.color == 'pink' %}bg-pink{% elif badge.color == 'lilac' %}bg-lilac{% else %}bg-brand-soft{% endif %}">
+                    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/><circle cx="12" cy="8" r="6"/></svg>
+                    <span class="sr-only">{{ badge.name }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="mt-3 text-[13px] text-ink-soft">No badges yet. They appear here as {% if is_owner %}you hit{% else %}{{ display_name }} hits{% endif %} gardening milestones.</p>
+            {% endif %}
+        </section>
+    </aside>
+</div>
+
+<script>
+    // "Share profile" copies the link to this profile. showToast() comes from toast.js (loaded in base.html).
+    document.getElementById("share-profile").addEventListener("click", async (event) => {
+        const link = window.location.origin + event.currentTarget.dataset.path;
+        try {
+            await navigator.clipboard.writeText(link);
+            showToast("Link copied", "Anyone with an account can open this profile.");
+        } catch (error) {
+            showToast("Couldn't copy the link", link, "error");
+        }
+    });
+</script>
+{% endblock content %}
