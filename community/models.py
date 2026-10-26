@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 # Create your models here.
+# Question model
 class Question(models.Model):
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="questions")
     title = models.CharField(max_length=256)
@@ -17,6 +18,7 @@ class Question(models.Model):
     def __str__(self):
         return f"{self.title} {self.body} {self.created_at}"
 
+# Answer model
 class Answer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="answers")
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="answers")
