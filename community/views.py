@@ -276,12 +276,6 @@ def vote_answer_ajax(request, answer_id):
 
     return JsonResponse({"voted": voted, "score": answer.voters.count()})
 
-@require_POST
-def unvote_answer_ajax(request, answer_id):
-    if not request.user.is_authenticated:
-        return JsonResponse
-
-
 def save_question_from_form(question, form):
     question.title = form.cleaned_data["title"]
     question.body = form.cleaned_data["body"]
@@ -290,5 +284,4 @@ def save_question_from_form(question, form):
 def save_answer_from_form(answer, form):
     answer.body = form.cleaned_data["body"]
     answer.save()
-        
     
