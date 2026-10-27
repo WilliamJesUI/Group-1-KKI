@@ -123,6 +123,16 @@ class LoginForm(AriaInvalidMixin, AuthenticationForm):
         self.fields["password"].label = "Password"
         self.fields["password"].widget.attrs.update({"class": INPUT_CLASS, "placeholder": "Your password"})
 
+    def clean(self):
+        username = self.cleaned_data.get("username")
+        password = self.cleaned_data.get("password")
+        # Check the username first, so we can say that the account does not exist. This is a form-wide error, so it
+        # shows in the pink box above the form (like a wrong password) and no field turns red.
+        if username and password and not User.objects.filter(username=username).exists():
+            raise forms.ValidationError("An account with that username does not exist.", code="no_account")
+        # The username exists, so what is left is a wrong password (or an inactive account)
+        return super().clean()
+
 
 def detect_image_type(head):
     # Look at the first bytes of the file, because the file name and the browser's content type can be faked
