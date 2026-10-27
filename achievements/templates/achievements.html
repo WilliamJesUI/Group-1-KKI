@@ -6,4 +6,41 @@
 {% block content %}
 <h1 class="font-display text-[32px] leading-tight">Achievements</h1>
 <p class="mt-1.5 text-ink-soft">Your badges, streaks and progress</p>
+
+<!-- Statistik -->
+<div class="mt-8 grid grid-cols-2 overflow-hidden rounded-2xl border-2 border-ink bg-surface lg:grid-cols-4">
+
+  <div class="flex items-start gap-3 border-r border-ink p-[18px]">
+    <img src="{% static 'img/icons/badge.svg' %}" alt="" width="20" height="20" class="mt-1 shrink-0">
+    <div>
+      <p class="font-display text-[20px] leading-[26px]">8</p>
+      <p class="text-xs leading-[17px] text-ink-soft">Badges unlocked</p>
+    </div>
+  </div>
+
+  <div class="flex items-start gap-3 border-ink p-[18px] lg:border-r">
+    <img src="{% static 'img/icons/flame.svg' %}" alt="" width="20" height="20" class="mt-1 shrink-0">
+    <div>
+      <p class="font-display text-[20px] leading-[26px]">4</p>
+      <p class="text-xs leading-[17px] text-ink-soft">Day garden streak</p>
+    </div>
+  </div>
+
+  <div class="flex items-start gap-3 border-r border-t border-ink p-[18px] lg:border-t-0">
+    <img src="{% static 'img/icons/sprout.svg' %}" alt="" width="20" height="20" class="mt-1 shrink-0">
+    <div>
+      <p class="font-display text-[20px] leading-[26px]">6</p>
+      <p class="text-xs leading-[17px] text-ink-soft">Plants thriving</p>
+    </div>
+  </div>
+
+  <div class="flex items-start gap-3 border-t border-ink p-[18px] lg:border-t-0">
+    <img src="{% static 'img/icons/message.svg' %}" alt="" width="20" height="20" class="mt-1 shrink-0">
+    <div>
+      <p class="font-display text-[20px] leading-[26px]">12</p>
+      <p class="text-xs leading-[17px] text-ink-soft">Posts shared</p>
+    </div>
+  </div>
+
+</div>
 {% endblock content %}
