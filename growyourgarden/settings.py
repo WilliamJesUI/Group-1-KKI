@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'garden',
     'community',
     'events',
+    'achievements',
 ]
 
 MIDDLEWARE = [
