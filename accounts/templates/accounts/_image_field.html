@@ -5,7 +5,7 @@ Use it like: {% include "accounts/_image_field.html" with title="Profile picture
 The dropzone is wired up by the script at the bottom of edit_profile.html (it looks for [data-dropzone]).
 {% endcomment %}
 <fieldset class="flex flex-col gap-4 rounded-2xl border-2 border-line p-4 sm:p-5">
-    <legend class="px-2 text-[13px] font-extrabold">{{ title }} <span class="font-normal text-ink-soft">(optional)</span></legend>
+    <legend class="px-2 text-[13px] font-extrabold">{{ title }} <span class="font-normal text-ink-soft"></span></legend>
 
     {% if current %}
     <div class="flex items-center gap-3">

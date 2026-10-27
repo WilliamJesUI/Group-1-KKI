@@ -9,13 +9,13 @@
 
 {# Header card: cover banner, avatar, name, bio, location and the two buttons #}
 <section class="mt-8 overflow-hidden rounded-2xl border-2 border-ink bg-surface">
-    <div class="h-[150px] border-b-2 border-ink bg-brand-soft">
+    <div class="h-[150px] border-b-2 border-ink {{ profile.avatar_bg_class }}">
         {% if profile.cover_image %}
         <img src="{{ profile.cover_image }}" alt="" class="size-full object-cover">
         {% else %}
         {# No cover image yet: just the name in big letters, like the letter avatar #}
         <div class="flex size-full items-center justify-center px-6">
-            <span aria-hidden="true" class="max-w-full truncate font-display text-6xl uppercase tracking-wide text-brand/40 select-none">{{ display_name }}</span>
+            <span aria-hidden="true" class="max-w-full truncate font-display text-6xl uppercase tracking-wide text-ink/20 select-none">{{ display_name }}</span>
         </div>
         {% endif %}
     </div>
