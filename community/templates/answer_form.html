@@ -1,0 +1,12 @@
+<form id="answer-form" data-endpoint="{% url 'community:create_answer_ajax' question.id %}" method="post" class="rounded-[28px] border-2 border-ink bg-white p-6">
+  {% csrf_token %}
+  <h2 class="font-display text-[24px] leading-tight mb-2">Your answer</h2>
+
+  {{ answer_form.body }}
+
+  <div class="mt-4 flex justify-end">
+    <button type="submit" class="rounded-full border-2 border-ink bg-green-800 px-6 py-3 font-bold text-white hover:bg-green-900">
+      Post answer
+    </button>
+  </div>
+</form>
