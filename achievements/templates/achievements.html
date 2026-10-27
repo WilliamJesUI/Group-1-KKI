@@ -7,40 +7,78 @@
 <h1 class="font-display text-[32px] leading-tight">Achievements</h1>
 <p class="mt-1.5 text-ink-soft">Your badges, streaks and progress</p>
 
-<!-- Statistik -->
-<div class="mt-8 grid grid-cols-2 overflow-hidden rounded-2xl border-2 border-ink bg-surface lg:grid-cols-4">
-
-  <div class="flex items-start gap-3 border-r border-ink p-[18px]">
-    <img src="{% static 'img/icons/badge.svg' %}" alt="" width="20" height="20" class="mt-1 shrink-0">
-    <div>
-      <p class="font-display text-[20px] leading-[26px]">8</p>
-      <p class="text-xs leading-[17px] text-ink-soft">Badges unlocked</p>
+{# Hero: headline on the left, badge progress card on the right #}
+<section class="mt-8 flex flex-col gap-8 rounded-3xl border-2 border-ink bg-butter p-6 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
+    <div class="max-w-[420px]">
+        <span class="inline-block rounded-lg border-[1.5px] border-ink bg-surface px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-brand">Your growth</span>
+        <h2 class="mt-3 font-display text-5xl leading-[1.05] sm:text-[56px]">Every little leaf<br>is a win.</h2>
+        <p class="mt-4 text-sm text-ink-soft">Keep growing your plants and helping your neighbors.</p>
     </div>
-  </div>
 
-  <div class="flex items-start gap-3 border-ink p-[18px] lg:border-r">
-    <img src="{% static 'img/icons/flame.svg' %}" alt="" width="20" height="20" class="mt-1 shrink-0">
-    <div>
-      <p class="font-display text-[20px] leading-[26px]">4</p>
-      <p class="text-xs leading-[17px] text-ink-soft">Day garden streak</p>
+    <div class="flex items-center gap-5 rounded-2xl bg-surface/60 p-5 lg:w-[400px]">
+        <div class="size-[88px] shrink-0 rounded-full border-2 border-brand p-1.5">
+            <div class="flex size-full flex-col items-center justify-center rounded-full bg-brand-soft">
+                <span class="font-display text-[32px] leading-none">{{ unlocked }}</span>
+                <span class="mt-1 text-[10px] font-black uppercase tracking-[0.08em]">Badges</span>
+            </div>
+        </div>
+        <div class="min-w-0 flex-1">
+            <p class="text-[10px] font-black uppercase tracking-[0.08em] text-brand">Your progress</p>
+            <p class="font-extrabold">{{ unlocked }} of {{ total }} badges</p>
+            <div class="mt-1.5 h-2 rounded-full bg-surface" role="progressbar" aria-valuemin="0" aria-valuemax="{{ total }}" aria-valuenow="{{ unlocked }}" aria-label="Badges unlocked">
+                <div class="h-full rounded-full bg-brand" style="width: {{ progress_percent }}%"></div>
+            </div>
+            <p class="mt-1.5 text-xs text-ink-soft">{{ remaining }} more to unlock</p>
+        </div>
     </div>
-  </div>
+</section>
 
-  <div class="flex items-start gap-3 border-r border-t border-ink p-[18px] lg:border-t-0">
-    <img src="{% static 'img/icons/sprout.svg' %}" alt="" width="20" height="20" class="mt-1 shrink-0">
-    <div>
-      <p class="font-display text-[20px] leading-[26px]">6</p>
-      <p class="text-xs leading-[17px] text-ink-soft">Plants thriving</p>
+{# Stats: icon, number and label on one line. gap-px on a dark background draws the dividers. #}
+<section class="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border-2 border-ink bg-ink lg:grid-cols-4">
+    {% for stat in stats %}
+    <div class="flex items-center gap-3 bg-surface p-[18px]">
+        <img src="{% static stat.icon %}" alt="" width="20" height="20" class="shrink-0">
+        <span class="font-display text-xl leading-[26px]">{{ stat.value }}</span>
+        <span class="text-xs text-ink-soft">{{ stat.label }}</span>
     </div>
-  </div>
+    {% endfor %}
+</section>
 
-  <div class="flex items-start gap-3 border-t border-ink p-[18px] lg:border-t-0">
-    <img src="{% static 'img/icons/message.svg' %}" alt="" width="20" height="20" class="mt-1 shrink-0">
-    <div>
-      <p class="font-display text-[20px] leading-[26px]">12</p>
-      <p class="text-xs leading-[17px] text-ink-soft">Posts shared</p>
+{# Milestones #}
+<section class="mt-8 pb-8">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+            <h2 class="font-display text-xl leading-tight">Milestones</h2>
+            <p class="text-[13px] text-ink-soft">{{ milestones_in_progress }} of {{ total }} milestones in progress</p>
+        </div>
+        <div class="flex gap-2">
+            <button type="button" aria-pressed="true" class="rounded-full border-2 border-ink bg-brand-soft px-4 py-1.5 text-[13px] font-extrabold">All plants</button>
+            <button type="button" aria-pressed="false" class="rounded-full border-2 border-ink bg-surface px-4 py-1.5 text-[13px] font-extrabold hover:bg-brand-tint">Tomato</button>
+            <button type="button" aria-pressed="false" class="rounded-full border-2 border-ink bg-surface px-4 py-1.5 text-[13px] font-extrabold hover:bg-brand-tint">Herbs</button>
+        </div>
     </div>
-  </div>
 
-</div>
+    <div class="mt-4 grid gap-4 lg:grid-cols-2">
+        {% for m in milestones %}
+        <article class="flex items-center gap-4 rounded-2xl border-2 border-ink bg-surface p-[18px]">
+            <span class="flex size-[54px] shrink-0 items-center justify-center rounded-xl {{ m.tone }}">
+                <img src="{% static m.icon %}" alt="" width="30" height="30">
+            </span>
+            <div class="min-w-0 flex-1">
+                <h3 class="font-display text-xl leading-tight">{{ m.title }}</h3>
+                <p class="text-xs text-ink-soft">{{ m.description }}</p>
+                <div class="mt-2 h-2 rounded-full bg-brand-tint" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ m.percent }}" aria-label="{{ m.title }} progress">
+                    <div class="h-full rounded-full bg-brand" style="width: {{ m.percent }}%"></div>
+                </div>
+                <p class="mt-1.5 text-xs text-ink-soft">{{ m.percent }}% complete</p>
+            </div>
+            {% if m.percent == 100 %}
+            <button type="button" class="shrink-0 rounded-full border-2 border-ink bg-brand-tint px-4 py-2 text-[11px] font-black uppercase tracking-[0.08em] hover:bg-brand-soft">Claim badge</button>
+            {% else %}
+            <img src="{% static 'img/icons/ach-lock.svg' %}" alt="Locked" width="19" height="19" class="shrink-0">
+            {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+</section>
 {% endblock content %}
