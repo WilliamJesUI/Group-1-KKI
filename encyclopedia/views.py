@@ -1,5 +1,4 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -117,6 +116,15 @@ def care_guide_for(plant):
     }
 
 
+
+def _require_authenticated(request):
+    """Keep collection actions private without depending on a login-page app."""
+    if not request.user.is_authenticated:
+        messages.info(request, "Sign-in is required to view or manage plant collections.")
+        return False
+    return True
+
+
 def encyclopedia(request):
     plants = Plant.objects.all()
     query = request.GET.get("q", "").strip()
@@ -128,46 +136,84 @@ def encyclopedia(request):
         plants = plants.filter(category=category)
     if difficulty in {"easy", "medium", "hard"}:
         plants = plants.filter(difficulty=difficulty)
+
+    collections = PlantCollection.objects.none()
     saved_ids = set()
-    collection = None
     if request.user.is_authenticated:
-        saved_ids = set(SavedPlant.objects.filter(user=request.user).values_list("plant_id", flat=True))
-        collection, _ = PlantCollection.objects.get_or_create(user=request.user, defaults={"name": "My Balcony"})
-    return render(request, "encyclopedia/encyclopedia.html", {
+        collections = PlantCollection.objects.filter(user=request.user)
+        saved_ids = set(PlantCollection.objects.filter(user=request.user, plants__isnull=False).values_list("plants__id", flat=True))
+
+    return render(request, "encyclopedia.html", {
         "plants": plants, "query": query, "category": category, "difficulty": difficulty,
-        "saved_ids": saved_ids, "collection": collection,
+        "saved_ids": saved_ids, "collections": collections,
         "plant_count": Plant.objects.count(), "result_count": plants.count(),
     })
 
 
 def plant_detail(request, slug):
     plant = get_object_or_404(Plant, slug=slug)
-    is_saved = request.user.is_authenticated and SavedPlant.objects.filter(user=request.user, plant=plant).exists()
-    return render(request, "encyclopedia/plant_detail.html", {
-        "plant": plant, "is_saved": is_saved, "care_guide": care_guide_for(plant),
+    collections = PlantCollection.objects.filter(user=request.user) if request.user.is_authenticated else PlantCollection.objects.none()
+    saved_ids = set(collections.filter(plants=plant).values_list("id", flat=True)) if request.user.is_authenticated else set()
+    return render(request, "plant_detail.html", {
+        "plant": plant, "is_saved": bool(saved_ids), "saved_collection_ids": saved_ids,
+        "collections": collections, "care_guide": care_guide_for(plant),
     })
 
 
-@login_required
 @require_POST
 def toggle_saved(request, slug):
+    """Save a plant into the collection explicitly selected in the card popover."""
+    if not request.user.is_authenticated:
+        messages.info(request, "Plant collections require authentication.")
+        return redirect(request.POST.get("next") or "encyclopedia:index")
+
     plant = get_object_or_404(Plant, slug=slug)
-    saved, created = SavedPlant.objects.get_or_create(user=request.user, plant=plant)
-    collection, _ = PlantCollection.objects.get_or_create(user=request.user, defaults={"name": "My Balcony"})
-    if not created:
-        saved.delete()
+    collection_id = request.POST.get("collection_id", "").strip()
+    collection = get_object_or_404(PlantCollection, pk=collection_id, user=request.user)
+    if collection.plants.filter(pk=plant.pk).exists():
         collection.plants.remove(plant)
-        messages.success(request, f"{plant.name} removed from your saved plants.")
+        messages.success(request, f"{plant.name} removed from {collection.name}.")
     else:
         collection.plants.add(plant)
-        messages.success(request, f"{plant.name} added to your collection.")
+        SavedPlant.objects.get_or_create(user=request.user, plant=plant)
+        messages.success(request, f"{plant.name} saved to {collection.name}.")
     return redirect(request.POST.get("next") or "encyclopedia:index")
 
 
-@login_required
+@require_POST
+def create_collection(request):
+    if not _require_authenticated(request):
+        return redirect("encyclopedia:index")
+    name = request.POST.get("name", "").strip()
+    if not name:
+        messages.error(request, "Enter a name for your new collection.")
+    else:
+        collection = PlantCollection.objects.create(user=request.user, name=name[:100])
+        messages.success(request, f'Collection "{collection.name}" created.')
+        return redirect(f"/encyclopedia/collection/?collection={collection.pk}")
+    return redirect("encyclopedia:collection")
+
+
+@require_POST
+def delete_collection(request, collection_id):
+    if not _require_authenticated(request):
+        return redirect("encyclopedia:index")
+    collection = get_object_or_404(PlantCollection, pk=collection_id, user=request.user)
+    name = collection.name
+    collection.delete()
+    messages.success(request, f'Collection "{name}" deleted.')
+    return redirect("encyclopedia:collection")
+
+
 def my_collection(request):
-    collection, _ = PlantCollection.objects.get_or_create(user=request.user, defaults={"name": "My Balcony"})
+    if not _require_authenticated(request):
+        return redirect("encyclopedia:index")
+    collections = PlantCollection.objects.filter(user=request.user)
+    active_id = request.GET.get("collection", "").strip()
+    active_collection = collections.filter(pk=active_id).first() if active_id else collections.first()
     if request.method == "POST":
+        collection_id = request.POST.get("collection_id", "").strip()
+        collection = get_object_or_404(PlantCollection, pk=collection_id, user=request.user)
         name = request.POST.get("name", "").strip()
         if name:
             collection.name = name[:100]
@@ -175,16 +221,23 @@ def my_collection(request):
             messages.success(request, "Collection name updated.")
         else:
             messages.error(request, "Please enter a collection name.")
-        return redirect("encyclopedia:collection")
-    return render(request, "encyclopedia/collection.html", {"collection": collection})
+        return redirect(f"/encyclopedia/collection/?collection={collection.pk}")
+    return render(request, "collection.html", {
+        "collections": collections,
+        "collection": active_collection,
+    })
 
 
-@login_required
 @require_POST
 def remove_from_collection(request, slug):
+    if not request.user.is_authenticated:
+        messages.info(request, "Plant collections require authentication.")
+        return redirect("encyclopedia:index")
     plant = get_object_or_404(Plant, slug=slug)
-    collection, _ = PlantCollection.objects.get_or_create(user=request.user, defaults={"name": "My Balcony"})
+    collection_id = request.POST.get("collection_id", "").strip()
+    collection = get_object_or_404(PlantCollection, pk=collection_id, user=request.user)
     collection.plants.remove(plant)
-    SavedPlant.objects.filter(user=request.user, plant=plant).delete()
-    messages.success(request, f"{plant.name} removed from your collection.")
-    return redirect("encyclopedia:collection")
+    if not PlantCollection.objects.filter(user=request.user, plants=plant).exists():
+        SavedPlant.objects.filter(user=request.user, plant=plant).delete()
+    messages.success(request, f"{plant.name} removed from {collection.name}.")
+    return redirect(f"/encyclopedia/collection/?collection={collection.pk}")

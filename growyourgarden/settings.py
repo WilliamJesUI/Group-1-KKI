@@ -51,7 +51,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'garden',
     'events',
-    'accounts',
     'plants',
     'encyclopedia',
 ]
@@ -161,7 +160,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Plant API token. Comes from .env on a laptop and from the PWS Environment tab online.
 TREFLE_TOKEN = os.getenv('TREFLE_TOKEN', '')
 
-# Authentication redirects used by the accounts app and login_required views.
-LOGIN_URL = 'profile:login'
-LOGIN_REDIRECT_URL = 'profile:show_profile'
-LOGOUT_REDIRECT_URL = 'profile:login'
+# Collection views check request.user.is_authenticated directly. No account/login app is installed.
