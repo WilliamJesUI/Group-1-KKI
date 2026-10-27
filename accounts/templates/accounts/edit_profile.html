@@ -16,10 +16,12 @@
         </div>
         {% endif %}
 
+        {% include "accounts/_field.html" with field=form.display_name optional=True %}
+
         {% include "accounts/_image_field.html" with title="Profile picture" shape="square" current=form.current_picture is_upload=form.picture_is_upload file=form.picture_file url=form.picture_url remove=form.remove_picture %}
         {% include "accounts/_image_field.html" with title="Profile banner" shape="wide" current=form.current_banner is_upload=form.banner_is_upload file=form.banner_file url=form.banner_url remove=form.remove_banner %}
         <p class="-mt-2 text-xs text-ink-soft">Without a profile banner, your profile shows your name in big letters instead.</p>
-        
+
         {% include "accounts/_field.html" with field=form.bio optional=True %}
         {% include "accounts/_field.html" with field=form.location optional=True %}
 

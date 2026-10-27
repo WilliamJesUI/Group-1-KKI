@@ -1,6 +1,7 @@
 import time
 
 from django import forms
+from django.contrib.auth import password_validation
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.urls import reverse
@@ -65,9 +66,30 @@ class RegisterForm(AriaInvalidMixin, UserCreationForm):
         self.fields["email"].label = "Email"
         self.fields["email"].widget.attrs.update({"class": INPUT_CLASS, "placeholder": "you@example.com", "autocomplete": "email"})
         self.fields["password1"].label = "Password"
+        # Django's list of password rules is HTML and looks broken in this layout. The rules that fail are shown as errors.
+        self.fields["password1"].help_text = ""
         self.fields["password1"].widget.attrs.update({"class": INPUT_CLASS, "placeholder": "At least 8 characters"})
         self.fields["password2"].label = "Confirm password"
         self.fields["password2"].widget.attrs.update({"class": INPUT_CLASS, "placeholder": "Type it again"})
+
+    def _post_clean(self):
+        # Django checks the password rules (too short, too common, too similar to the username...) in its own
+        # _post_clean and puts any errors on "Confirm password". They are about the password itself, so we do the
+        # same check here and show the errors on "Password" instead. A mismatch between the two fields still shows
+        # on "Confirm password", because that is done by clean_password2.
+        forms.ModelForm._post_clean(self)
+        password = self.cleaned_data.get("password2")
+        if password:
+            try:
+                password_validation.validate_password(password, self.instance)
+            except forms.ValidationError as error:
+                self.add_error("password1", error)
+
+    def full_clean(self):
+        super().full_clean()
+        # The two password boxes belong together, so when the password is refused, both get the red border
+        if "password1" in self.errors:
+            self.fields["password2"].widget.attrs["aria-invalid"] = "true"
 
     def clean_username(self):
         # Django's own clean_username only checks for duplicates (ignoring upper/lower case) and returns nothing,
@@ -140,6 +162,12 @@ def make_image_fields(label):
 
 
 class EditProfileForm(AriaInvalidMixin, forms.ModelForm):
+    # The display name is saved on the User (as first_name, which the navbar already shows), not on the Profile.
+    display_name = forms.CharField(
+        required=False, max_length=50, label="Display name",
+        widget=forms.TextInput(attrs={"placeholder": "e.g. Pro Gardener", "class": INPUT_CLASS}),
+        help_text="Shown instead of your username. Leave it empty to use your username.",
+    )
     # The text fields are normal model fields. The two images are handled by hand (see save()),
     # because each one can come from an uploaded file or from a pasted link.
     picture_file = make_image_fields("profile picture")["file"]
@@ -164,6 +192,7 @@ class EditProfileForm(AriaInvalidMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Replace Django's "---------" with friendlier text for the empty choice
         self.fields["growing_style"].choices = [("", "Choose a growing style")] + GROWING_STYLE_CHOICES
+        self.initial["display_name"] = self.instance.user.first_name
         # For each image: what is saved now (the template shows a preview), and was it uploaded or pasted?
         # An uploaded photo is saved as one of our own addresses, which starts with "/".
         for slot, field, kind, url_name in IMAGE_SLOTS:
@@ -193,6 +222,10 @@ class EditProfileForm(AriaInvalidMixin, forms.ModelForm):
             raise forms.ValidationError(IMAGE_LINK_ERROR)
         return url
 
+    def clean_display_name(self):
+        # Remove extra spaces, so "  Kristina   Ayu " becomes "Kristina Ayu"
+        return " ".join(self.cleaned_data["display_name"].split())
+
     def clean_picture_file(self):
         return self._clean_file("picture_file")
 
@@ -207,6 +240,9 @@ class EditProfileForm(AriaInvalidMixin, forms.ModelForm):
 
     def save(self, commit=True):
         profile = super().save(commit=False)
+        user = profile.user
+        user.first_name = self.cleaned_data["display_name"]
+        user.save(update_fields=["first_name"])
         for slot, field, kind, url_name in IMAGE_SLOTS:
             upload = self.cleaned_data.get(f"{slot}_file")
             url = self.cleaned_data.get(f"{slot}_url")

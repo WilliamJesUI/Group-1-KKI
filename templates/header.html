@@ -1,4 +1,4 @@
-{% load static %}
+{% load static accounts_tags %}
 {% comment %}
 The navbar at the top of every page (Figma "Navbar", not the "Page Header" component).
 base.html already includes it, so don't include it again in your page.
@@ -41,12 +41,8 @@ The .nav-tab and .nav-tab-active styles are in base.html, and static/js/navbar.j
             {% if user.is_authenticated %}
             <div class="mt-4 flex items-center gap-3 border-t border-line pt-4 lg:mt-0 lg:border-0 lg:pt-0">
                 <a href="{% url 'profile:show_profile' %}" class="flex items-center gap-3" aria-label="Your profile">
-                    {# user.profile is empty for old users without a Profile, then the letter avatar is used #}
-                    {% if user.profile.profile_picture %}
-                    <img src="{{ user.profile.profile_picture }}" alt="" class="size-10 rounded-full border-2 border-ink object-cover">
-                    {% else %}
-                    <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink {{ user.profile.avatar_bg_class|default:'bg-brand-soft' }} text-sm font-extrabold">{{ user.profile.initials|default:user.username|slice:":2"|upper }}</span>
-                    {% endif %}
+                    {# The same {% avatar %} tag is used next to posts and events, so a user's color matches everywhere #}
+                    {% avatar user %}
                     <span class="flex flex-col">
                         <span class="text-[13px] font-extrabold leading-tight">{{ user.first_name|default:user.username }}</span>
                         <span class="text-xs text-ink-soft">@{{ user.username }}</span>

@@ -12,6 +12,17 @@ AVATAR_COLORS = [("green", "Green"), ("pink", "Pink"), ("lilac", "Lilac"), ("yel
 AVATAR_BG_CLASSES = {"green": "bg-brand-soft", "pink": "bg-pink", "lilac": "bg-lilac", "yellow": "bg-butter"}
 
 
+def initials_for(name):
+    # The letters shown on the avatar. One word gives its first letter ("Ala" gives A).
+    # Two or more words give the first letters of the first two words ("Ala Tidur" gives AT).
+    words = name.split()
+    if not words:
+        return ""
+    if len(words) == 1:
+        return words[0][0].upper()
+    return (words[0][0] + words[1][0]).upper()
+
+
 def random_avatar_color():
     # A plain function (not a lambda), because migrations need to be able to refer to it by name
     return random.choice([value for value, label in AVATAR_COLORS])
@@ -53,17 +64,13 @@ class Profile(models.Model):
 
     @property
     def display_name(self):
-        # Same rule as the navbar: first_name, or the username when first_name is empty
+        # The "Display name" from Edit profile (kept in the user's first_name, which the navbar already reads),
+        # or the username when it is empty
         return self.user.first_name or self.user.username
 
     @property
     def initials(self):
-        # Two letters for the avatar, like "AH" in Figma: the first letters of the first two words of the name
-        # ("Ana Hill" gives AH). A one-word name or username uses its first two letters ("ala" gives AL).
-        words = self.display_name.split()
-        if len(words) >= 2:
-            return (words[0][0] + words[1][0]).upper()
-        return self.display_name[:2].upper()
+        return initials_for(self.display_name)
 
     @property
     def avatar_bg_class(self):
@@ -98,3 +105,4 @@ def create_profile_for_new_user(sender, instance, created, raw=False, **kwargs):
     # raw=True means loaddata is loading a fixture, which already contains its own Profile rows.
     if created and not raw:
         Profile.objects.get_or_create(user=instance)
+

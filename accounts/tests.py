@@ -211,3 +211,41 @@ class AccountDeletionTests(TestCase):
         self.assertFalse(User.objects.filter(username="ben").exists())
         self.assertFalse(Profile.objects.filter(id=profile_id).exists())
         self.assertNotIn("_auth_user_id", self.client.session)
+
+
+class AvatarColorConsistencyTests(TestCase):
+    def test_own_page_and_public_page_show_the_same_color(self):
+        user = User.objects.create_user("ala", "ala@example.com", PASSWORD)
+        viewer = User.objects.create_user("sam", "sam@example.com", PASSWORD)
+        color_class = user.profile.avatar_bg_class
+        self.client.force_login(user)
+        own = self.client.get(reverse("profile:show_profile"))
+        self.client.force_login(viewer)
+        public = self.client.get(reverse("profile:show_user_profile", args=["ala"]))
+        self.assertContains(own, color_class)
+        self.assertContains(public, color_class)
+
+
+class AvatarTagTests(TestCase):
+    def render(self, template, **context):
+        from django.template import Context, Template
+        return Template("{% load accounts_tags %}" + template).render(Context(context))
+
+    def test_avatar_tag_shows_initials_on_the_users_own_color(self):
+        user = User.objects.create_user("ala", "ala@example.com", PASSWORD)
+        html = self.render("{% avatar u %}", u=user)
+        self.assertIn(user.profile.avatar_bg_class, html)
+        self.assertIn("AL", html)
+
+    def test_avatar_tag_shows_the_picture_when_there_is_one(self):
+        user = User.objects.create_user("ala", "ala@example.com", PASSWORD)
+        Profile.objects.filter(user=user).update(profile_picture="https://images.pexels.com/photos/1/a.jpg")
+        user = User.objects.get(pk=user.pk)
+        html = self.render("{% avatar u %}", u=user)
+        self.assertIn("https://images.pexels.com/photos/1/a.jpg", html)
+        self.assertNotIn("AL", html)
+
+    def test_filters_give_the_same_color_as_the_profile(self):
+        user = User.objects.create_user("ala", "ala@example.com", PASSWORD)
+        html = self.render("{{ u|avatar_bg_class }} {{ u|avatar_initials }}", u=user)
+        self.assertEqual(html, f"{user.profile.avatar_bg_class} AL")
