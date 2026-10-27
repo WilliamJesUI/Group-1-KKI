@@ -21,6 +21,7 @@ from django.views.generic import TemplateView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('events/', include('events.urls')),
+    path('', include('accounts.urls')),
     path('community/', include('community.urls')),
     # Temporary preview page for base.html, remove once a real home page exists
     path('', TemplateView.as_view(template_name='home.html')),
