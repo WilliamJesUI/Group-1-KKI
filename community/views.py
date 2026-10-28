@@ -35,9 +35,12 @@ def show_questions(request):
     if pill == "mine" and not request.user.is_authenticated:
         pill = "latest"
 
+    question_asked_count = Question.objects.all().count()
+
     questions = (
         Question.objects
-        .filter(title__icontains=query)
+        .select_related("plant")
+        .filter(Q(title__icontains=query) | Q(plant__name__icontains=query))
         .annotate(answer_count=Count("answers"))
     )
 
@@ -71,6 +74,7 @@ def show_questions(request):
         "question_form": QuestionForm(),
         "question_filters": QUESTION_FILTERS,
         "question_list": questions,
+        "question_asked_count": question_asked_count,
         "selected_filter": pill,
         "query": query,
         "popular_plants": popular_plants,
