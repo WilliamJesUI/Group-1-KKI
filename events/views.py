@@ -79,11 +79,11 @@ def show_events(request):
     if selected_filter not in dict(EVENT_FILTERS):
         selected_filter = "upcoming"
     events = filter_events(all_events, selected_filter, request.user)
-    # ?q=seed searches inside the selected filter. icontains = "contains, ignoring upper/lower case".
-    # TODO: also search the theme plant once the shared Plant model is merged.
+    # ?q=seed searches inside the selected filter, in the event name or its theme plant's name.
+    # icontains = "contains, ignoring upper/lower case". Q(...) | Q(...) means "this OR that".
     query = request.GET.get("q", "").strip()
     if query:
-        events = events.filter(name__icontains=query)
+        events = events.filter(Q(name__icontains=query) | Q(theme_plant__name__icontains=query))
     events = mark_going(list(events), request.user)
 
     # ?partial=1 comes from event_filters.js: send only the cards, it swaps them into the page
