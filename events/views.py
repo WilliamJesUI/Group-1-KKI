@@ -1,9 +1,8 @@
 from django.http import Http404, HttpResponse, JsonResponse
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch, Q
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
