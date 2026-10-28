@@ -5,16 +5,17 @@ from .forms import *
 from django.views.decorators.http import require_POST
 from django.db.models import Count, Q, Exists, OuterRef, Count, Case, When, Value, IntegerField
 from django.contrib import messages 
+from plants.models import Plant
 
 
 # Create your views here.
-QUESTION_FILTERS = [("latest", "Latest"), ("popular", "Popular"), ("unanswered", "Unanswered"), ("mine", "Mine")]
+QUESTION_FILTERS = [("latest", "Latest"), ("popular", "Popular"), ("unpopular", "Unpopular"), ("mine", "Mine")]
 ANSWER_FILTERS = [("most_helpful", "Most Helpful"), ("newest", "Newest"), ("mine", "Mine")]
 
 QUESTION_SORTS = {
     "latest": ["-created_at"],
     "popular": ["-answer_count", "-created_at"],
-    "unanswered": ["-created_at"],
+    "unpopular": ["answer_count", "-created_at"],
     "mine" : ["-created_at"],
 }
 ANSWER_SORTS = {
@@ -40,8 +41,6 @@ def show_questions(request):
         .annotate(answer_count=Count("answers"))
     )
 
-    if pill == "unanswered":
-        questions = questions.filter(answer_count=0)
 
     order = list(QUESTION_SORTS[pill])
 
@@ -57,12 +56,25 @@ def show_questions(request):
 
     questions = questions.order_by(*order)
 
+    popular_plants = (
+        Plant.objects
+        .annotate(question_count=Count("questions"))
+        .filter(question_count__gt=0)
+        .order_by("-question_count", "name")[:5]
+    )
+
+    plant_slug = request.GET.get("plant", "").strip()
+    if plant_slug:
+        questions = questions.filter(plant__slug=plant_slug)
+
     context = {
         "question_form": QuestionForm(),
         "question_filters": QUESTION_FILTERS,
         "question_list": questions,
         "selected_filter": pill,
         "query": query,
+        "popular_plants": popular_plants,
+        "selected_plant": plant_slug,
         "helpful_answer_count": Answer.objects.annotate(num_voters=Count("voters")).filter(num_voters__gt=0).count()
     }
 

@@ -10,8 +10,7 @@
   <ul class="mt-4 flex flex-col gap-2">
     {% for plant in popular_plants %}
     <li>
-      <a href="{% url 'community:show_questions' %}?plant={{ plant.slug|urlencode }}"
-         {% if plant.slug == selected_plant %}aria-current="true"{% endif %}
+      <a href="#"
          class="flex items-center gap-3 rounded-xl border-2 border-ink px-3 py-2 transition duration-150 ease-out hover:border-brand hover:bg-brand-tint aria-[current=true]:bg-brand-soft focus-visible:border-brand focus-visible:outline-none">
 
         {% if plant.image_url %}
