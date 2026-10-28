@@ -356,7 +356,7 @@ class CreateEventTest(TestCase):
         response = self.client.post(self.url, self.data)
         self.assertEqual(response.status_code, 201)
         self.assertIsNone(Event.objects.get().theme_plant)
-        
+
 
 class PlantSelectTest(TestCase):
     # The Theme plant dropdown puts each plant's photo, scientific name and category on its <option>,
@@ -387,7 +387,8 @@ class PlantSelectTest(TestCase):
 
     def test_option_has_plant_data(self):
         option = self.find_option(self.tomato.id)
-        self.assertIn('data-image="https://bs.plantnet.org/image/o/tomato"', option)
+        # The picker asks for PlantNet's small photo (/s/), not the full size original (/o/)
+        self.assertIn('data-image="https://bs.plantnet.org/image/s/tomato"', option)
         self.assertIn('data-scientific="Solanum lycopersicum"', option)
         self.assertIn('data-category="vegetables"', option)
         self.assertIn(">Tomato</option>", option)

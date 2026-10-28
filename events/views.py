@@ -70,7 +70,7 @@ def show_events(request):
     # prefetch_related loads the attendees of all events in one extra query, instead of one query per card
     # for the avatars, "N going" and the RSVP button. Prefetch(...) sorts them by id, the same order the event
     # page and the RSVP answer use, so the avatars don't jump around after an RSVP.
-    all_events = Event.objects.defer("cover_image").prefetch_related(
+    all_events = Event.objects.defer("cover_image").select_related("theme_plant").prefetch_related(
         Prefetch("attendees", queryset=User.objects.order_by("pk"))
     )
 
@@ -135,7 +135,7 @@ def show_event(request, event_id):
 
 def show_event_cover(request, event_id):
     # Sends the uploaded cover photo from the database to the browser, like a normal image file
-    event = get_object_or_404(Event, pk=event_id)
+    event = get_object_or_404(Event.objects.defer("cover_image").select_related("theme_plant"), pk=event_id)
     if not event.cover_image_type:
         raise Http404("This event has no uploaded cover photo.")
     response = HttpResponse(bytes(event.cover_image), content_type=event.cover_image_type)
