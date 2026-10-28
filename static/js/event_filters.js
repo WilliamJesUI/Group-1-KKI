@@ -6,6 +6,8 @@ const pills = document.querySelectorAll('#event-filter-pills [data-filter]');
 const searchForm = document.getElementById('event-search-form');
 const searchInput = document.getElementById('event-search');
 const filterInput = searchForm.querySelector('input[name="filter"]');
+// Only there when the page was opened with ?plant=...
+const plantInput = searchForm.querySelector('input[name="plant"]');
 
 let latestRequest = 0; // so an old, slow response can't replace newer cards
 let typingTimer = null;
@@ -15,6 +17,10 @@ function buildUrl(filter, query) {
     const params = new URLSearchParams({ filter: filter });
     if (query) {
         params.set('q', query);
+    }
+    // Keep the plant filter when switching pills or searching
+    if (plantInput) {
+        params.set('plant', plantInput.value);
     }
     return '?' + params.toString();
 }

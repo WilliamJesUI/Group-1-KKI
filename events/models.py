@@ -23,6 +23,11 @@ class Event(models.Model):
     host = models.ForeignKey(User, on_delete=models.CASCADE, related_name="hosted_events")
     # One event can have many attendees, and one user can RSVP to many events
     attendees = models.ManyToManyField(User, related_name="rsvped_events", blank=True)
+    # The plant the event is about, from the shared plant list (plants app, filled from the Trefle API).
+    # Optional, and if that plant is ever removed the event stays with no theme plant (SET_NULL).
+    theme_plant = models.ForeignKey(
+        "plants.Plant", on_delete=models.SET_NULL, null=True, blank=True, related_name="events"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     # Changes every time the event is saved. Used to tell browsers when the cover photo has changed.
     updated_at = models.DateTimeField(auto_now=True)

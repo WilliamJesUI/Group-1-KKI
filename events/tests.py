@@ -12,7 +12,8 @@ from django.urls import reverse
 from django.utils import timezone
 from events.models import Event
 from events.views import get_when_label
-from events.forms import detect_image_type
+from events.forms import EventForm, detect_image_type
+from plants.models import Plant
 
 
 class EventListTest(TestCase):
@@ -340,6 +341,90 @@ class CreateEventTest(TestCase):
         response = self.client.get(reverse("events:show_events"))
         self.assertContains(response, 'id="host-event-modal"')
         self.assertContains(response, 'popovertarget="host-event-modal"')
+
+    def test_create_event_with_theme_plant(self):
+        plant = Plant.objects.create(name="Tomato", slug="test-tomato", category="vegetables")
+        self.client.login(username="rina", password="tomatoes123")
+        self.data["theme_plant"] = plant.id
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Event.objects.get().theme_plant, plant)
+
+    def test_theme_plant_is_optional(self):
+        self.client.login(username="rina", password="tomatoes123")
+        self.data["theme_plant"] = ""
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 201)
+        self.assertIsNone(Event.objects.get().theme_plant)
+
+
+class PlantSelectTest(TestCase):
+    # The Theme plant dropdown puts each plant's photo, scientific name and category on its <option>,
+    # so plant_picker.js can draw the picker from them
+    def setUp(self):
+        self.tomato = Plant.objects.create(
+            name="Tomato",
+            slug="test-tomato",
+            scientific_name="Solanum lycopersicum",
+            category="vegetables",
+            image_url="https://bs.plantnet.org/image/o/tomato",
+        )
+        self.rosemary = Plant.objects.create(
+            name="Rosemary", slug="test-rosemary", scientific_name="Salvia rosmarinus", category="herbs"
+        )
+        self.html = str(EventForm()["theme_plant"])
+
+    def find_option(self, value):
+        # The <option ...> line for one value, like '<option value="12" data-image="..." ...>Tomato</option>'
+        for line in self.html.splitlines():
+            if f'<option value="{value}"' in line:
+                return line
+        self.fail(f"No option with value {value}")
+
+    def test_select_turns_into_picker(self):
+        self.assertIn("data-plant-picker", self.html)
+        self.assertIn('name="theme_plant"', self.html)
+
+    def test_option_has_plant_data(self):
+        option = self.find_option(self.tomato.id)
+        # The picker asks for PlantNet's small photo (/s/), not the full size original (/o/)
+        self.assertIn('data-image="https://bs.plantnet.org/image/s/tomato"', option)
+        self.assertIn('data-scientific="Solanum lycopersicum"', option)
+        self.assertIn('data-category="vegetables"', option)
+        self.assertIn(">Tomato</option>", option)
+
+    def test_empty_option_has_no_plant_data(self):
+        option = self.find_option("")
+        self.assertIn("Choose a theme plant...", option)
+        self.assertNotIn("data-", option)
+
+    def test_plant_without_photo_has_empty_image(self):
+        option = self.find_option(self.rosemary.id)
+        self.assertIn('data-image=""', option)
+        self.assertIn('data-category="herbs"', option)
+
+    def test_picker_script_is_on_the_page(self):
+        User.objects.create_user(username="rina", password="tomatoes123")
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.get(reverse("events:show_events"))
+        self.assertContains(response, "js/plant_picker.js")
+        self.assertContains(response, 'data-scientific="Solanum lycopersicum"')
+
+    def test_edit_form_starts_with_the_events_plant(self):
+        host = User.objects.create_user(username="rina", password="tomatoes123")
+        event = Event.objects.create(
+            name="Tomato Day",
+            description="All about tomatoes.",
+            location="Menteng Urban Farm",
+            start_time=timezone.make_aware(datetime(2030, 11, 9, 9, 0)),
+            host=host,
+            theme_plant=self.tomato,
+        )
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.get(reverse("events:show_event", args=[event.id]))
+        # "selected" on the Tomato option is what plant_picker.js reads to show Tomato in the field.
+        # [^>]* in the pattern means "any other attributes here".
+        self.assertRegex(response.content.decode(), f'<option value="{self.tomato.id}"[^>]* selected[^>]*>Tomato</option>')
 
 
 class EventCoverTest(TestCase):
@@ -1309,3 +1394,67 @@ class HideNavbarTest(TestCase):
         self.assertNotIn('id="nav-menu"', html)
         self.assertIn("<h1>Log in</h1>", html)
         self.assertIn('id="toast-area"', html)
+
+
+class ThemePlantTest(TestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(username="rina", password="tomatoes123")
+        later = timezone.now() + timedelta(days=5)
+        self.rose = Plant.objects.create(name="Rose", slug="test-rose", category="flowers")
+        # The name doesn't say "rose", so a search for rose can only find it through the theme plant
+        self.pruning = Event.objects.create(
+            name="Weekend Pruning", description="-", location="Kemang", start_time=later, host=self.host,
+            theme_plant=self.rose,
+        )
+        self.seed_swap = Event.objects.create(
+            name="Community Seed Swap", description="-", location="Menteng Urban Farm", start_time=later, host=self.host,
+        )
+        self.list_url = reverse("events:show_events")
+
+    def test_card_tag_links_to_encyclopedia(self):
+        response = self.client.get(self.list_url)
+        self.assertContains(response, 'href="/encyclopedia/test-rose/"')
+
+    def test_no_tag_without_theme_plant(self):
+        response = self.client.get(self.list_url + "?q=seed&partial=1")
+        self.assertContains(response, "Community Seed Swap")
+        self.assertNotContains(response, "/encyclopedia/")
+
+    def test_search_finds_theme_plant(self):
+        response = self.client.get(self.list_url + "?q=ROSE")
+        self.assertEqual(response.context["event_list"], [self.pruning])
+
+    def test_plant_filter(self):
+        response = self.client.get(self.list_url + "?plant=test-rose")
+        self.assertEqual(response.context["event_list"], [self.pruning])
+        self.assertEqual(response.context["selected_plant"], self.rose)
+        self.assertContains(response, "Showing events for")
+        # The search box and the pills keep the plant
+        self.assertContains(response, 'name="plant" value="test-rose"')
+        self.assertContains(response, 'href="?filter=upcoming&amp;plant=test-rose"')
+
+    def test_unknown_plant_shows_everything(self):
+        response = self.client.get(self.list_url + "?plant=cactus")
+        self.assertEqual(len(response.context["event_list"]), 2)
+        self.assertIsNone(response.context["selected_plant"])
+        self.assertNotContains(response, "Showing events for")
+
+    def test_plant_filter_works_with_search(self):
+        response = self.client.get(self.list_url + "?plant=test-rose&q=seed")
+        self.assertEqual(response.context["event_list"], [])
+
+    def test_partial_keeps_plant_filter(self):
+        response = self.client.get(self.list_url + "?plant=test-rose&partial=1")
+        self.assertEqual(response.context["event_list"], [self.pruning])
+        self.assertNotContains(response, "Community Seed Swap")
+
+    def test_detail_page_links(self):
+        response = self.client.get(reverse("events:show_event", args=[self.pruning.id]))
+        self.assertContains(response, 'href="/encyclopedia/test-rose/"')
+        self.assertContains(response, self.list_url + "?plant=test-rose")
+        self.assertContains(response, "More Rose events")
+
+    def test_detail_page_without_theme_plant(self):
+        response = self.client.get(reverse("events:show_event", args=[self.seed_swap.id]))
+        self.assertNotContains(response, "/encyclopedia/")
+        self.assertNotContains(response, "?plant=")

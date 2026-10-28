@@ -80,9 +80,10 @@ already seen on the page. These are ready from the start, so a new avatar never 
     <form id="event-search-form" method="get" role="search" class="flex w-full items-center gap-[9px] rounded-full border-2 border-ink bg-surface px-[14px] py-[10px] focus-within:border-brand focus-within:ring-1 focus-within:ring-brand sm:max-w-[520px]">
         {# Keeps the selected pill when searching #}
         <input type="hidden" name="filter" value="{{ selected_filter }}">
+        {% if selected_plant %}<input type="hidden" name="plant" value="{{ selected_plant.slug }}">{% endif %}
         <img src="{% static 'img/icons/search.svg' %}" alt="" width="18" height="19">
         <label for="event-search" class="sr-only">Search events</label>
-        <input id="event-search" type="search" name="q" value="{{ query }}" placeholder="Search by event name..."
+        <input id="event-search" type="search" name="q" value="{{ query }}" placeholder="Search by event or theme plant..."
                class="min-w-0 flex-1 bg-transparent text-sm leading-[1.5] placeholder:text-ink/50 focus:outline-none">
     </form>
 
@@ -90,13 +91,23 @@ already seen on the page. These are ready from the start, so a new avatar never 
         {# Filter pills (Figma "Filter Pill"). aria-current="page" marks the selected one, and aria-[current=page]:bg-brand-soft makes it green. #}
         {% for value, label in event_filters %}
         {% if value != "mine" or user.is_authenticated %}
-        <a href="?filter={{ value }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}" data-filter="{{ value }}"
+        <a href="?filter={{ value }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}{% if selected_plant %}&amp;plant={{ selected_plant.slug }}{% endif %}" data-filter="{{ value }}"
            {% if value == selected_filter %}aria-current="page"{% endif %}
            class="rounded-full border-2 border-ink bg-surface px-4 py-2 text-xs font-bold leading-[1.2] hover:bg-brand-tint aria-[current=page]:bg-brand-soft transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">{{ label }}</a>
         {% endif %}
         {% endfor %}
     </div>
 </div>
+
+{% if selected_plant %}
+<div class="flex flex-wrap items-center gap-2 pt-5 text-[13px] font-bold text-ink-soft">
+    Showing events for
+    <a href="?filter={{ selected_filter }}" aria-label="Remove the {{ selected_plant.name }} filter" class="flex items-center gap-2 rounded-full border-2 border-ink bg-pink py-1.5 pl-3.5 pr-1.5 text-xs font-bold leading-[1.2] text-ink transition duration-150 ease-out hover:bg-pink/70 active:scale-[0.97] motion-reduce:active:scale-100">
+        {{ selected_plant.name }}
+        <span aria-hidden="true" class="flex size-5 items-center justify-center rounded-full bg-ink/10 text-sm leading-none">×</span>
+    </a>
+</div>
+{% endif %}
 
 {# event_filters.js swaps new cards in here. aria-busy="true" is set while loading, which fades them. #}
 {# min-h-[392px] is one row of cards (374px) plus the space above, so the page doesn't jump up when the results get shorter #}
