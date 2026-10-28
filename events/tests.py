@@ -12,7 +12,8 @@ from django.urls import reverse
 from django.utils import timezone
 from events.models import Event
 from events.views import get_when_label
-from events.forms import detect_image_type
+from events.forms import EventForm, detect_image_type
+from plants.models import Plant
 
 
 class EventListTest(TestCase):
@@ -340,6 +341,89 @@ class CreateEventTest(TestCase):
         response = self.client.get(reverse("events:show_events"))
         self.assertContains(response, 'id="host-event-modal"')
         self.assertContains(response, 'popovertarget="host-event-modal"')
+
+    def test_create_event_with_theme_plant(self):
+        plant = Plant.objects.create(name="Tomato", slug="test-tomato", category="vegetables")
+        self.client.login(username="rina", password="tomatoes123")
+        self.data["theme_plant"] = plant.id
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(Event.objects.get().theme_plant, plant)
+
+    def test_theme_plant_is_optional(self):
+        self.client.login(username="rina", password="tomatoes123")
+        self.data["theme_plant"] = ""
+        response = self.client.post(self.url, self.data)
+        self.assertEqual(response.status_code, 201)
+        self.assertIsNone(Event.objects.get().theme_plant)
+        
+
+class PlantSelectTest(TestCase):
+    # The Theme plant dropdown puts each plant's photo, scientific name and category on its <option>,
+    # so plant_picker.js can draw the picker from them
+    def setUp(self):
+        self.tomato = Plant.objects.create(
+            name="Tomato",
+            slug="test-tomato",
+            scientific_name="Solanum lycopersicum",
+            category="vegetables",
+            image_url="https://bs.plantnet.org/image/o/tomato",
+        )
+        self.rosemary = Plant.objects.create(
+            name="Rosemary", slug="test-rosemary", scientific_name="Salvia rosmarinus", category="herbs"
+        )
+        self.html = str(EventForm()["theme_plant"])
+
+    def find_option(self, value):
+        # The <option ...> line for one value, like '<option value="12" data-image="..." ...>Tomato</option>'
+        for line in self.html.splitlines():
+            if f'<option value="{value}"' in line:
+                return line
+        self.fail(f"No option with value {value}")
+
+    def test_select_turns_into_picker(self):
+        self.assertIn("data-plant-picker", self.html)
+        self.assertIn('name="theme_plant"', self.html)
+
+    def test_option_has_plant_data(self):
+        option = self.find_option(self.tomato.id)
+        self.assertIn('data-image="https://bs.plantnet.org/image/o/tomato"', option)
+        self.assertIn('data-scientific="Solanum lycopersicum"', option)
+        self.assertIn('data-category="vegetables"', option)
+        self.assertIn(">Tomato</option>", option)
+
+    def test_empty_option_has_no_plant_data(self):
+        option = self.find_option("")
+        self.assertIn("Choose a theme plant...", option)
+        self.assertNotIn("data-", option)
+
+    def test_plant_without_photo_has_empty_image(self):
+        option = self.find_option(self.rosemary.id)
+        self.assertIn('data-image=""', option)
+        self.assertIn('data-category="herbs"', option)
+
+    def test_picker_script_is_on_the_page(self):
+        User.objects.create_user(username="rina", password="tomatoes123")
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.get(reverse("events:show_events"))
+        self.assertContains(response, "js/plant_picker.js")
+        self.assertContains(response, 'data-scientific="Solanum lycopersicum"')
+
+    def test_edit_form_starts_with_the_events_plant(self):
+        host = User.objects.create_user(username="rina", password="tomatoes123")
+        event = Event.objects.create(
+            name="Tomato Day",
+            description="All about tomatoes.",
+            location="Menteng Urban Farm",
+            start_time=timezone.make_aware(datetime(2030, 11, 9, 9, 0)),
+            host=host,
+            theme_plant=self.tomato,
+        )
+        self.client.login(username="rina", password="tomatoes123")
+        response = self.client.get(reverse("events:show_event", args=[event.id]))
+        # "selected" on the Tomato option is what plant_picker.js reads to show Tomato in the field.
+        # [^>]* in the pattern means "any other attributes here".
+        self.assertRegex(response.content.decode(), f'<option value="{self.tomato.id}"[^>]* selected[^>]*>Tomato</option>')
 
 
 class EventCoverTest(TestCase):
