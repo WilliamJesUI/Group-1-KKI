@@ -45,6 +45,27 @@
                 </div>
             </div>
         </section>
+
+        <div class="lg:col-start-1">
+            <form id="question-search-form" method="get" autocomplete="off">
+                <input type="hidden" name="filter" value="{{ selected_filter }}">
+                <div class="flex flex-wrap items-center gap-3">
+                    <input id="question-search" name="q" type="search" placeholder="Search questions or plants…" class="min-w-0 flex-1 rounded-full border-2 border-ink bg-white px-5 py-3">
+                    <div id="question-filter-pills" class="flex flex-wrap items-center gap-[7px]">
+                        {% for value, label in question_filters %}
+                        {% if value != "mine" or user.is_authenticated %}
+                        <a href="?filter={{ value }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}" data-filter="{{ value }}"
+                            {% if value == selected_filter %}aria-current="page"{% endif %}
+                            class="rounded-full border-2 border-ink bg-surface px-4 py-2 text-xs font-bold leading-[1.2] hover:bg-brand-tint aria-[current=page]:bg-brand-soft transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">{{ label }}</a>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </form>
+            <div id="question-cards" class="min-h-[392px] pt-[18px] transition-opacity aria-busy:opacity-50 ">
+                {% include "question_cards.html" %}
+            </div>
+        </div> 
     </div>
 
     <aside class="mt-5 mb-6 space-y-6 lg:sticky lg:top-6">
@@ -53,7 +74,7 @@
             <div class="grid grid-cols-2 gap-2 lg:grid-cols-2[1fr_1fr]">
                 <div class="px-4 py-4 bg-brand-tint rounded-[11px]">
                     <p class="font-display text-[12px]">Questions Asked:</p>
-                    <p id="questions-asked-card"  class="font-display text-[20px] leading-tight">{{ question_list.count }}</p>
+                    <p id="questions-asked-card"  class="font-display text-[20px] leading-tight">{{ question_asked_count }}</p>
                 </div>
                 <div class="px-4 py-4 bg-brand-tint rounded-[11px]">
                     <p class="font-display text-[12px]">Helpful Answers:</p>
@@ -61,35 +82,10 @@
                 </div>
             </div>
         </section>
+        
+        {% include 'popular_plants_container.html' %}
 
-        <section class="rounded-2xl border-2 border-ink bg-white p-5">
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <h2 class="font-display text-[20px] leading-tight">Popular Plants</h2>
-                <a class="font-display text-[11px] flex justify-end">SEE ALL</a>
-            </div>
-        </section>
     </aside>
-
-    <div class="lg:col-start-1">
-        <form id="question-search-form" method="get" autocomplete="off">
-            <input type="hidden" name="filter" value="{{ selected_filter }}">
-            <div class="flex flex-wrap items-center gap-3">
-                <input id="question-search" name="q" type="search" placeholder="Search questions or plants…" class="min-w-0 flex-1 rounded-full border-2 border-ink bg-white px-5 py-3">
-                <div id="question-filter-pills" class="flex flex-wrap items-center gap-[7px]">
-                    {% for value, label in question_filters %}
-                    {% if value != "mine" or user.is_authenticated %}
-                    <a href="?filter={{ value }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}" data-filter="{{ value }}"
-                        {% if value == selected_filter %}aria-current="page"{% endif %}
-                        class="rounded-full border-2 border-ink bg-surface px-4 py-2 text-xs font-bold leading-[1.2] hover:bg-brand-tint aria-[current=page]:bg-brand-soft transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">{{ label }}</a>
-                    {% endif %}
-                    {% endfor %}
-                </div>
-            </div>
-        </form>
-        <div id="question-cards" class="min-h-[392px] pt-[18px] transition-opacity aria-busy:opacity-50">
-            {% include "question_cards.html" %}
-        </div>
-    </div> 
     {% include "question_form_modal.html" %}
 </div>
 

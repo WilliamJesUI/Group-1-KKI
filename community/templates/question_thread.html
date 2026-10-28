@@ -23,18 +23,9 @@
 {% block content %}
 <a href="{% url 'community:show_questions' %}">Back to community</a>
 <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
-    <section class="mt-5 mb-6 flex flex-col gap-8">
+    <section class="mt-5 mb-6 flex flex-col gap-8 self-start">
         {% include "question_thread_card.html" %}
-    </section>
-
-
-    <aside class="mt-5 mb-6 space-y-6 lg:sticky lg:top-6">
-        {% if user.is_authenticated and question.author_id == user.id %}
-            {% include 'question_edit_delete_card.html' %}
-        {% endif %}
-    </aside>
-
-    <div class="lg:col-start-1">
+        <div class="lg:col-start-1">
         <div class="flex items-center justify-between gap-4">
             {% with n=answer_list|length %}
             <h2 data-answer-count-label data-empty-text="No Answers Yet!"
@@ -62,7 +53,16 @@
             {% include 'answer_cards.html' %}
         </div>
         {% include 'answer_form.html' %}
-    </div>
+        </div>
+    </section>
+
+
+    <aside class="mt-5 mb-6 space-y-6 lg:sticky lg:top-6">
+        {% include "related_questions_container.html" %}
+        {% if user.is_authenticated and question.author_id == user.id %}
+            {% include 'question_edit_delete_card.html' %}
+        {% endif %}
+    </aside>
 </div>
 
 {% include 'question_edit_form_modal.html' %}

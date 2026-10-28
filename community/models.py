@@ -14,6 +14,13 @@ class Question(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     voters = models.ManyToManyField(User)
+    plant = models.ForeignKey(
+        "plants.Plant",            # change "plants" to the app that holds Plant
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,                # the tag is optional
+        related_name="questions",
+    )
 
     def __str__(self):
         return f"{self.title} {self.body} {self.created_at}"
