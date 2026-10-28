@@ -1394,3 +1394,67 @@ class HideNavbarTest(TestCase):
         self.assertNotIn('id="nav-menu"', html)
         self.assertIn("<h1>Log in</h1>", html)
         self.assertIn('id="toast-area"', html)
+
+
+class ThemePlantTest(TestCase):
+    def setUp(self):
+        self.host = User.objects.create_user(username="rina", password="tomatoes123")
+        later = timezone.now() + timedelta(days=5)
+        self.rose = Plant.objects.create(name="Rose", slug="test-rose", category="flowers")
+        # The name doesn't say "rose", so a search for rose can only find it through the theme plant
+        self.pruning = Event.objects.create(
+            name="Weekend Pruning", description="-", location="Kemang", start_time=later, host=self.host,
+            theme_plant=self.rose,
+        )
+        self.seed_swap = Event.objects.create(
+            name="Community Seed Swap", description="-", location="Menteng Urban Farm", start_time=later, host=self.host,
+        )
+        self.list_url = reverse("events:show_events")
+
+    def test_card_tag_links_to_encyclopedia(self):
+        response = self.client.get(self.list_url)
+        self.assertContains(response, 'href="/encyclopedia/test-rose/"')
+
+    def test_no_tag_without_theme_plant(self):
+        response = self.client.get(self.list_url + "?q=seed&partial=1")
+        self.assertContains(response, "Community Seed Swap")
+        self.assertNotContains(response, "/encyclopedia/")
+
+    def test_search_finds_theme_plant(self):
+        response = self.client.get(self.list_url + "?q=ROSE")
+        self.assertEqual(response.context["event_list"], [self.pruning])
+
+    def test_plant_filter(self):
+        response = self.client.get(self.list_url + "?plant=test-rose")
+        self.assertEqual(response.context["event_list"], [self.pruning])
+        self.assertEqual(response.context["selected_plant"], self.rose)
+        self.assertContains(response, "Showing events for")
+        # The search box and the pills keep the plant
+        self.assertContains(response, 'name="plant" value="test-rose"')
+        self.assertContains(response, 'href="?filter=upcoming&amp;plant=test-rose"')
+
+    def test_unknown_plant_shows_everything(self):
+        response = self.client.get(self.list_url + "?plant=cactus")
+        self.assertEqual(len(response.context["event_list"]), 2)
+        self.assertIsNone(response.context["selected_plant"])
+        self.assertNotContains(response, "Showing events for")
+
+    def test_plant_filter_works_with_search(self):
+        response = self.client.get(self.list_url + "?plant=test-rose&q=seed")
+        self.assertEqual(response.context["event_list"], [])
+
+    def test_partial_keeps_plant_filter(self):
+        response = self.client.get(self.list_url + "?plant=test-rose&partial=1")
+        self.assertEqual(response.context["event_list"], [self.pruning])
+        self.assertNotContains(response, "Community Seed Swap")
+
+    def test_detail_page_links(self):
+        response = self.client.get(reverse("events:show_event", args=[self.pruning.id]))
+        self.assertContains(response, 'href="/encyclopedia/test-rose/"')
+        self.assertContains(response, self.list_url + "?plant=test-rose")
+        self.assertContains(response, "More Rose events")
+
+    def test_detail_page_without_theme_plant(self):
+        response = self.client.get(reverse("events:show_event", args=[self.seed_swap.id]))
+        self.assertNotContains(response, "/encyclopedia/")
+        self.assertNotContains(response, "?plant=")
