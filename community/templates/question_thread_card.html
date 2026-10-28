@@ -9,8 +9,16 @@
 
     <div class="min-w-0 flex-1">
       <!-- author row -->
-      <a class="hover:scale-102 duration-150 inline-flex items-center gap-2 text-sm" href="{% url 'profile:show_user_profile' question.author.username %}">
-        <span class="card-avatar card-avatar-lilac">{{ question.author.username|slice:":2"|upper }}</span>
+      <a class="flex w-fit flex-wrap items-center gap-2 text-sm transition-transform duration-150 hover:scale-102" href="{% url 'profile:show_user_profile' question.author.username %}">
+        {% with profile=question.author.profile %}
+          {% if profile.profile_picture %}
+            <img src="{{ profile.profile_picture }}"
+                alt="Profile picture of {{ profile.display_name }}"
+                class="block size-8 rounded-full object-cover">
+          {% else %}
+            <span class="card-avatar {{ profile.avatar_bg_class }}">{{ profile.initials }}</span>
+          {% endif %}
+        {% endwith %}
         <span class="font-semibold">{{ question.author.get_full_name|default:question.author.username }}</span>
         <span class="text-ink-soft">· {{ question.created_at|timesince }} ago</span>
       </a>

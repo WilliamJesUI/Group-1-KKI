@@ -9,13 +9,19 @@
 
           <div class="min-w-0 flex-1">
             <!-- author row -->
-            <a class="relative z-10 inline-flex items-center gap-2 hover:scale-102 duration-150" href="{% url 'profile:show_user_profile' question.author.username %}">
-            <div class="flex items-center gap-2 text-sm">
-                <span class="card-avatar card-avatar-lilac">{{ question.author.username|slice:":2"|upper }}</span>
-                <span class="font-semibold">{{ question.author.get_full_name|default:question.author.username }}</span>
-
+            <a class="relative z-10 flex w-fit transition-transform duration-150 hover:scale-102 flex-wrap items-center gap-2 text-sm" href="{% url 'profile:show_user_profile' question.author.username %}">
+              <!-- Author profile picture -->
+              {% with profile=question.author.profile %}
+                {% if profile.profile_picture %}
+                  <img src="{{ profile.profile_picture }}"
+                      alt="Profile picture of {{ profile.display_name }}"
+                      class="size-8 rounded-full object-cover">
+                {% else %}
+                  <span class="card-avatar {{ profile.avatar_bg_class }}">{{ profile.initials }}</span>
+                {% endif %}
+              {% endwith %}
+              <span class="font-semibold">{{ question.author.get_full_name|default:question.author.username }}</span>
               <span class="text-ink-soft">· {{ question.created_at|timesince }} ago</span>
-            </div>
             </a>
 
             <!-- title (this link covers the whole card) -->
@@ -39,6 +45,5 @@
               {% endif %}
             </div>
           </div>
-
         </div>
       </article>
