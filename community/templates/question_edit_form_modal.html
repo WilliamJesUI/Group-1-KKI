@@ -11,7 +11,9 @@
     <form id="edit-question-form" class="mt-4"
           data-endpoint="{% url 'community:update_question_ajax' question.id %}">
         {% csrf_token %}
-        {{ edit_form }}
+        <div class="mb-6">
+            {{ edit_form }}
+        </div>
         <div class="mt-4 flex justify-end gap-3">
             <button type="button" popovertarget="edit-question-modal" popovertargetaction="hide"
                 class="rounded-full border-2 border-ink bg-surface px-6 py-3 text-[15px] font-extrabold hover:bg-brand-tint transition duration-150 ease-out active:scale-[0.97]">Cancel</button>
