@@ -31,6 +31,12 @@ Browsers that don't know starting: or transition-discrete simply skip the animat
         </div>
 
         <div class="flex flex-col gap-2">
+            <label for="{{ form.theme_plant.id_for_label }}" class="text-[13px] font-extrabold">{{ form.theme_plant.label }}</label>
+            {{ form.theme_plant }}
+            <p data-error-for="theme_plant" class="hidden text-xs text-danger-text"></p>
+        </div>
+
+        <div class="flex flex-col gap-2">
             <label for="{{ form.date.id_for_label }}" class="text-[13px] font-extrabold">Date &amp; time</label>
             <div class="flex flex-col gap-3 sm:flex-row">
                 <div class="flex h-11 flex-1 items-center gap-2 rounded-full border-2 border-ink bg-surface px-4 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand has-aria-invalid:border-danger">

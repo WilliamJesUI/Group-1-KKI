@@ -60,14 +60,17 @@ class EventForm(ModelForm):
 
     class Meta:
         model = Event
-        fields = ["name", "location", "description", "what_to_bring", "cover_photo_url"]
+        fields = ["name", "theme_plant", "location", "description", "what_to_bring", "cover_photo_url"]
         labels = {
             "name": "Event name",
+            "theme_plant": "Theme plant",
             "what_to_bring": "What to bring",
             "cover_photo_url": "Cover photo",
         }
         widgets = {
             "name": forms.TextInput(attrs={"placeholder": "e.g. Community Seed Swap", "class": INPUT_CLASS}),
+            # A dropdown of every plant in the shared plant list (plants app)
+            "theme_plant": forms.Select(attrs={"class": INPUT_CLASS}),
             "location": forms.TextInput(attrs={"placeholder": "e.g. Menteng Urban Farm", "class": INPUT_CLASS}),
             "description": forms.Textarea(attrs={
                 "placeholder": "What will people do?",
@@ -93,6 +96,8 @@ class EventForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # The first, empty choice of the dropdown (Figma: "Choose a theme plant...")
+        self.fields["theme_plant"].empty_label = "Choose a theme plant..."
         # When editing an existing event, fill the date and time boxes from its start_time and end_time.
         # Checks start_time, not pk: our UUID id is made right away, so even a new, unsaved event has a pk.
         if self.instance.start_time:
