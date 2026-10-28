@@ -712,7 +712,8 @@ class DeleteEventTest(TestCase):
     def test_host_can_delete(self):
         self.client.login(username="rina", password="tomatoes123")
         response = self.client.post(self.url)
-        self.assertRedirects(response, reverse("events:show_events"))
+        # event_delete.js goes to this url after deleting
+        self.assertEqual(response.json(), {"url": reverse("events:show_events")})
         self.assertFalse(Event.objects.filter(pk=self.event.pk).exists())
         # The event is gone from the attendee's list too
         self.assertEqual(self.other.rsvped_events.count(), 0)
@@ -721,11 +722,13 @@ class DeleteEventTest(TestCase):
         self.client.login(username="ben", password="tomatoes123")
         response = self.client.post(self.url)
         self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["message"], "Only the host can delete this event.")
         self.assertTrue(Event.objects.filter(pk=self.event.pk).exists())
 
     def test_visitor_cannot_delete(self):
         response = self.client.post(self.url)
         self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["message"], "Please log in to delete this event.")
         self.assertTrue(Event.objects.filter(pk=self.event.pk).exists())
 
     def test_get_does_not_delete(self):
@@ -748,6 +751,8 @@ class DeleteEventTest(TestCase):
         self.assertContains(response, 'Delete "Community Seed Swap"?')
         self.assertContains(response, 'popovertarget="delete-event-modal"')
         self.assertContains(response, f'action="{self.url}"')
+        self.assertContains(response, 'id="delete-event-form"')
+        self.assertContains(response, "js/event_delete.js")
 
 
 class EventStatusTest(TestCase):
@@ -1252,7 +1257,9 @@ class EventToastTest(TestCase):
             name="Community Seed Swap", description="-", location="Menteng Urban Farm",
             start_time=timezone.now() + timedelta(days=3), host=self.host,
         )
-        response = self.client.post(reverse("events:delete_event", args=[event.id]), follow=True)
+        self.client.post(reverse("events:delete_event", args=[event.id]))
+        # The message waits until the next page, which is where event_delete.js goes: the Events page
+        response = self.client.get(reverse("events:show_events"))
         # Django escapes the apostrophe in "It's" inside the attribute
         self.assertContains(response, 'data-toast-message="Event deleted\nIt&#x27;s off the Events page now."')
 
