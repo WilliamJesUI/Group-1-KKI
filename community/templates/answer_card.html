@@ -12,14 +12,14 @@
 
     <div class="min-w-0 flex-1">
       <!-- author row -->
-      <div class="flex flex-wrap items-center gap-2 text-sm">
+      <a class="inline-flex flex-wrap items-center gap-2 text-sm hover:scale-102 duration-150" href="{% url 'profile:show_user_profile' answer.author.username %}">
         <span class="card-avatar card-avatar-lilac">{{ answer.author.username|slice:":2"|upper }}</span>
         <span class="font-semibold">{{ answer.author.get_full_name|default:answer.author.username }}</span>
         <span class="text-ink-soft">· {{ answer.created_at|timesince }} ago</span>
         {% if is_top %}
         <span class="rounded-full border-2 border-ink bg-green-200 px-3 py-0.5 text-xs font-extrabold uppercase tracking-wider text-green-900">Top answer</span>
         {% endif %}
-      </div>
+      </a>
 
       <!-- body -->
       <p data-answer-body class="mt-2 whitespace-pre-line text-[15px] leading-relaxed">{{ answer.body }}</p>

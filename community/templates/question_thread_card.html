@@ -1,4 +1,4 @@
-<article data-answer-card class="relative h-full overflow-hidden rounded-2xl border-2 border-ink bg-surface transition-[border-color,box-shadow] duration-150 ease-out hover:border-brand hover:shadow-[4px_4px_0_0_var(--color-ink)] has-[h2_a:focus-visible]:border-brand has-[h2_a:focus-visible]:shadow-[4px_4px_0_0_var(--color-ink)]">
+<article data-answer-card class="transition-transform hover:scale-101 relative h-full overflow-hidden rounded-2xl border-2 border-ink bg-surface transition-[border-color,box-shadow] duration-150 ease-out hover:border-brand hover:shadow-[4px_4px_0_0_var(--color-ink)] has-[h2_a:focus-visible]:border-brand has-[h2_a:focus-visible]:shadow-[4px_4px_0_0_var(--color-ink)]">
   <div class="flex gap-4 p-8">
 
     <!-- vote box -->
@@ -9,11 +9,11 @@
 
     <div class="min-w-0 flex-1">
       <!-- author row -->
-      <div class="flex items-center gap-2 text-sm">
+      <a class="hover:scale-102 duration-150 inline-flex items-center gap-2 text-sm" href="{% url 'profile:show_user_profile' question.author.username %}">
         <span class="card-avatar card-avatar-lilac">{{ question.author.username|slice:":2"|upper }}</span>
         <span class="font-semibold">{{ question.author.get_full_name|default:question.author.username }}</span>
         <span class="text-ink-soft">· {{ question.created_at|timesince }} ago</span>
-      </div>
+      </a>
 
       <!-- title (this link covers the whole card) -->
       <h2 class="mt-1 font-display text-[32px] leading-[1.3]">{{ question.title }}</h2>
