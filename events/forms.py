@@ -51,7 +51,9 @@ class PlantSelect(forms.Select):
         # The empty "Choose a theme plant..." option has no plant, so it gets no data-* attributes.
         plant = getattr(value, "instance", None)
         if plant:
-            option["attrs"]["data-image"] = plant.image_url
+            # The picker only shows small circles, so ask PlantNet for its small copy (/s/)
+            # instead of the original full size photo (/o/), which can be several MB
+            option["attrs"]["data-image"] = plant.image_url.replace("/image/o/", "/image/s/")
             option["attrs"]["data-scientific"] = plant.scientific_name
             option["attrs"]["data-category"] = plant.category
         return option
