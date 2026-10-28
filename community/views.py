@@ -86,6 +86,20 @@ def show_questions(request):
         return render(request, "question_cards.html", context)
     return render(request, "question_list.html", context)
 
+def popular_plants_ajax(request):
+    popular_plants = (
+            Plant.objects
+            .annotate(question_count=Count("questions"))
+            .filter(question_count__gt=0)
+            .order_by("-question_count", "name")[:25]
+        )
+
+    context = {
+        "popular_plants" : popular_plants,
+    }
+    return render(request, "popular_plants_container.html", context)
+
+
 def show_question_thread(request, question_id):
     question = get_object_or_404(Question, id=question_id)
     pill = request.GET.get("filter", "most_helpful")

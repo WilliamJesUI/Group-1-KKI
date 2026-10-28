@@ -30,6 +30,7 @@ async function createQuestion(event) {
     } finally {
         submitButton.disabled = false;
         window.reloadQuestionCards();
+        window.refreshPopularPlants()
         document.getElementById('ask-question-modal').hidePopover();
         
         const n = Number(document.getElementById('questions-asked-card').innerHTML);
