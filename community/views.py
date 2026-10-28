@@ -100,6 +100,18 @@ def show_question_thread(request, question_id):
 
     answers = answers.order_by(*order)
 
+    # Get related questions
+    related_questions = Question.objects.none()
+    if question.plant_id:
+        related_questions = (
+            Question.objects
+            .filter(plant_id=question.plant_id)
+            .exclude(id=question.id)
+            .select_related("plant")
+            .annotate(answer_count=Count("answers"))
+            .order_by("-created_at")[:5]
+        )
+
     context = {
         "question": question,
         "answer_list": answers,
@@ -108,6 +120,7 @@ def show_question_thread(request, question_id):
         "selected_filter": pill,
         "show_top": pill == "most_helpful",
         "edit_form": QuestionForm(instance=question, auto_id="edit_%s"),
+        "related_questions" : related_questions,
     }
 
     if request.GET.get("partial") == "1":
