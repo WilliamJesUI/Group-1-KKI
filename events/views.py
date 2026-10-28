@@ -85,7 +85,7 @@ def show_events(request):
     query = request.GET.get("q", "").strip()
     if query:
         events = events.filter(Q(name__icontains=query) | Q(theme_plant__name__icontains=query))
-        # ?plant=tomato shows only events with that theme plant. Unknown slugs are ignored.
+    # ?plant=tomato shows only events with that theme plant. Unknown slugs are ignored.
     plant_slug = request.GET.get("plant", "").strip()
     selected_plant = Plant.objects.filter(slug=plant_slug).first() if plant_slug else None
     if selected_plant:
@@ -118,7 +118,7 @@ def show_events(request):
 # ensure_csrf_cookie: the RSVP button uses fetch, which needs the csrftoken cookie even on pages without a form
 @ensure_csrf_cookie
 def show_event(request, event_id):
-    event = get_object_or_404(Event.objects.defer("cover_image"), pk=event_id)
+    event = get_object_or_404(Event.objects.defer("cover_image").select_related("theme_plant"), pk=event_id)
     going_count = event.attendees.count()
     context = {
         "event": event,
@@ -142,7 +142,7 @@ def show_event(request, event_id):
 
 def show_event_cover(request, event_id):
     # Sends the uploaded cover photo from the database to the browser, like a normal image file
-    event = get_object_or_404(Event.objects.defer("cover_image").select_related("theme_plant"), pk=event_id)
+    event = get_object_or_404(Event, pk=event_id)
     if not event.cover_image_type:
         raise Http404("This event has no uploaded cover photo.")
     response = HttpResponse(bytes(event.cover_image), content_type=event.cover_image_type)
