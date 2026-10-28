@@ -238,10 +238,14 @@ def rsvp_event_ajax(request, event_id):
 
 @require_POST
 def delete_event(request, event_id):
+    # Not @login_required: fetch needs a JSON error it can read, not a redirect
+    if not request.user.is_authenticated:
+        return JsonResponse({"message": "Please log in to delete this event."}, status=403)
     event = get_object_or_404(Event, pk=event_id)
-    # Only the host may delete. Visitors who aren't logged in never equal the host, so they're stopped here too.
-    if request.user != event.host:
-        raise PermissionDenied
+    # Hiding the Delete button isn't enough, anyone could send this request with fetch, so check the host here too
+    if event.host != request.user:
+        return JsonResponse({"message": "Only the host can delete this event."}, status=403)
     event.delete()
+    # event_delete.js goes to this url, and the Events page shows this message as a toast
     messages.success(request, "Event deleted\nIt's off the Events page now.")
-    return redirect("events:show_events")
+    return JsonResponse({"url": reverse("events:show_events")})
