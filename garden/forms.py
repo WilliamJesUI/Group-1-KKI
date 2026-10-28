@@ -2,42 +2,43 @@ from django import forms
 from .models import Post, Comment
 
 class PostForm(forms.ModelForm):
+    categories = forms.MultipleChoiceField(
+        choices=Post.PLANT_CATEGORIES,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+    )
+
     class Meta:
         model = Post
-        fields = ['caption', 'image_url', 'category', 'plant_tag']
+        fields = ["caption", "image_url", "categories", "plant_tag"]
         widgets = {
-            'caption': forms.Textarea(attrs={
-                'placeholder': "Share what's growing in your garden...",
-                'rows': 2,
-                'class': 'w-full bg-transparent resize-none focus:outline-none text-sm'
-            }),
-            'image_url': forms.URLInput(attrs={
-                'placeholder': 'Paste image URL (optional)',
-                'class': 'w-full text-xs text-ink-soft bg-transparent focus:outline-none'
-            }),
-            'category': forms.Select(attrs={
-                'class': 'w-full text-xs text-ink-soft bg-transparent focus:outline-none cursor-pointer'
-            }),
-            'plant_tag': forms.TextInput(attrs={
-                'placeholder': 'Specific plant (optional, e.g. Cherry Tomato)',
-                'class': 'w-full text-xs text-ink-soft bg-transparent focus:outline-none'
-            })
+            "caption": forms.Textarea(attrs={"placeholder": "Share what's growing...", "rows": 3}),
+            "image_url": forms.URLInput(attrs={"placeholder": "https://example.com/photo.jpg"}),
+            "plant_tag": forms.TextInput(attrs={"placeholder": "e.g. Cherry Tomato"}),
         }
-        labels = {
-            'caption': '',
-            'image_url': '',
-            'category': '',
-            'plant_tag': ''
-        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            selected = self.instance.categories or []
+            if not selected and self.instance.category:
+                selected = [self.instance.category]
+            self.fields["categories"].initial = selected
+
+    def save(self, commit=True):
+        post = super().save(commit=False)
+        selected = self.cleaned_data.get("categories", [])
+        post.categories = list(selected)
+        post.category = selected[0] if selected else ""
+        if commit:
+            post.save()
+            self.save_m2m()
+        return post
 
 class CommentForm(forms.ModelForm):
     class Meta:
         model = Comment
-        fields = ['text']
+        fields = ["text"]
         widgets = {
-            'text': forms.TextInput(attrs={
-                'placeholder': 'Write a comment...',
-                'class': 'w-full text-sm bg-transparent focus:outline-none'
-            })
+            "text": forms.Textarea(attrs={"placeholder": "Write a comment...", "rows": 2, "maxlength": 1500}),
         }
-        labels = {'text': ''}

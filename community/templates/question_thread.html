@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}
+<style type="text/tailwindcss">
+    @layer components {
+        .card-avatar {
+            @apply flex size-[30px] items-center justify-center rounded-full border-[1.5px] border-ink text-[9px] font-bold leading-[1.2];
+        }
+        .card-avatar-lilac {
+            @apply bg-lilac;
+        }
+        .card-avatar-pink {
+            @apply bg-pink;
+        }
+        .card-avatar-more {
+            @apply bg-brand-soft;
+        }
+    }
+</style>
+{% endblock meta %}
+
+{% block content %}
+<a href="{% url 'community:show_questions' %}">Back to community</a>
+<div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
+    <section class="mt-5 mb-6 flex flex-col gap-8">
+        {% include "question_thread_card.html" %}
+    </section>
+
+
+    <aside class="mt-5 mb-6 space-y-6 lg:sticky lg:top-6">
+        {% if user.is_authenticated and question.author_id == user.id %}
+            {% include 'question_edit_delete_card.html' %}
+        {% endif %}
+    </aside>
+
+    <div class="lg:col-start-1">
+        <div class="flex items-center justify-between gap-4">
+            {% with n=answer_list|length %}
+            <h2 data-answer-count-label data-empty-text="No Answers Yet!"
+                class="font-display text-[24px] leading-tight mb-6">
+                {% if n == 0 %}No Answers Yet!{% else %}{{ n }} answer{{ n|pluralize }}{% endif %}
+            </h2>
+            {% endwith %}
+            <form id="question-search-form" method="get" autocomplete="off" class="mb-6">
+                <input type="hidden" name="filter" value="{{ selected_filter }}">
+                <div class="flex flex-wrap items-center gap-3">
+                    <div id="answer-filter-pills" class="flex flex-wrap items-center gap-[7px]">
+                        {% for value, label in answer_filters %}
+                        {% if value != "mine" or user.is_authenticated %}
+                        <a href="?filter={{ value }}" data-filter="{{ value }}"
+                            {% if value == selected_filter %}aria-current="page"{% endif %}
+                            class="rounded-full border-2 border-ink bg-surface px-4 py-2 text-xs font-bold leading-[1.2] hover:bg-brand-tint aria-[current=page]:bg-brand-soft transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">{{ label }}</a>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div id="answer-cards">
+            {% include 'answer_cards.html' %}
+        </div>
+        {% include 'answer_form.html' %}
+    </div>
+</div>
+
+{% include 'question_edit_form_modal.html' %}
+
+
+<script src="{% static 'js/community_question_thread.js' %}"></script>
+<script src="{% static 'js/community_answer_form.js' %}"></script>
+<script src="{% static 'js/community_question_owner.js' %}"></script>
+<script src="{% static 'js/community_answer_owner.js' %}"></script>
+{% endblock content %}
