@@ -1,4 +1,4 @@
-{% load static %}
+{% load static accounts_tags %}
 {% comment %}
 The navbar at the top of every page (Figma "Navbar", not the "Page Header" component).
 base.html already includes it, so don't include it again in your page.
@@ -31,25 +31,28 @@ The .nav-tab and .nav-tab-active styles are in base.html, and static/js/navbar.j
                 <a href="#" class="nav-tab {% if app == 'garden' %}nav-tab-active{% endif %}">Garden</a>
                 <a href="{% url 'events:show_events' %}" class="nav-tab {% if app == 'events' %}nav-tab-active{% endif %}">Events</a>
                 <a href="#" class="nav-tab {% if app == 'encyclopedia' %}nav-tab-active{% endif %}">Encyclopedia</a>
-                <a href="#" class="nav-tab {% if app == 'community' %}nav-tab-active{% endif %}">Community</a>
+                <a href="{% url 'community:show_questions' %}" class="nav-tab {% if app == 'community' %}nav-tab-active{% endif %}">Community</a>
                 <a href="#" class="nav-tab {% if app == 'achievements' %}nav-tab-active{% endif %}">Achievements</a>
-                <a href="#" class="nav-tab {% if app == 'profile' %}nav-tab-active{% endif %}">Profile</a>
+                <a href="{% url 'profile:show_profile' %}" class="nav-tab {% if app == 'profile' %}nav-tab-active{% endif %}">Profile</a>
             </nav>
 
-            {# Logged in: letter avatar + name. Logged out: Log in / Register (links are "#" until the auth pages exist). #}
+            {# Logged in: letter avatar + name. Logged out: Log in / Register. #}
             {# The avatar letter and the name both use first_name, or username when first_name is empty, so they always match. #}
             {% if user.is_authenticated %}
             <div class="mt-4 flex items-center gap-3 border-t border-line pt-4 lg:mt-0 lg:border-0 lg:pt-0">
-                <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink bg-brand-soft font-extrabold">{{ user.first_name|default:user.username|first|upper }}</span>
-                <span class="flex flex-col">
-                    <span class="text-[13px] font-extrabold leading-tight">{{ user.first_name|default:user.username }}</span>
-                    <span class="text-xs text-ink-soft">@{{ user.username }}</span>
-                </span>
+                <a href="{% url 'profile:show_profile' %}" class="flex items-center gap-3" aria-label="Your profile">
+                    {# The same {% avatar %} tag is used next to posts and events, so a user's color matches everywhere #}
+                    {% avatar user %}
+                    <span class="flex flex-col">
+                        <span class="text-[13px] font-extrabold leading-tight">{{ user.first_name|default:user.username }}</span>
+                        <span class="text-xs text-ink-soft">@{{ user.username }}</span>
+                    </span>
+                </a>
             </div>
             {% else %}
             <div class="mt-4 flex items-center gap-3 border-t border-line pt-4 lg:mt-0 lg:gap-2 lg:border-0 lg:pt-0">
-                <a href="#" class="flex-1 rounded-full border-2 border-ink bg-surface px-4 py-2 text-center text-[13px] font-extrabold hover:bg-brand-tint lg:flex-none">Log in</a>
-                <a href="#" class="flex-1 rounded-full border-2 border-ink bg-brand px-4 py-2 text-center text-[13px] font-extrabold text-white hover:bg-brand-hover lg:flex-none">Register</a>
+                <a href="{% url 'profile:login' %}" class="flex-1 rounded-full border-2 border-ink bg-surface px-4 py-2 text-center text-[13px] font-extrabold hover:bg-brand-tint lg:flex-none">Log in</a>
+                <a href="{% url 'profile:register' %}" class="flex-1 rounded-full border-2 border-ink bg-brand px-4 py-2 text-center text-[13px] font-extrabold text-white hover:bg-brand-hover lg:flex-none">Register</a>
             </div>
             {% endif %}
         </div>

@@ -60,14 +60,27 @@ class EventListTest(TestCase):
         User.objects.create_user(username="u27", first_name="Dewi", password="tomatoes123")
         self.client.login(username="u27", password="tomatoes123")
         response = self.client.get(reverse("events:show_events"))
-        self.assertContains(response, 'bg-brand-soft font-extrabold">D</span>')
-        self.assertNotContains(response, 'bg-brand-soft font-extrabold">U</span>')
+        # Each user has their own random avatar color, so read it from their profile
+        color = User.objects.get(username="u27").profile.avatar_bg_class
+        self.assertContains(response, f'font-extrabold {color}">D</span>')
+        self.assertNotContains(response, f'font-extrabold {color}">U</span>')
 
     def test_navbar_avatar_falls_back_to_username(self):
         # ben has no first name, so the avatar uses the username
         self.client.login(username="ben", password="tomatoes123")
         response = self.client.get(reverse("events:show_events"))
-        self.assertContains(response, 'bg-brand-soft font-extrabold">B</span>')
+        color = User.objects.get(username="ben").profile.avatar_bg_class
+        self.assertContains(response, f'font-extrabold {color}">B</span>')
+    
+    def test_navbar_shows_profile_picture_instead_of_letters(self):
+        # When the user has a profile picture, the navbar shows the photo, not the letter
+        ben = User.objects.get(username="ben")
+        ben.profile.profile_picture = "https://example.com/ben.jpg"
+        ben.profile.save()
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.get(reverse("events:show_events"))
+        self.assertContains(response, 'src="https://example.com/ben.jpg"')
+        self.assertNotContains(response, f'font-extrabold {ben.profile.avatar_bg_class}">B</span>')
 
     def test_only_start_time_when_no_end_time(self):
         self.event.end_time = None

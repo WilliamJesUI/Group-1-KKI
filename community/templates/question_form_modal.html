@@ -1,0 +1,15 @@
+<div id="ask-question-modal"
+     popover="auto"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="ask-question-title"
+     class="m-auto max-h-[calc(100dvh-2rem)] w-[560px] max-w-[calc(100%-2rem)] overflow-y-auto rounded-[20px] border-2 border-ink bg-surface p-6 text-ink opacity-0 transition-all transition-discrete duration-250 ease-in open:opacity-100 open:ease-out starting:open:opacity-0 motion-safe:translate-y-2 motion-safe:open:translate-y-0 motion-safe:starting:open:translate-y-2 backdrop:bg-ink/50 backdrop:opacity-0 backdrop:transition-all backdrop:transition-discrete backdrop:duration-250 backdrop:ease-in open:backdrop:opacity-100 open:backdrop:ease-out starting:open:backdrop:opacity-0">
+
+    <form id="question-form" data-endpoint="{% url 'community:create_question_ajax' %}">
+        {{ question_form }}
+        <div class="flex justify-end gap-3">
+            <button type="button" popovertarget="ask-question-modal" popovertargetaction="hide" class="rounded-full border-2 border-ink bg-surface px-6 py-3 text-[15px] font-extrabold hover:bg-brand-tint transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Cancel</button>
+            <button type="submit" popovertarget="ask-question-modal" popovertargetaction="hide" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover disabled:opacity-40 transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Ask Question</button>
+        </div>
+    </form>
+</div>

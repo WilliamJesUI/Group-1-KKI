@@ -50,7 +50,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'garden',
+    'community',
     'events',
+    'accounts',
     'plants',
 ]
 
@@ -158,3 +160,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Plant API token. Comes from .env on a laptop and from the PWS Environment tab online.
 TREFLE_TOKEN = os.getenv('TREFLE_TOKEN', '')
+
+LOGIN_URL = 'profile:login'
+LOGIN_REDIRECT_URL = 'profile:show_profile'
+LOGOUT_REDIRECT_URL = 'profile:login'
