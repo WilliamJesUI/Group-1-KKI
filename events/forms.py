@@ -33,6 +33,30 @@ def detect_image_type(data):
     return None
 
 
+class PlantSelect(forms.Select):
+    """A normal plant dropdown, plus each plant's photo, scientific name and category on its <option>.
+    static/js/plant_picker.js reads these data-* attributes to draw the plant picker.
+    Any form with a ForeignKey to Plant can use it (from events.forms import PlantSelect),
+    for example in Meta.widgets: "plant": PlantSelect(attrs={"class": INPUT_CLASS})"""
+
+    def __init__(self, attrs=None):
+        # data-plant-picker tells plant_picker.js to turn this <select> into the picker
+        attrs = dict(attrs or {})  # a copy, so we never change a dict that someone else passed in
+        attrs["data-plant-picker"] = ""
+        super().__init__(attrs)
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        # For a model's options, value has the Plant in value.instance.
+        # The empty "Choose a theme plant..." option has no plant, so it gets no data-* attributes.
+        plant = getattr(value, "instance", None)
+        if plant:
+            option["attrs"]["data-image"] = plant.image_url
+            option["attrs"]["data-scientific"] = plant.scientific_name
+            option["attrs"]["data-category"] = plant.category
+        return option
+
+
 class EventForm(ModelForm):
     # The model stores start_time and end_time as full date + time values.
     # The form asks for one date and two times, like the Figma design, and combines them in clean().
@@ -69,8 +93,9 @@ class EventForm(ModelForm):
         }
         widgets = {
             "name": forms.TextInput(attrs={"placeholder": "e.g. Community Seed Swap", "class": INPUT_CLASS}),
-            # A dropdown of every plant in the shared plant list (plants app)
-            "theme_plant": forms.Select(attrs={"class": INPUT_CLASS}),
+            # A dropdown of every plant in the shared plant list (plants app).
+            # plant_picker.js turns it into a search box with photos. Without JS it stays a normal dropdown.
+            "theme_plant": PlantSelect(attrs={"class": INPUT_CLASS}),
             "location": forms.TextInput(attrs={"placeholder": "e.g. Menteng Urban Farm", "class": INPUT_CLASS}),
             "description": forms.Textarea(attrs={
                 "placeholder": "What will people do?",
