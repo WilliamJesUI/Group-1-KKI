@@ -19,9 +19,8 @@ from django.urls import include, path
 from django.views.generic import TemplateView
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('events/', include('events.urls')),
-    # Temporary preview page for base.html, remove once a real home page exists
-    path('', TemplateView.as_view(template_name='home.html')),
-    path('garden/', include('garden.urls')),
+    path("admin/", admin.site.urls),
+    path("events/", include("events.urls")),
+    path("", TemplateView.as_view(template_name="home.html")),
+    path("garden/", include("garden.urls")),
 ]
