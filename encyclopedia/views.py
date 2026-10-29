@@ -399,7 +399,7 @@ def encyclopedia(request):
     collections = PlantCollection.objects.none()
     saved_ids = set()
     if request.user.is_authenticated:
-        collections = PlantCollection.objects.filter(user=request.user)
+        collections = PlantCollection.objects.filter(user=request.user).prefetch_related("plants")
         saved_ids = set(
             PlantCollection.objects.filter(
                 user=request.user,

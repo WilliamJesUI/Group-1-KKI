@@ -22,7 +22,7 @@
     <div class="plant-detail-layout">
     <div>
       {% if plant.image_url %}
-      <img src="{{ plant.image_url }}" alt="{{ plant.name }}" class="plant-detail-image">
+      <img src="{{ plant.card_image_url }}" alt="{{ plant.name }}" class="plant-detail-image">
       {% else %}
       <div class="plant-detail-image flex items-center justify-center bg-brand-tint text-7xl">🌱</div>
       {% endif %}

@@ -92,11 +92,13 @@ def popular_plants_ajax(request):
             Plant.objects
             .annotate(question_count=Count("questions"))
             .filter(question_count__gt=0)
-            .order_by("-question_count", "name")[:25]
+            .order_by("-question_count", "name")[:5]
         )
 
     context = {
         "popular_plants" : popular_plants,
+        # Keeps the chosen plant highlighted after the box refreshes
+        "selected_plant": request.GET.get("plant", "").strip(),
     }
     return render(request, "popular_plants_container.html", context)
 
