@@ -24,6 +24,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
+PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-y=^b&m2xwj27yo4j)e45o4*3sr2+f&i*uldpi9s&tr3iseztj+'
 
@@ -37,7 +39,7 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "william-jesiel-growyourgarden.pws.cs
 # If the PWS address changes, update it here and in ALLOWED_HOSTS.
 CSRF_TRUSTED_ORIGINS = ["https://william-jesiel-growyourgarden.pws.cs.ui.ac.id"]
 
-PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
+
 
 
 # Application definition
