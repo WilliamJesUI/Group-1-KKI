@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'community',
     'events',
     'accounts',
+    'achievements',
     'plants',
     'encyclopedia',
 ]

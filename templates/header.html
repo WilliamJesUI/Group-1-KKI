@@ -32,7 +32,7 @@ The .nav-tab and .nav-tab-active styles are in base.html, and static/js/navbar.j
                 <a href="{% url 'events:show_events' %}" class="nav-tab {% if app == 'events' %}nav-tab-active{% endif %}">Events</a>
                 <a href="{% url 'encyclopedia:index' %}" class="nav-tab {% if app == 'encyclopedia' %}nav-tab-active{% endif %}">Encyclopedia</a>
                 <a href="{% url 'community:show_questions' %}" class="nav-tab {% if app == 'community' %}nav-tab-active{% endif %}">Community</a>
-                <a href="#" class="nav-tab {% if app == 'achievements' %}nav-tab-active{% endif %}">Achievements</a>
+                <a href="{% url 'achievements:show_achievements' %}" class="nav-tab {% if app == 'achievements' %}nav-tab-active{% endif %}">Achievements</a>
                 <a href="{% url 'profile:show_profile' %}" class="nav-tab {% if app == 'profile' %}nav-tab-active{% endif %}">Profile</a>
             </nav>
 
