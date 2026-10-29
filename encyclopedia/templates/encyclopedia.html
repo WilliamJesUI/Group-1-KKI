@@ -37,10 +37,10 @@
     </form>
   </div>
   <div class="mb-3 flex flex-wrap items-center justify-between gap-3"><div class="flex flex-wrap gap-2">
-    <a href="?{% if query %}q={{ query|urlencode }}&{% endif %}" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold {% if category == 'all' %}bg-brand-soft{% else %}bg-white{% endif %}">All</a>
-    <a href="?category=herbs{% if query %}&q={{ query|urlencode }}{% endif %}" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold {% if category == 'herbs' %}bg-brand-soft{% else %}bg-white{% endif %}">Herb</a>
-    <a href="?category=vegetables{% if query %}&q={{ query|urlencode }}{% endif %}" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold {% if category == 'vegetables' %}bg-brand-soft{% else %}bg-white{% endif %}">Vegetable</a>
-    <a href="?category=flowers{% if query %}&q={{ query|urlencode }}{% endif %}" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold {% if category == 'flowers' %}bg-brand-soft{% else %}bg-white{% endif %}">Flower</a>
+    <a href="?{% if query %}q={{ query|urlencode }}&{% endif %}" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100 {% if category == 'all' %}bg-brand-soft{% else %}bg-white{% endif %}">All</a>
+    <a href="?category=herbs{% if query %}&q={{ query|urlencode }}{% endif %}" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100 {% if category == 'herbs' %}bg-brand-soft{% else %}bg-white{% endif %}">Herb</a>
+    <a href="?category=vegetables{% if query %}&q={{ query|urlencode }}{% endif %}" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100 {% if category == 'vegetables' %}bg-brand-soft{% else %}bg-white{% endif %}">Vegetable</a>
+    <a href="?category=flowers{% if query %}&q={{ query|urlencode }}{% endif %}" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100 {% if category == 'flowers' %}bg-brand-soft{% else %}bg-white{% endif %}">Flower</a>
   </div>
   <p class="text-[11px] text-ink-soft">Showing {{ result_count }} of {{ plant_count }} plants</p>
   </div>
