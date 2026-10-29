@@ -374,6 +374,8 @@ def encyclopedia(request):
         )
     if category in {"herbs", "vegetables", "flowers"}:
         plants = plants.filter(category=category)
+    else:
+        category = "all"  # empty or unknown: show every category, and light up the "All" pill
     if difficulty not in {"easy", "medium", "hard"}:
         difficulty = ""
 
@@ -404,21 +406,25 @@ def encyclopedia(request):
                 plants__isnull=False,
             ).values_list("plants__id", flat=True)
         )
-
-    return render(
-        request, "encyclopedia.html", {
-            "plants": plants,
-            "query": query,
-            "category": category,
-            "difficulty": difficulty,
-            "category_pills": category_pills,
-            "difficulty_pills": difficulty_pills,
-            "saved_ids": saved_ids,
-            "collections": collections,
-            "plant_count": Plant.objects.count(),
-            "result_count": plants.count(),
-        },
-    )
+        
+    context = {
+        "plants": plants,
+        "query": query,
+        "category": category,
+        "difficulty": difficulty,
+        "category_pills": category_pills,
+        "difficulty_pills": difficulty_pills,
+        "saved_ids": saved_ids,
+        "collections": collections,
+        "plant_count": Plant.objects.count(),
+        "result_count": plants.count(),
+        # This page's address without ?partial=1, so "Save to collection" comes back to the full page
+        "page_url": request.path + filter_url(query, category, difficulty),
+    }
+    # ?partial=1 comes from encyclopedia_search.js: send only the pills and cards, it swaps them into the page
+    if request.GET.get("partial") == "1":
+        return render(request, "plant_results.html", context)
+    return render(request, "encyclopedia.html", context)
 
 
 # ensure_csrf_cookie: the RSVP buttons on the event cards use fetch, which needs the csrftoken cookie
