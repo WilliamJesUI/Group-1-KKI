@@ -1,0 +1,16 @@
+{% load static accounts_tags %}
+{# One comment (Figma "Post Card / comments open"). Also sent alone by add_comment, so garden.js can add it. #}
+<div id="comment-{{ comment.id }}" data-comment class="group flex items-start gap-2.5 motion-safe:transition-all motion-safe:duration-300 motion-safe:starting:opacity-0">
+    {% avatar comment.author "sm" %}
+    <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+        <p class="text-xs leading-[1.4] text-ink-soft"><span class="text-[13px] font-extrabold text-ink">{{ comment.author.get_full_name|default:comment.author.username }}</span> · {{ comment.age_label }}</p>
+        <p class="whitespace-pre-line text-sm leading-[1.5]">{{ comment.text }}</p>
+    </div>
+    {% if comment.can_delete %}
+    {# Your own comments, or every comment for moderators. Faint until you point at the comment. #}
+    <button type="button" data-delete-comment="{% url 'garden:delete_comment' comment.id %}" aria-label="Delete comment"
+            class="flex size-8 shrink-0 items-center justify-center rounded-full opacity-40 hover:bg-pink/40 hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100">
+        <img src="{% static 'img/icons/trash-danger.svg' %}" alt="" width="16" height="16">
+    </button>
+    {% endif %}
+</div>

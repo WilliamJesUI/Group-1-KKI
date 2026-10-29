@@ -1,0 +1,91 @@
+{% load static accounts_tags %}
+{% comment %}
+One post on the feed (Figma "Post Card"). Used by post_feed.html, and sent alone by create_post / edit_post
+so garden.js can put the new or changed card into the page without reloading.
+data-* on the article are read by garden.js: the edit pop-up is filled from them.
+{% endcomment %}
+<article id="post-{{ post.id }}" data-post
+         data-edit-url="{% url 'garden:edit_post' post.id %}"
+         data-delete-url="{% url 'garden:delete_post' post.id %}"
+         data-caption="{{ post.caption }}"
+         data-plant-id="{{ post.plant_id|default:'' }}"
+         data-photo="{{ post.photo_src }}"
+         class="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-surface p-4 motion-safe:transition-all motion-safe:duration-300 motion-safe:starting:translate-y-2 motion-safe:starting:opacity-0">
+    <div class="flex items-center gap-3">
+        {% avatar post.author %}
+        <div class="flex min-w-0 flex-1 flex-col">
+            <p class="truncate text-[13px] font-extrabold leading-[1.2]">{{ post.author.get_full_name|default:post.author.username }}</p>
+            <p class="truncate text-xs leading-[1.4] text-ink-soft">@{{ post.author.username }} · <time datetime="{{ post.created_at|date:'c' }}">{{ post.age_label }}</time></p>
+        </div>
+        {% if post.can_edit or post.can_delete %}
+        {# The ••• menu (Figma "Post menu open"). Edit only for the author, Delete for the author and moderators. #}
+        <div class="relative">
+            <button type="button" data-menu-button aria-expanded="false" aria-label="Post options" class="flex size-8 items-center justify-center rounded-full hover:bg-brand-tint">
+                <img src="{% static 'img/icons/ellipsis.svg' %}" alt="" width="20" height="20">
+            </button>
+            <div data-menu hidden class="absolute right-0 top-full z-20 mt-1 flex w-[200px] flex-col gap-0.5 rounded-2xl border-2 border-ink bg-surface p-1.5 shadow-[0_8px_24px_rgba(23,36,27,0.12)]">
+                {% if post.can_edit %}
+                <button type="button" data-edit-post class="flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-left text-[13px] font-extrabold leading-[1.2] hover:bg-brand-tint focus-visible:bg-brand-tint focus-visible:outline-none">
+                    <img src="{% static 'img/icons/pencil.svg' %}" alt="" width="18" height="18"> Edit post
+                </button>
+                {% endif %}
+                <button type="button" data-delete-post class="flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-left text-[13px] font-extrabold leading-[1.2] text-danger-text hover:bg-pink/40 focus-visible:bg-pink/40 focus-visible:outline-none">
+                    <img src="{% static 'img/icons/trash-danger.svg' %}" alt="" width="18" height="18"> Delete post
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {# whitespace-pre-line keeps the line breaks people typed #}
+    <p class="whitespace-pre-line text-sm leading-[1.5]">{{ post.caption }}</p>
+
+    {% if post.plant %}
+    {# Plant tag (Figma "Plant Tag"): goes to the plant's page in the Encyclopedia #}
+    <a href="{% url 'encyclopedia:detail' post.plant.slug %}" class="w-fit rounded-lg bg-brand-tint px-2 py-1 text-[11px] font-black uppercase leading-[1.2] tracking-[0.08em] hover:bg-brand-soft">{{ post.plant.name }}</a>
+    {% endif %}
+
+    {% if post.photo_src %}
+    <img src="{{ post.photo_src }}" alt="Photo by {{ post.author.username }}{% if post.plant %} of {{ post.plant.name }}{% endif %}" loading="lazy" decoding="async" class="h-[300px] w-full rounded-xl border-2 border-ink bg-brand-tint object-cover">
+    {% endif %}
+
+    <div class="flex items-center gap-4">
+        {# Like Toggle (Figma). Logged out it's a link to log in, so the count is still shown. #}
+        {% if user.is_authenticated %}
+        <button type="button" data-like-url="{% url 'garden:like_post' post.id %}" aria-pressed="{% if post.is_liked %}true{% else %}false{% endif %}" aria-label="Like"
+                class="group flex items-center gap-1 rounded-full text-xs font-bold leading-[1.2] transition duration-150 ease-out active:scale-90 motion-reduce:active:scale-100">
+        {% else %}
+        <a href="{% url 'profile:login' %}?next={{ request.path|urlencode }}" aria-label="Log in to like" class="group flex items-center gap-1 text-xs font-bold leading-[1.2]">
+        {% endif %}
+            {# fill-current + text-danger when liked: a filled red heart. aria-pressed is what garden.js flips. #}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" class="stroke-ink group-aria-pressed:fill-danger group-aria-pressed:stroke-danger">
+                <path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span data-like-count>{{ post.like_count }}</span>
+        {% if user.is_authenticated %}</button>{% else %}</a>{% endif %}
+
+        <button type="button" data-comments-url="{% url 'garden:show_comments' post.id %}" aria-expanded="false" aria-controls="comments-{{ post.id }}" aria-label="Comments"
+                class="flex items-center gap-1 text-xs font-bold leading-[1.2] hover:text-brand">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" class="stroke-current">
+                <path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span data-comment-count>{{ post.comment_count }}</span>
+        </button>
+    </div>
+
+    {# Comments (Figma "Post Card / comments open"). Hidden until the comment button is clicked, then garden.js loads them. #}
+    <section id="comments-{{ post.id }}" data-comments hidden class="flex flex-col gap-3 border-t border-line pt-3">
+        <div data-comment-list class="flex flex-col gap-3 aria-busy:opacity-50" aria-live="polite"></div>
+        {% if user.is_authenticated %}
+        <form data-comment-form method="post" action="{% url 'garden:add_comment' post.id %}" novalidate class="flex items-center gap-2.5">
+            {% avatar user "sm" %}
+            <label for="comment-{{ post.id }}" class="sr-only">Write a comment</label>
+            <input id="comment-{{ post.id }}" type="text" name="text" maxlength="1000" placeholder="Write a comment..." required
+                   class="h-11 min-w-0 flex-1 rounded-full border-2 border-ink bg-surface px-4 text-sm placeholder:text-muted focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none aria-invalid:border-danger">
+            <button type="submit" class="rounded-full border-2 border-ink bg-brand px-5 py-2.5 text-sm font-extrabold text-white hover:bg-brand-hover disabled:opacity-40 transition duration-150 ease-out active:scale-[0.97] motion-reduce:active:scale-100">Send</button>
+        </form>
+        {% else %}
+        <a href="{% url 'profile:login' %}?next={{ request.path|urlencode }}" class="text-[11px] font-black uppercase leading-[1.2] tracking-[0.08em] text-brand hover:underline">Log in to comment</a>
+        {% endif %}
+    </section>
+</article>

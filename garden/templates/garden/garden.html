@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% load static accounts_tags %}
+
+{% block title %}Garden - Grow Your Garden{% endblock title %}
+
+{% block content %}
+<div class="pt-2 pb-6">
+    <h1 class="font-display text-[32px] leading-tight">Garden</h1>
+    <p class="mt-1.5 text-ink-soft">See what's growing in your neighborhood</p>
+</div>
+
+{# Figma "GardenPage": the feed on the left, the sidebar on the right (under the feed on phones) #}
+<div class="mt-5 grid grid-cols-1 gap-7 lg:grid-cols-[minmax(0,760px)_329px] lg:justify-between">
+    <div class="flex min-w-0 flex-col">
+        {# Composer (Figma): looks like a text box, but opens the "Share your garden" pop-up #}
+        <section class="grid grid-cols-[40px_minmax(0,1fr)] gap-x-3 gap-y-3 rounded-[15px] border-2 border-ink bg-surface p-4">
+            {% if user.is_authenticated %}
+            {% avatar user %}
+            <button type="button" data-open-post-form class="flex h-12 items-center rounded-xl border border-ink bg-surface px-4 text-left text-base text-ink-soft hover:bg-brand-tint">Share what's growing in your garden...</button>
+            <div class="col-start-2 flex gap-5">
+                <button type="button" data-open-post-form="photo" class="flex items-center gap-[7px] p-[3px] text-[13px] font-extrabold text-ink-soft hover:text-ink">
+                    <img src="{% static 'img/icons/upload-soft.svg' %}" alt="" width="18" height="18"> Photo
+                </button>
+                <button type="button" data-open-post-form="plant" class="flex items-center gap-[7px] p-[3px] text-[13px] font-extrabold text-ink-soft hover:text-ink">
+                    <img src="{% static 'img/icons/tag.svg' %}" alt="" width="18" height="18"> Tag plant
+                </button>
+            </div>
+            {% else %}
+            <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink bg-brand-soft">
+                <img src="{% static 'img/icons/sprout.svg' %}" alt="" width="20" height="20">
+            </span>
+            <a href="{% url 'profile:login' %}?next={{ request.path|urlencode }}" class="flex h-12 items-center rounded-xl border border-ink bg-surface px-4 text-base text-ink-soft hover:bg-brand-tint">Log in to share what's growing in your garden...</a>
+            {% endif %}
+        </section>
+
+        <div class="flex flex-col gap-3 pt-7 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <h2 class="font-display text-xl leading-[1.3]">Community garden</h2>
+                <p class="text-sm text-ink-soft">Latest from the community</p>
+            </div>
+            {# Filter pills (Figma "Filter Pill"), same as Events: aria-current="page" makes the selected one green #}
+            <nav id="garden-filter-pills" aria-label="Filter posts" class="flex flex-wrap gap-[7px]">
+                {% for value, label in garden_filters %}
+                {% if value != "mine" or user.is_authenticated %}
+                <a href="?filter={{ value }}{% if selected_plant %}&amp;plant={{ selected_plant.slug }}{% endif %}" data-filter="{{ value }}"
+                   {% if value == selected_filter %}aria-current="page"{% endif %}
+                   class="rounded-full border-2 border-ink bg-surface px-4 py-2 text-xs font-bold leading-[1.2] hover:bg-brand-tint aria-[current=page]:bg-brand-soft transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">{{ label }}</a>
+                {% endif %}
+                {% endfor %}
+            </nav>
+        </div>
+
+        {% if selected_plant %}
+        {# ?plant=... from a plant tag or the plant page. Same look as the Events plant filter. #}
+        <div id="garden-plant-filter" data-plant="{{ selected_plant.slug }}" class="flex flex-wrap items-center gap-2 pt-4 text-[13px] font-bold text-ink-soft">
+            Showing posts about
+            <a href="?filter={{ selected_filter }}" aria-label="Remove the {{ selected_plant.name }} filter" class="flex items-center gap-2 rounded-full border-2 border-ink bg-brand-tint py-1.5 pl-3.5 pr-1.5 text-xs font-bold leading-[1.2] text-ink transition duration-150 ease-out hover:bg-brand-soft active:scale-[0.97] motion-reduce:active:scale-100">
+                {{ selected_plant.name }}
+                <span aria-hidden="true" class="flex size-5 items-center justify-center rounded-full bg-ink/10 text-sm leading-none">×</span>
+            </a>
+        </div>
+        {% endif %}
+
+        {# garden.js swaps the posts in here when a pill is clicked. aria-busy fades them while loading. #}
+        <div id="post-feed" class="flex flex-col gap-5 pt-[14px] transition-opacity aria-busy:opacity-50">
+            {% include "garden/post_feed.html" %}
+        </div>
+    </div>
+
+    <aside class="flex flex-col gap-[18px]">
+        {% include "garden/plant_of_the_week.html" %}
+
+        {# Upcoming events (Figma): the next 3, each linking to its event page #}
+        <section class="flex flex-col rounded-[15px] border-2 border-ink bg-surface p-4">
+            <div class="flex items-center justify-between gap-3 pb-[13px]">
+                <h2 class="font-display text-xl leading-[1.3]">Upcoming events</h2>
+                <a href="{% url 'events:show_events' %}" class="text-[11px] font-black uppercase leading-[1.2] tracking-[0.08em] text-brand hover:underline">View all</a>
+            </div>
+            {% for event in upcoming_events %}
+            <a href="{% url 'events:show_event' event.id %}" class="flex items-center gap-2.5 border-t border-ink py-3 hover:bg-brand-tint/50">
+                <span class="flex size-[39px] shrink-0 items-center justify-center rounded-full border-2 border-ink {% cycle 'bg-lilac' 'bg-butter' 'bg-pink' %} text-[11px] font-black tracking-[0.08em]">{{ event.start_time|date:"d" }}</span>
+                <span class="flex min-w-0 flex-col">
+                    <span class="truncate text-[13px] font-extrabold leading-[1.2]">{{ event.name }}</span>
+                    <span class="truncate text-xs leading-[1.4] text-ink-soft">{{ event.start_time|date:"D j M" }} · {{ event.location }}</span>
+                </span>
+            </a>
+            {% empty %}
+            <p class="border-t border-ink pt-3 text-sm text-ink-soft">No upcoming events yet.</p>
+            {% endfor %}
+        </section>
+
+        {# Today's garden tip (Figma) #}
+        <section class="flex items-start gap-3 rounded-[15px] border-2 border-ink bg-brand-soft p-[18px]">
+            <img src="{% static 'img/icons/sprout.svg' %}" alt="" width="24" height="24">
+            <div class="flex flex-col gap-1">
+                <h2 class="pt-[5px] text-[13px] font-extrabold leading-[1.2] text-brand">Today's garden tip</h2>
+                <p class="text-xs leading-[1.4] text-[#42634f]">Water the soil, not the leaves. Early morning is best.</p>
+            </div>
+        </section>
+    </aside>
+</div>
+
+{% if user.is_authenticated %}
+{% include "garden/post_form_modal.html" %}
+{% endif %}
+{% if week_form %}
+{% include "garden/week_modal.html" %}
+{% endif %}
+<script src="{% static 'js/plant_picker.js' %}"></script>
+<script src="{% static 'js/garden.js' %}"></script>
+{% endblock content %}

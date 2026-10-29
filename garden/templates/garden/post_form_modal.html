@@ -1,0 +1,60 @@
+{% load static %}
+{% comment %}
+The "Share your garden" pop-up (Figma "Overlay / Create a post"), also used for "Edit post" (Figma C).
+garden.js changes the title, button and form action, and fills in the fields when editing.
+Same open/close animation as the Events pop-ups (Figma Motion table): fade in + rise 8px, 250ms.
+{% endcomment %}
+<div id="post-modal"
+     popover="auto"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="post-modal-title"
+     class="m-auto max-h-[calc(100dvh-2rem)] w-[560px] max-w-[calc(100%-2rem)] overflow-y-auto rounded-[20px] border-2 border-ink bg-surface p-6 text-ink opacity-0 transition-all transition-discrete duration-250 ease-in open:opacity-100 open:ease-out starting:open:opacity-0 motion-safe:translate-y-2 motion-safe:open:translate-y-0 motion-safe:starting:open:translate-y-2 backdrop:bg-ink/50 backdrop:opacity-0 backdrop:transition-all backdrop:transition-discrete backdrop:duration-250 backdrop:ease-in open:backdrop:opacity-100 open:backdrop:ease-out starting:open:backdrop:opacity-0">
+    <form id="post-form" method="post" action="{% url 'garden:create_post' %}" data-create-url="{% url 'garden:create_post' %}" novalidate class="flex flex-col gap-4">
+        {% csrf_token %}
+        <h2 id="post-modal-title" class="font-display text-2xl leading-[1.25]">Share your garden</h2>
+        {{ form.remove_photo }}
+
+        <div class="flex flex-col gap-2">
+            <label for="{{ form.caption.id_for_label }}" class="text-[13px] font-extrabold">{{ form.caption.label }}</label>
+            {{ form.caption }}
+            <p data-error-for="caption" class="hidden text-xs text-danger-text"></p>
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <span class="text-[13px] font-extrabold">Photo <span class="font-normal text-ink-soft">(optional)</span></span>
+            {{ form.photo_upload }}
+            {# Empty state (Figma "Image Upload"): click to browse or drop a photo. data-drag is added while a file hovers over it. #}
+            <label id="photo-drop" for="{{ form.photo_upload.id_for_label }}" class="flex h-[160px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-ink bg-surface text-center peer-focus-visible:ring-2 peer-focus-visible:ring-brand peer-aria-invalid:border-danger data-drag:border-brand data-drag:bg-brand-tint *:pointer-events-none">
+                <img src="{% static 'img/icons/upload.svg' %}" alt="" width="24" height="24">
+                <span id="photo-drop-text" class="text-[13px] font-extrabold">Drop a photo or browse</span>
+                <span class="text-xs text-ink-soft">JPG, PNG or WebP, up to 2 MB</span>
+            </label>
+            {# Filled state: preview of the chosen or current photo #}
+            <div id="photo-preview" class="hidden flex-col gap-2 rounded-2xl border-2 border-ink bg-surface p-3">
+                <img id="photo-preview-img" src="" alt="Preview of the chosen photo" class="h-24 w-full rounded-xl bg-brand-tint object-cover">
+                <div class="flex items-center justify-between gap-3 text-xs">
+                    <span id="photo-file-name" class="truncate"></span>
+                    <span class="flex shrink-0 gap-3 font-bold">
+                        <label for="{{ form.photo_upload.id_for_label }}" class="cursor-pointer hover:underline">Replace</label>
+                        <button type="button" id="photo-remove" class="hover:underline">Remove</button>
+                    </span>
+                </div>
+            </div>
+            <p data-error-for="photo_upload" class="hidden text-xs text-danger-text"></p>
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <label for="{{ form.plant.id_for_label }}" class="text-[13px] font-extrabold">{{ form.plant.label }} <span class="font-normal text-ink-soft">(optional)</span></label>
+            {{ form.plant }}
+            <p data-error-for="plant" class="hidden text-xs text-danger-text"></p>
+        </div>
+
+        <p data-error-for="__all__" class="hidden text-xs text-danger-text"></p>
+
+        <div class="flex justify-end gap-3">
+            <button type="button" popovertarget="post-modal" popovertargetaction="hide" class="rounded-full border-2 border-ink bg-surface px-6 py-3 text-[15px] font-extrabold hover:bg-brand-tint transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Cancel</button>
+            <button type="submit" id="post-submit" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover disabled:opacity-40 transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Post</button>
+        </div>
+    </form>
+</div>
