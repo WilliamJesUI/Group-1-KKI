@@ -26,12 +26,12 @@ while you type or click a pill. Needs the same context as encyclopedia.html.
         {% if user.is_authenticated and collections %}<details class="group/bookmark absolute right-3 top-3 z-10"><summary class="bookmark-button cursor-pointer list-none text-brand" aria-label="Choose collection for {{ plant.name }}"><svg class="bookmark-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-4-6 4z" {% if plant.id in saved_ids %}fill="#17653b"{% endif %}/></svg></summary><div class="collection-picker"><p class="mb-2 text-xs font-extrabold">Save {{ plant.name }} to…</p>{% for collection in collections %}<form method="post" action="{% url 'encyclopedia:toggle_saved' plant.slug %}" class="mb-2 flex items-center gap-2">{% csrf_token %}<input type="hidden" name="collection_id" value="{{ collection.id }}"><input type="hidden" name="next" value="{{ page_url }}"><button class="min-w-0 flex-1 rounded-lg border border-line px-2 py-2 text-left text-xs hover:bg-brand-tint">{{ collection.name }}</button>{% if plant in collection.plants.all %}<span class="text-xs text-brand">✓</span>{% endif %}</form>{% endfor %}<a href="{% url 'encyclopedia:collection' %}" class="block text-xs font-bold text-brand underline">Manage collections</a></div></details>{% endif %}
       </div>
       <div class="p-3">
-        <p class="text-[9px] font-black uppercase tracking-[0.12em] text-gold">{{ plant.get_category_display|default:"Plant" }}</p>
+        <p class="text-[9px] font-black uppercase tracking-[0.12em] text-gold">{{ plant.category_label }}</p>
         <h3 class="mt-1 font-display text-lg leading-tight">{{ plant.name }}</h3>
         <p class="mt-1 text-xs italic text-ink-soft">{{ plant.scientific_name|default:"Scientific name unavailable" }}</p>
         <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-ink-soft">
-          <span>☼ {{ plant.get_sunlight_display|default:"Sunlight varies" }}</span>
-          <span>♨ {{ plant.get_watering_display|default:"Regular watering" }}</span>
+          <span class="inline-flex items-center gap-1">{% include "care_icon.html" with icon="sun" size="size-3.5" %}{{ plant.get_sunlight_display|default:"Sunlight varies" }}</span>
+          <span class="inline-flex items-center gap-1">{% include "care_icon.html" with icon="droplets" size="size-3.5" %}{{ plant.get_watering_display|default:"Regular watering" }}</span>
         </div>
         <a href="{% url 'encyclopedia:detail' plant.slug %}" class="mt-3 inline-flex items-center gap-1 text-xs font-extrabold text-brand hover:underline after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none">Open growing guide <span aria-hidden="true">›</span>
         </a></div>

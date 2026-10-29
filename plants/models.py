@@ -56,6 +56,11 @@ class Plant(models.Model):
         return {"easy": "bg-brand-soft", "medium": "bg-butter", "hard": "bg-pink"}.get(self.difficulty, "bg-brand-soft")
 
     @property
+    def category_label(self):
+        """One plant's category in singular, like the filter pills and Figma: "Herb", not "Herbs"."""
+        return {"vegetables": "Vegetable", "herbs": "Herb", "flowers": "Flower"}.get(self.category, "Plant")
+
+    @property
     def card_image_url(self):
         """Medium-size photo for cards. PlantNet /o/ is the full original, which is slow to load."""
         return self.image_url.replace("/image/o/", "/image/m/")
