@@ -1,0 +1,25 @@
+{% if user.is_authenticated and question.author_id == user.id %}
+<div id="edit-question-modal"
+     popover="auto"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="edit-question-title"
+     class="m-auto max-h-[calc(100dvh-2rem)] w-[560px] max-w-[calc(100%-2rem)] overflow-y-auto rounded-[20px] border-2 border-ink bg-surface p-6 text-ink backdrop:bg-ink/50">
+
+    <h2 id="edit-question-title" class="font-display text-[24px] leading-tight">Edit question</h2>
+
+    <form id="edit-question-form" class="mt-4"
+          data-endpoint="{% url 'community:update_question_ajax' question.id %}">
+        {% csrf_token %}
+        <div class="mb-6">
+            {{ edit_form }}
+        </div>
+        <div class="mt-4 flex justify-end gap-3">
+            <button type="button" popovertarget="edit-question-modal" popovertargetaction="hide"
+                class="rounded-full border-2 border-ink bg-surface px-6 py-3 text-[15px] font-extrabold hover:bg-brand-tint transition duration-150 ease-out active:scale-[0.97]">Cancel</button>
+            <button type="submit"
+                class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover disabled:opacity-40 transition duration-150 ease-out active:scale-[0.97]">Save changes</button>
+        </div>
+    </form>
+</div>
+{% endif %}

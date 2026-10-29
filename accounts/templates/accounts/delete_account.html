@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Delete account - Grow Your Garden{% endblock title %}
+
+{% block content %}
+<div class="mx-auto max-w-[560px]">
+    <h1 class="font-display text-[32px] leading-tight">Delete your account?</h1>
+    <p class="mt-1.5 text-ink-soft">This can't be undone.</p>
+
+    <div class="mt-8 flex flex-col gap-5 rounded-2xl border-2 border-ink bg-surface p-6 sm:p-8">
+        <div class="rounded-2xl border-2 border-danger bg-pink/40 px-4 py-3 text-sm">
+            <p class="font-extrabold text-danger-text">What will be deleted</p>
+            <ul class="mt-2 list-disc space-y-1 pl-5 text-ink">
+                <li>Your account (<strong>@{{ user.username }}</strong>) and your login</li>
+                <li>Your profile, profile picture and banner</li>
+                <li>The events you host, and your RSVPs to other events</li>
+            </ul>
+        </div>
+
+        <form method="post" action="{% url 'profile:delete_account' %}" class="flex flex-col gap-5">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div role="alert" class="rounded-2xl border-2 border-danger bg-pink/40 px-4 py-3 text-sm text-danger-text">
+                {{ form.non_field_errors.0 }}
+            </div>
+            {% endif %}
+
+            {% include "accounts/_field.html" with field=form.password %}
+
+            <div class="flex flex-col gap-1.5">
+                <label class="flex items-center gap-3 text-sm">
+                    {{ form.confirm }}
+                    {{ form.confirm.label }}
+                </label>
+                {% for error in form.confirm.errors %}
+                <p class="text-xs text-danger-text">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div class="mt-2 flex flex-wrap justify-end gap-3">
+                <a href="{% url 'profile:edit_profile' %}" class="rounded-full border-2 border-ink bg-surface px-6 py-3 text-[15px] font-extrabold hover:bg-brand-tint">Keep my account</a>
+                <button type="submit" class="rounded-full border-2 border-ink bg-danger-text px-6 py-3 text-[15px] font-extrabold text-white hover:bg-danger-hover">Delete my account</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}

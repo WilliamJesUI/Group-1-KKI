@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}
+<style type="text/tailwindcss">
+    @layer components {
+        .card-avatar {
+            @apply flex size-[30px] items-center justify-center rounded-full border-[1.5px] border-ink text-[9px] font-bold leading-[1.2];
+        }
+        .card-avatar-lilac {
+            @apply bg-lilac;
+        }
+        .card-avatar-pink {
+            @apply bg-pink;
+        }
+        .card-avatar-more {
+            @apply bg-brand-soft;
+        }
+    }
+</style>
+{% endblock meta %}
+
+
+{% block content %}
+<div class="pt-2 pb-6">
+    <h1 class="font-display text-[40px] leading-tight">Community</h1>
+    <p class="mt-1.5 text-ink-soft">Ask questions and learn from gardeners</p>
+</div>
+
+<div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
+    <div>
+        <section class="mt-5 mb-6 flex flex-col gap-8 rounded-2xl border-2 border-ink bg-pink px-6 py-8 lg:flex-row lg:items-center lg:justify-between lg:px-[42px] lg:py-9">
+            <div>
+                <span class="inline-block rounded-lg border-[1.5px] border-ink bg-white/65 px-2.5 py-[5px] text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-brand">Community Q&A</span>
+                <h2 class="mt-2 font-display text-[40px] leading-[0.98] sm:text-[52px]">Ask. Learn.<br>Grow.</h2>
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <p class="mt-4 text-sm text-ink-soft">No question is too small. Ask anything and get answers from people who grow the same plants.</p>
+                    <div class="flex justify-end">
+                        {% if user.is_authenticated %}
+                        <button type="button" popovertarget="ask-question-modal" class="mt-4 rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Ask a question</button>
+                        {% else %}
+                        <a href="#" class="mt-4 inline-block rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Log in to ask a question</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="lg:col-start-1">
+            <form id="question-search-form" method="get" autocomplete="off">
+                <input type="hidden" name="filter" value="{{ selected_filter }}">
+                <div class="flex flex-wrap items-center gap-3">
+                    <input id="question-search" name="q" type="search" placeholder="Search questions or plants…" class="min-w-0 flex-1 rounded-full border-2 border-ink bg-white px-5 py-3">
+                    <div id="question-filter-pills" class="flex flex-wrap items-center gap-[7px]">
+                        {% for value, label in question_filters %}
+                        {% if value != "mine" or user.is_authenticated %}
+                        <a href="?filter={{ value }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}" data-filter="{{ value }}"
+                            {% if value == selected_filter %}aria-current="page"{% endif %}
+                            class="rounded-full border-2 border-ink bg-surface px-4 py-2 text-xs font-bold leading-[1.2] hover:bg-brand-tint aria-[current=page]:bg-brand-soft transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">{{ label }}</a>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </form>
+            <div id="question-cards" class="min-h-[392px] pt-[18px] transition-opacity aria-busy:opacity-50 ">
+                {% include "question_cards.html" %}
+            </div>
+        </div> 
+    </div>
+
+    <aside class="mt-5 mb-6 space-y-6 lg:sticky lg:top-6">
+        <section class="rounded-2xl border-2 border-ink bg-white p-5">
+            <h2 class="font-display text-[20px] leading-tight">Community so far</h2>
+            <div class="grid grid-cols-2 gap-2 lg:grid-cols-2[1fr_1fr]">
+                <div class="px-4 py-4 bg-brand-tint rounded-[11px]">
+                    <p class="font-display text-[12px]">Questions Asked:</p>
+                    <p id="questions-asked-card"  class="font-display text-[20px] leading-tight">{{ question_asked_count }}</p>
+                </div>
+                <div class="px-4 py-4 bg-brand-tint rounded-[11px]">
+                    <p class="font-display text-[12px]">Helpful Answers:</p>
+                    <p class="font-display text-[20px] leading-tight">{{ helpful_answer_count }}</p>
+                </div>
+            </div>
+        </section>
+        
+        <div id="popular-plants-wrapper" data-endpoint="{% url 'community:popular_plants_ajax' %}">
+            {% include "popular_plants_container.html" %}
+        </div>
+
+    </aside>
+    {% include "question_form_modal.html" %}
+</div>
+
+<script src="{% static 'js/csrf.js' %}"></script>
+<script src="{% static 'js/community_popular_plants.js' %}"></script>
+<script src="{% static 'js/community_question_filters.js' %}"></script>
+<script src="{% static 'js/community_question_form.js' %}"></script>
+{% endblock content %}
