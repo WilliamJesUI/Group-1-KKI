@@ -172,6 +172,47 @@ class EncyclopediaDirectoryTests(EncyclopediaTestData):
         )
         self.assertEqual(response.context["result_count"], 3)
 
+
+    def test_level_pills_keep_the_other_filters(self):
+        response = self.client.get(self.index_url, {"q": "a", "category": "herbs"})
+        pills = {pill["label"]: pill for pill in response.context["difficulty_pills"]}
+        # Only basil is a herb with "a" in it, so only "Easy" gets a pill
+        self.assertEqual(list(pills), ["Easy"])
+        self.assertFalse(pills["Easy"]["active"])
+        self.assertEqual(pills["Easy"]["url"], "?q=a&category=herbs&difficulty=easy")
+
+    def test_clicking_the_active_level_again_turns_it_off(self):
+        response = self.client.get(self.index_url, {"category": "herbs", "difficulty": "easy"})
+        pills = {pill["label"]: pill for pill in response.context["difficulty_pills"]}
+        self.assertTrue(pills["Easy"]["active"])
+        self.assertEqual(pills["Easy"]["url"], "?category=herbs")
+
+    def test_category_pills_keep_the_level_and_search(self):
+        response = self.client.get(self.index_url, {"q": "to", "difficulty": "medium"})
+        pills = {pill["label"]: pill for pill in response.context["category_pills"]}
+        self.assertEqual(pills["All"]["url"], "?q=to&difficulty=medium")
+        self.assertEqual(pills["Vegetable"]["url"], "?q=to&category=vegetables&difficulty=medium")
+        self.assertTrue(pills["All"]["active"])
+
+    def test_other_level_pills_stay_when_one_is_picked(self):
+        # Picking "Hard" must not hide the Easy and Medium pills
+        response = self.client.get(self.index_url, {"difficulty": "hard"})
+        labels = [pill["label"] for pill in response.context["difficulty_pills"]]
+        self.assertEqual(labels, ["Easy", "Medium", "Hard"])
+        self.assertEqual(list(response.context["plants"]), [self.flower])
+
+    def test_search_form_keeps_category_and_level(self):
+        response = self.client.get(self.index_url, {"category": "flowers", "difficulty": "hard"})
+        self.assertContains(response, '<input type="hidden" name="category" value="flowers">', html=True)
+        self.assertContains(response, '<input type="hidden" name="difficulty" value="hard">', html=True)
+
+    def test_difficulty_badge_color_matches_level(self):
+        self.assertEqual(self.basil.difficulty_badge_class, "bg-brand-soft")
+        self.assertEqual(self.tomato.difficulty_badge_class, "bg-butter")
+        self.assertEqual(self.flower.difficulty_badge_class, "bg-pink")
+        self.assertEqual(Plant(difficulty="").difficulty_badge_class, "bg-brand-soft")
+
+
     def test_authenticated_directory_shows_owned_collections_and_saved_ids(self):
         self.client.force_login(self.user)
         self.collection.plants.add(self.basil)
