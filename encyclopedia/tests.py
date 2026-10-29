@@ -17,6 +17,9 @@ class EncyclopediaTestData(TestCase):
     """Shared fixtures for the Encyclopedia view and collection tests."""
 
     def setUp(self):
+        # The plants migration already loads the real plant list, so clear it
+        # so these tests only see their own test plants (and slugs don't clash)
+        Plant.objects.all().delete()
         self.user = User.objects.create_user(
             username="gardener",
             password="test-password-123",
