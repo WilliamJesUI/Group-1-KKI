@@ -1463,5 +1463,6 @@ class ThemePlantTest(TestCase):
 
     def test_detail_page_without_theme_plant(self):
         response = self.client.get(reverse("events:show_event", args=[self.seed_swap.id]))
-        self.assertNotContains(response, "/encyclopedia/")
+        # The navbar always links to /encyclopedia/, so check for a plant page link instead
+        self.assertNotContains(response, 'href="/encyclopedia/test-')
         self.assertNotContains(response, "?plant=")
