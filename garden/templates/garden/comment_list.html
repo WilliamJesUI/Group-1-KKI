@@ -1,0 +1,9 @@
+{# What garden.js puts into a post's comments when they open (views.show_comments) #}
+{% for comment in comments %}
+{% include "garden/comment.html" %}
+{% empty %}
+<p data-no-comments class="text-sm text-ink-soft">No comments yet. Be the first to say something nice.</p>
+{% endfor %}
+{% if hidden_count %}
+<button type="button" data-show-all-comments="{% url 'garden:show_comments' post.id %}?all=1" class="w-fit text-[11px] font-black uppercase leading-[1.2] tracking-[0.08em] text-brand hover:underline">Show all {{ hidden_count|add:3 }} comments</button>
+{% endif %}

@@ -1,0 +1,31 @@
+{% comment %}
+Moderators only: the "Plant of the week" pop-up (Figma "Overlay / Set plant of the week (admin)").
+Opened by the "Change" button on the Plant of the week card. garden.js sends it with fetch.
+{% endcomment %}
+<div id="week-modal"
+     popover="auto"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="week-modal-title"
+     class="m-auto max-h-[calc(100dvh-2rem)] w-[560px] max-w-[calc(100%-2rem)] overflow-y-auto rounded-[20px] border-2 border-ink bg-surface p-6 text-ink opacity-0 transition-all transition-discrete duration-250 ease-in open:opacity-100 open:ease-out starting:open:opacity-0 motion-safe:translate-y-2 motion-safe:open:translate-y-0 motion-safe:starting:open:translate-y-2 backdrop:bg-ink/50 backdrop:opacity-0 backdrop:transition-all backdrop:transition-discrete backdrop:duration-250 backdrop:ease-in open:backdrop:opacity-100 open:backdrop:ease-out starting:open:backdrop:opacity-0">
+    <form id="week-form" method="post" action="{% url 'garden:set_plant_of_the_week' %}" novalidate class="flex flex-col gap-4">
+        {% csrf_token %}
+        <h2 id="week-modal-title" class="font-display text-2xl leading-[1.25]">Plant of the week</h2>
+        <div class="flex flex-col gap-2">
+            <label for="{{ week_form.plant.id_for_label }}" class="text-[13px] font-extrabold">{{ week_form.plant.label }}</label>
+            {{ week_form.plant }}
+            <p data-error-for="plant" class="hidden text-xs text-danger-text"></p>
+        </div>
+        <div class="flex flex-col gap-2">
+            <label for="{{ week_form.short_line.id_for_label }}" class="text-[13px] font-extrabold">Short line <span class="font-normal text-ink-soft">(optional)</span></label>
+            {{ week_form.short_line }}
+            <p class="text-xs text-ink-soft">Shown under the plant name on the Garden page.</p>
+            <p data-error-for="short_line" class="hidden text-xs text-danger-text"></p>
+        </div>
+        <p data-error-for="__all__" class="hidden text-xs text-danger-text"></p>
+        <div class="flex justify-end gap-3">
+            <button type="button" popovertarget="week-modal" popovertargetaction="hide" class="rounded-full border-2 border-ink bg-surface px-6 py-3 text-[15px] font-extrabold hover:bg-brand-tint transition duration-150 ease-out active:scale-[0.97] motion-reduce:active:scale-100">Cancel</button>
+            <button type="submit" class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover disabled:opacity-40 transition duration-150 ease-out active:scale-[0.97] motion-reduce:active:scale-100">Save plant</button>
+        </div>
+    </form>
+</div>
