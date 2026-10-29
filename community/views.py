@@ -39,9 +39,10 @@ def show_questions(request):
 
     questions = (
         Question.objects
-        .select_related("plant")
+        .select_related("plant", "author__profile")
         .filter(Q(title__icontains=query) | Q(plant__name__icontains=query))
-        .annotate(answer_count=Count("answers"))
+        # distinct=True: with two Counts in one query, each would otherwise count the other's rows too
+        .annotate(answer_count=Count("answers", distinct=True), vote_count=Count("voters", distinct=True))
     )
 
 
@@ -154,7 +155,8 @@ def create_question_ajax(request):
         question.author = request.user
         save_question_from_form(question, form)
         return JsonResponse({"url" : reverse("community:show_questions")}, status=201)
-    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+    first_error = next(iter(form.errors.values()))[0]
+    return JsonResponse({"message": first_error, "errors": form.errors.get_json_data()}, status=400)
 
 @require_POST
 def update_question_ajax(request, question_id):
@@ -233,7 +235,7 @@ def vote_question_ajax(request, question_id):
 @require_POST
 def create_answer_ajax(request, question_id):
     if not request.user.is_authenticated:
-        return JsonResponse({"message" : "Please log in to ask a question!"}, status=403)
+        return JsonResponse({"message" : "Please log in to answer!"}, status=403)
 
     try:
         question = Question.objects.get(id=question_id)
@@ -247,7 +249,8 @@ def create_answer_ajax(request, question_id):
         answer.question = question
         save_answer_from_form(answer, form)
         return JsonResponse({"url" : reverse("community:show_question_thread", args=[question.id])}, status=201)
-    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+    first_error = next(iter(form.errors.values()))[0]
+    return JsonResponse({"message": first_error, "errors": form.errors.get_json_data()}, status=400)
 
 
 @require_POST

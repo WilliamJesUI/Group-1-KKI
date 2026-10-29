@@ -107,6 +107,23 @@ class QuestionListTest(CommunityTestCase):
         response = self.client.get(self.url, {"filter": "mine"})
         self.assertEqual(response.context["selected_filter"], "latest")
 
+    def test_counts_are_correct_with_votes_and_answers(self):
+        # two Counts in one query: without distinct=True these numbers would multiply
+        self.tomato_question.voters.add(self.ben, self.ala)
+        Answer.objects.create(question=self.tomato_question, author=self.ben, body="A")
+        Answer.objects.create(question=self.tomato_question, author=self.ala, body="B")
+        Answer.objects.create(question=self.tomato_question, author=self.ala, body="C")
+        response = self.client.get(self.url)
+        question = next(q for q in response.context["question_list"] if q.pk == self.tomato_question.pk)
+        self.assertEqual((question.answer_count, question.vote_count), (3, 2))
+
+    def test_query_count_does_not_grow_with_more_questions(self):
+        for i in range(10):
+            Question.objects.create(author=self.ben, title=f"Extra {i}")
+        # 12 cards, but the same handful of queries as for 2 cards
+        with self.assertNumQueries(5):
+            self.client.get(self.url)
+
     def test_mine_puts_my_questions_first(self):
         self.login(self.ben)
         response = self.client.get(self.url, {"filter": "mine"})
@@ -192,6 +209,7 @@ class CreateQuestionTest(CommunityTestCase):
         response = self.client.post(self.url, {"title": ""})
         self.assertEqual(response.status_code, 400)
         self.assertIn("title", response.json()["errors"])
+        self.assertEqual(response.json()["message"], "This field is required.")
 
     def test_get_is_not_allowed(self):
         self.login(self.ben)
