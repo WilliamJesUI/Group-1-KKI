@@ -1,5 +1,7 @@
+from urllib.parse import urlencode
+
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from plants.models import Plant
@@ -342,6 +344,16 @@ def _require_authenticated(request):
         return False
     return True
 
+CATEGORY_PILLS = [("all", "All"), ("herbs", "Herb"), ("vegetables", "Vegetable"), ("flowers", "Flower")]
+DIFFICULTY_PILLS = [("", "Any level"), ("easy", "Easy"), ("medium", "Medium"), ("hard", "Hard")]
+
+
+def filter_url(query, category, difficulty):
+    """The link for one filter pill. It keeps the other filters, so search + category + level work together."""
+    params = {"q": query, "category": "" if category == "all" else category, "difficulty": difficulty}
+    return "?" + urlencode({key: value for key, value in params.items() if value})
+
+
 
 def encyclopedia(request):
     """Show the searchable, filterable plant directory."""
@@ -358,8 +370,25 @@ def encyclopedia(request):
         )
     if category in {"herbs", "vegetables", "flowers"}:
         plants = plants.filter(category=category)
-    if difficulty in {"easy", "medium", "hard"}:
+    if difficulty not in {"easy", "medium", "hard"}:
+        difficulty = ""
+
+    # How many plants each level has with the current search and category (before the level filter),
+    # so the pills can say "Easy 12" and a level with 0 plants is hidden
+    level_counts = dict(plants.values_list("difficulty").annotate(count=Count("id")))
+    if difficulty:
         plants = plants.filter(difficulty=difficulty)
+
+    category_pills = [
+        {"label": label, "url": filter_url(query, value, difficulty), "active": category == value}
+        for value, label in CATEGORY_PILLS
+    ]
+    difficulty_pills = [
+        {"label": label, "value": value, "url": filter_url(query, category, value), "active": difficulty == value,
+         "count": level_counts.get(value, 0) if value else sum(level_counts.values())}
+        for value, label in DIFFICULTY_PILLS
+        if not value or level_counts.get(value)
+    ]
 
     collections = PlantCollection.objects.none()
     saved_ids = set()
@@ -378,6 +407,8 @@ def encyclopedia(request):
             "query": query,
             "category": category,
             "difficulty": difficulty,
+            "category_pills": category_pills,
+            "difficulty_pills": difficulty_pills,
             "saved_ids": saved_ids,
             "collections": collections,
             "plant_count": Plant.objects.count(),
