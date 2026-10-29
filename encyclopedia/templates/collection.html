@@ -51,7 +51,7 @@
         {% for plant in collection.plants.all %}
         <article class="overflow-hidden rounded-xl border-2 border-ink bg-white">
           {% if plant.image_url %}
-          <img src="{{ plant.image_url }}" alt="{{ plant.name }}" loading="lazy" class="h-36 w-full object-cover">
+          <img src="{{ plant.card_image_url }}" alt="{{ plant.name }}" loading="lazy" class="h-36 w-full object-cover">
           {% else %}
           <div class="flex h-36 items-center justify-center bg-brand-tint text-5xl">🌱</div>
           {% endif %}

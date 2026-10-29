@@ -50,6 +50,11 @@ class Plant(models.Model):
     trefle_id = models.IntegerField(unique=True, null=True, blank=True)
     info_source = models.CharField(max_length=200, blank=True)  # like "Trefle, Wikipedia"
 
+    @property
+    def card_image_url(self):
+        """Medium-size photo for cards. PlantNet /o/ is the full original, which is slow to load."""
+        return self.image_url.replace("/image/o/", "/image/m/")
+
     class Meta:
         ordering = ["name"]
 
