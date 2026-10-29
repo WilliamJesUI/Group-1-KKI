@@ -404,3 +404,15 @@ class AnswerTest(CommunityTestCase):
         response = self.client.post(self.delete_url)
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Answer.objects.filter(pk=self.answer.pk).exists())
+
+        
+class PlantTagLinkTest(CommunityTestCase):
+    """The plant tag on a question opens that plant's page in the Encyclopedia, like on Events."""
+
+    def test_question_card_tag_links_to_plant_page(self):
+        response = self.client.get(reverse("community:show_questions"))
+        self.assertContains(response, 'href="/encyclopedia/test-basil/"')
+
+    def test_question_page_tag_links_to_plant_page(self):
+        response = self.client.get(reverse("community:show_question_thread", args=[self.basil_question.id]))
+        self.assertContains(response, 'href="/encyclopedia/test-basil/"')

@@ -42,7 +42,7 @@
           Helpful
         </button>
         {% if question.plant %}
-        <span class="rounded-md mt-3 bg-brand-tint px-2.5 py-1 text-xs font-extrabold uppercase tracking-wide text-ink">{{ question.plant.name }}</span>
+        <a href="{% url 'encyclopedia:detail' question.plant.slug %}" class="rounded-md mt-3 bg-brand-tint px-2.5 py-1 text-xs font-extrabold uppercase tracking-wide text-ink hover:bg-brand-soft-hover">{{ question.plant.name }}</a>
         {% endif %}
         <span class="mt-3" data-answer-count-label data-empty-text="No answers yet...">
           {% with n=question.answers.count %}
