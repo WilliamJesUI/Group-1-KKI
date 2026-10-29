@@ -4,7 +4,9 @@
 
     async function refreshPopularPlants() {
         try {
-            const response = await fetch(wrapper.dataset.endpoint);
+            // Send the chosen plant along, so it stays highlighted in the new box
+            const plant = new URLSearchParams(window.location.search).get('plant') || '';
+            const response = await fetch(wrapper.dataset.endpoint + (plant ? '?plant=' + encodeURIComponent(plant) : ''));
             if (!response.ok) {
                 throw new Error('status ' + response.status);
             }
