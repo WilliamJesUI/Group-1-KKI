@@ -1,7 +1,12 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static accounts_tags %}
 
 {% block title %}{{ event.name }} - Grow Your Garden{% endblock title %}
+
+{% block meta %}
+{# Avatar color styles, ready for the avatars event_rsvp.js draws after an RSVP #}
+{% include "event_card_styles.html" %}
+{% endblock meta %}
 
 {% block content %}
 <div class="flex flex-col gap-7">
@@ -28,7 +33,7 @@
         <div class="flex min-w-0 flex-1 flex-col gap-4">
             {% if event.theme_plant %}
             <div class="flex flex-wrap items-center gap-3">
-                <a href="/encyclopedia/{{ event.theme_plant.slug }}/" class="relative z-10 w-fit rounded-lg bg-pink px-2 py-1 text-[11px] font-black uppercase leading-none tracking-[0.06em] hover:bg-pink/70">{{ event.theme_plant.name }}</a>
+                <a href="{% url 'encyclopedia:detail' event.theme_plant.slug %}" class="relative z-10 w-fit rounded-lg bg-pink px-2 py-1 text-[11px] font-black uppercase leading-none tracking-[0.06em] hover:bg-pink/70">{{ event.theme_plant.name }}</a>
                 <a href="{% url 'events:show_events' %}?plant={{ event.theme_plant.slug }}" class="text-[13px] font-bold text-ink-soft hover:text-brand hover:underline">More {{ event.theme_plant.name }} events →</a>
             </div>
             {% endif %}
@@ -67,7 +72,7 @@
 
             <h2 class="font-display text-xl leading-[1.3]">Hosted by</h2>
             <div class="flex items-center gap-3">
-                <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink bg-brand-soft text-xs font-bold">{{ host_initials }}</span>
+                {% avatar event.host %}
                 <span class="flex flex-col gap-0.5">
                     <span class="text-[13px] font-extrabold leading-tight">{{ event.host.get_full_name|default:event.host.username }}</span>
                     <span class="text-xs text-ink-soft">Hosted {{ host_event_count }} event{{ host_event_count|pluralize }}</span>
@@ -79,9 +84,13 @@
             <div class="flex flex-col gap-3.5 rounded-2xl border-2 border-ink bg-surface p-6">
                 {# data-going-count and data-attendee-avatars let event_rsvp.js update these after an RSVP #}
                 <p class="font-display text-2xl leading-[1.25]"><span data-going-count="{{ event.id }}">{{ going_count }}</span> going</p>
-                <div data-attendee-avatars="{{ event.id }}" class="flex{% if not attendee_initials %} hidden{% endif %}">
-                    {% for initials in attendee_initials %}
-                    <span class="-mr-2 flex size-10 items-center justify-center rounded-full border-2 border-ink text-xs font-bold {% cycle 'bg-lilac' 'bg-pink' 'bg-butter' 'bg-brand-soft' %}">{{ initials }}</span>
+                <div data-attendee-avatars="{{ event.id }}" class="flex{% if not attendee_avatars %} hidden{% endif %}">
+                    {% for person in attendee_avatars %}
+                    {% if person.picture %}
+                    <img src="{{ person.picture }}" alt="" class="-mr-2 size-10 rounded-full border-2 border-ink object-cover">
+                    {% else %}
+                    <span class="-mr-2 flex size-10 items-center justify-center rounded-full border-2 border-ink text-xs font-bold {{ person.bg_class }}">{{ person.initials }}</span>
+                    {% endif %}
                     {% endfor %}
                     {% if more_going > 0 %}
                     <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink bg-lilac text-xs font-bold">+{{ more_going }}</span>

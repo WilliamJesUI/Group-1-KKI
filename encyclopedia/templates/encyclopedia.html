@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Encyclopedia | Grow Your Garden{% endblock %}
+{% block content %}
+<style>
+  .encyclopedia-screen { display:flex; flex-direction:column; }
+  /* Cards fade + rise in one after another, like the Events cards. --stagger is set on each card. */
+  @keyframes plant-card-in { from { opacity: 0; transform: translateY(8px); } }
+  .plant-card-in { animation: plant-card-in 400ms ease-out both; animation-delay: var(--stagger); }
+  .bookmark-button { transition: background-color 150ms ease-out, transform 100ms ease-out; }
+  .bookmark-button:hover { background: #e8f7df; }
+  .bookmark-button:active { transform: scale(0.94); }
+  @media (prefers-reduced-motion: reduce) { .plant-card-in { animation: none; } }
+  .encyclopedia-collection-bar { flex:0 0 auto; position:sticky; bottom:15px; z-index:10; box-shadow:0 -8px 16px rgba(238,240,234,.8); }
+  .bookmark-button { width:36px; height:36px; display:grid; place-items:center; border:2px solid #17241b; border-radius:50%; background:#fff; }
+  .bookmark-icon { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2.3; stroke-linecap:round; stroke-linejoin:round; }
+  .collection-picker { position:absolute; right:0; top:42px; z-index:20; width:230px; padding:12px; border:2px solid #17241b; border-radius:14px; background:#fff; box-shadow:0 8px 20px #17241b22; }
+</style>
+
+<section class="encyclopedia-screen mx-auto max-w-[1060px]">
+  <div class="mb-5">
+    <h1 class="font-display text-3xl">Encyclopedia</h1>
+    <p class="mt-1 text-sm text-ink-soft">Look up plants and how to grow them</p>
+  </div>
+  <div class="mb-4 grid gap-5 rounded-2xl border-2 border-ink bg-[#b5fbf2] p-6 sm:grid-cols-2 sm:items-center sm:px-8 sm:py-7">
+    <div>
+      <span class="inline-block rounded-md border border-brand bg-white/70 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-brand">Plant directory</span>
+      <h2 class="mt-2 max-w-[390px] font-display text-3xl leading-[1.03] sm:text-4xl">What should you grow next?</h2>
+    </div>
+    <form id="plant-search-form" method="get" role="search" class="min-w-0">
+      <label class="sr-only" for="plant-search">Search plants</label>
+      <div class="flex items-center gap-2 rounded-full bg-white px-4 py-3">
+        <img src="{% static 'img/icons/search.svg' %}" alt="" class="size-4 opacity-60">
+        <input id="plant-search" type="search" name="q" value="{{ query }}" placeholder="Search over {{ plant_count }} plant guides..." class="w-full bg-transparent text-sm outline-none" />
+      </div>
+      {# Keep the chosen category and level when searching. encyclopedia_search.js keeps these up to date. #}
+      <input type="hidden" name="category" value="{% if category != "all" %}{{ category }}{% endif %}">
+      <input type="hidden" name="difficulty" value="{{ difficulty }}">
+      <p class="mt-2 text-[10px] text-ink-soft">Try “tomato”, “basil” or “mint”</p>
+    </form>
+  </div>
+  {# Pills + cards. encyclopedia_search.js swaps this box when you type or click a pill. aria-busy fades it while loading. #}
+  <div id="plant-results" class="transition-opacity aria-busy:opacity-50">
+    {% include "plant_results.html" %}
+  </div>
+  {% if user.is_authenticated %}
+    <a href="{% url 'encyclopedia:collection' %}" class="encyclopedia-collection-bar mt-3 flex flex-wrap items-center justify-between gap-4 rounded-xl border-2 border-ink bg-lilac p-4 transition-shadow duration-150 ease-out hover:shadow-[4px_4px_0_0_var(--color-ink)] sm:px-5">
+      <div class="flex items-center gap-3"><span class="flex size-10 items-center justify-center rounded-xl bg-white text-brand">{% include "care_icon.html" with icon="bookmark" size="size-5" %}</span><span><span class="block text-[10px] font-black uppercase tracking-wider text-brand">Your collections</span><span class="block font-display text-lg leading-tight">Manage plant collections</span><span class="block text-[10px] text-ink-soft">{{ collections.count }} collection{{ collections.count|pluralize }}</span></span></div>
+      <span class="rounded-full border-2 border-ink bg-brand-tint px-4 py-2 text-[10px] font-black uppercase tracking-wider">Manage collections</span>
+    </a>
+  {% else %}
+    <div class="encyclopedia-collection-bar mt-3 rounded-xl border-2 border-ink bg-lilac p-4 text-center text-sm text-ink-soft">
+      <a href="{% url 'profile:login' %}?next={{ request.path|urlencode }}" class="font-extrabold text-brand underline">Log in</a> or <a href="{% url 'profile:register' %}" class="font-extrabold text-brand underline">register</a> to create your own plant collection.
+    </div>
+  {% endif %}
+</section>
+{# Live search: results update while you type, pills load without a page reload #}
+<script src="{% static 'js/encyclopedia_search.js' %}"></script>
+{% endblock %}

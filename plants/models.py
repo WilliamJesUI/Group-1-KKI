@@ -49,6 +49,26 @@ class Plant(models.Model):
     image_credit_url = models.URLField(max_length=500, blank=True)
     trefle_id = models.IntegerField(unique=True, null=True, blank=True)
     info_source = models.CharField(max_length=200, blank=True)  # like "Trefle, Wikipedia"
+        
+    @property
+    def difficulty_badge_class(self):
+        """Background color for the Easy / Medium / Hard tag: green, yellow, pink."""
+        return {"easy": "bg-brand-soft", "medium": "bg-butter", "hard": "bg-pink"}.get(self.difficulty, "bg-brand-soft")
+
+    @property
+    def category_label(self):
+        """One plant's category in singular, like the filter pills and Figma: "Herb", not "Herbs"."""
+        return {"vegetables": "Vegetable", "herbs": "Herb", "flowers": "Flower"}.get(self.category, "Plant")
+
+    @property
+    def card_image_url(self):
+        """Medium-size photo for cards. PlantNet /o/ is the full original, which is slow to load."""
+        return self.image_url.replace("/image/o/", "/image/m/")
+    
+    @property
+    def thumb_image_url(self):
+        """Small photo for little round thumbnails (like Community's Popular Plants), a few KB instead of a few MB."""
+        return self.image_url.replace("/image/o/", "/image/s/")
 
     class Meta:
         ordering = ["name"]

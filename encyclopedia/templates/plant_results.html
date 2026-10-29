@@ -1,0 +1,47 @@
+{% load static %}
+{% comment %}
+The filter pills, "Showing X of Y plants" and the plant cards.
+Used by encyclopedia.html, and sent on its own (?partial=1) when encyclopedia_search.js asks for new results
+while you type or click a pill. Needs the same context as encyclopedia.html.
+{% endcomment %}
+  <div class="mb-3 flex flex-wrap items-center justify-between gap-3"><div class="flex flex-wrap items-center gap-2">
+    {# Category pills, a divider, then level pills. Each link keeps the other filters (filter_url in views.py). #}
+    {% for pill in category_pills %}
+    <a href="{{ pill.url }}" data-plant-filter {% if pill.active %}aria-current="page"{% endif %} class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100 {% if pill.active %}bg-brand-soft{% else %}bg-white{% endif %}">{{ pill.label }}</a>
+    {% endfor %}
+    <span class="hidden h-[34px] w-0.5 rounded-full bg-ink/35 sm:block" aria-hidden="true"></span>
+    {% for pill in difficulty_pills %}
+    <a href="{{ pill.url }}" data-plant-filter {% if pill.active %}aria-current="page"{% endif %} aria-label="{{ pill.label }} level{% if pill.active %}, tap again to show every level{% endif %}" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100 {% if pill.active %}bg-brand-soft{% else %}bg-white{% endif %}">{{ pill.label }}</a>
+    {% endfor %}
+  </div>
+  <p class="text-[11px] text-ink-soft">Showing {{ result_count }} of {{ plant_count }} plants</p>
+  </div>
+  <div>
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    {% for plant in plants %}
+    <article class="plant-card-in group relative overflow-visible rounded-xl border-2 border-ink bg-white transition-[border-color,box-shadow] duration-150 ease-out hover:border-brand hover:shadow-[4px_4px_0_0_var(--color-ink)] has-[a:focus-visible]:border-brand"
+             style="--stagger: {% if forloop.counter0 < 9 %}{% widthratio forloop.counter0 1 40 %}{% else %}360{% endif %}ms">
+      <div class="relative h-40 overflow-visible rounded-t-[10px] bg-brand-tint">{% if plant.image_url %}<div class="h-full overflow-hidden rounded-t-[10px]"><img src="{{ plant.card_image_url }}" alt="{{ plant.name }}" loading="lazy" class="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-105 motion-reduce:transition-none"></div>{% else %}<div class="flex h-full items-center justify-center text-5xl">🌱</div>{% endif %}
+        <span class="absolute left-3 top-3 rounded-full border border-ink {{ plant.difficulty_badge_class }} px-2.5 py-1 text-[10px] font-black uppercase">{{ plant.get_difficulty_display|default:"Beginner" }}</span>
+        {% if user.is_authenticated and collections %}<details class="group/bookmark absolute right-3 top-3 z-10"><summary class="bookmark-button cursor-pointer list-none text-brand" aria-label="Choose collection for {{ plant.name }}"><svg class="bookmark-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-4-6 4z" {% if plant.id in saved_ids %}fill="#17653b"{% endif %}/></svg></summary><div class="collection-picker"><p class="mb-2 text-xs font-extrabold">Save {{ plant.name }} to…</p>{% for collection in collections %}<form method="post" action="{% url 'encyclopedia:toggle_saved' plant.slug %}" class="mb-2 flex items-center gap-2">{% csrf_token %}<input type="hidden" name="collection_id" value="{{ collection.id }}"><input type="hidden" name="next" value="{{ page_url }}"><button class="min-w-0 flex-1 rounded-lg border border-line px-2 py-2 text-left text-xs hover:bg-brand-tint">{{ collection.name }}</button>{% if plant in collection.plants.all %}<span class="text-xs text-brand">✓</span>{% endif %}</form>{% endfor %}<a href="{% url 'encyclopedia:collection' %}" class="block text-xs font-bold text-brand underline">Manage collections</a></div></details>{% endif %}
+      </div>
+      <div class="p-3">
+        <p class="text-[9px] font-black uppercase tracking-[0.12em] text-gold">{{ plant.category_label }}</p>
+        <h3 class="mt-1 font-display text-lg leading-tight">{{ plant.name }}</h3>
+        <p class="mt-1 text-xs italic text-ink-soft">{{ plant.scientific_name|default:"Scientific name unavailable" }}</p>
+        <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-ink-soft">
+          <span class="inline-flex items-center gap-1">{% include "care_icon.html" with icon="sun" size="size-3.5" %}{{ plant.get_sunlight_display|default:"Sunlight varies" }}</span>
+          <span class="inline-flex items-center gap-1">{% include "care_icon.html" with icon="droplets" size="size-3.5" %}{{ plant.get_watering_display|default:"Regular watering" }}</span>
+        </div>
+        <a href="{% url 'encyclopedia:detail' plant.slug %}" class="mt-3 inline-flex items-center gap-1 text-xs font-extrabold text-brand hover:underline after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none">Open growing guide <span aria-hidden="true">›</span>
+        </a></div>
+    </article>
+    {% empty %}
+    <div class="rounded-xl border-2 border-ink bg-white p-8 text-center sm:col-span-2 lg:col-span-3">
+      <p class="font-display text-xl">No plants found</p>
+      <p class="mt-2 text-sm text-ink-soft">Try a different name or category.</p>
+      <a href="{% url 'encyclopedia:index' %}" class="mt-4 inline-block rounded-full border-2 border-ink bg-brand-soft px-4 py-2 text-sm font-bold">Clear filters</a>
+    </div>
+    {% endfor %}
+  </div>
+</div>

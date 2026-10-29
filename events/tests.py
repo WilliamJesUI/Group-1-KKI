@@ -165,7 +165,7 @@ class EventDetailTest(TestCase):
         self.assertContains(response, "Rina Wulandari")
         self.assertContains(response, "Hosted 1 event<")
         self.assertContains(response, f'<span data-going-count="{self.event.id}">1</span> going')
-        self.assertContains(response, ">BE</span>")
+        self.assertContains(response, f'{self.guest.profile.avatar_bg_class}">B</span>')
         self.assertEqual(response.context["bring_list"], ["Seeds in labelled envelopes", "A reusable bag"])
         # 1 person going: no "+N", and never a negative number
         self.assertEqual(response.context["more_going"], 0)
@@ -811,7 +811,9 @@ class RsvpTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["going"], True)
         self.assertEqual(response.json()["going_count"], 1)
-        self.assertEqual(response.json()["attendee_initials"], ["BE"])
+        self.assertEqual(response.json()["attendee_avatars"], [
+            {"initials": "B", "bg_class": self.guest.profile.avatar_bg_class, "picture": ""},
+        ])
         self.assertIn(self.guest, self.event.attendees.all())
 
         response = self.client.post(self.url, {"going": "false"})
@@ -833,7 +835,7 @@ class RsvpTest(TestCase):
         self.client.login(username="ben", password="tomatoes123")
         response = self.client.post(self.url, {"going": "true"})
         self.assertEqual(response.json()["going_count"], 6)
-        self.assertEqual(len(response.json()["attendee_initials"]), 4)
+        self.assertEqual(len(response.json()["attendee_avatars"]), 4)
         self.assertEqual(response.json()["more_going"], 2)
 
     def test_host_cannot_rsvp(self):
@@ -1327,11 +1329,13 @@ class CardAvatarTest(TestCase):
         )
         self.list_url = reverse("events:show_events")
 
-    def add_people(self, names):
-        # Each name becomes a user who RSVP'd, created in this order (so their ids go up in this order)
-        for name in names:
-            first, last = name.split()
-            person = User.objects.create_user(username=first.lower(), first_name=first, last_name=last, password="tomatoes123")
+    def add_people(self, names, colors=("lilac", "pink", "yellow", "green")):
+        # Each name becomes a user who RSVP'd, created in this order (so their ids go up in this order).
+        # Their avatar color is set by hand, because a new profile gets a random one.
+        for i, name in enumerate(names):
+            person = User.objects.create_user(username=name.split()[0].lower(), first_name=name, password="tomatoes123")
+            person.profile.avatar_color = colors[i % len(colors)]
+            person.profile.save()
             self.event.attendees.add(person)
 
     def card(self, response):
@@ -1339,7 +1343,7 @@ class CardAvatarTest(TestCase):
 
     def test_nobody_going_shows_text(self):
         response = self.client.get(self.list_url)
-        self.assertEqual(self.card(response).card_initials, [])
+        self.assertEqual(self.card(response).card_avatars, [])
         # "0 going" is visible (not sr-only), and there are no avatars
         self.assertContains(response, f'<p data-going-label="{self.event.id}" class="flex items-center gap-2 text-[13px] font-extrabold">')
         self.assertNotContains(response, '<span class="card-avatar')
@@ -1347,15 +1351,15 @@ class CardAvatarTest(TestCase):
     def test_one_person_one_avatar(self):
         self.add_people(["Sari Kusuma"])
         response = self.client.get(self.list_url)
-        self.assertContains(response, '<span class="card-avatar card-avatar-lilac">SK</span>')
+        self.assertContains(response, '<span class="card-avatar bg-lilac">SK</span>')
         self.assertNotContains(response, '<span class="card-avatar card-avatar-more">')
 
     def test_two_avatars_then_plus_the_rest(self):
-        # Like Figma: 2 initials (lilac, pink), then a green "+N" for everyone else
-        self.add_people(["Sari Kusuma", "Budi Hartono", "Citra Dewi", "Dimas Putra", "Eka Lestari"])
+        # Like Figma: 2 avatars, then a green "+N" for everyone else. Each avatar has the person's own color.
+        self.add_people(["Sari Kusuma", "Budi Hartono", "Citra Dewi", "Dimas Putra", "Eka Lestari"], ("pink", "yellow"))
         response = self.client.get(self.list_url)
-        self.assertContains(response, '<span class="card-avatar card-avatar-lilac">SK</span>')
-        self.assertContains(response, '<span class="card-avatar card-avatar-pink">BH</span>')
+        self.assertContains(response, '<span class="card-avatar bg-pink">SK</span>')
+        self.assertContains(response, '<span class="card-avatar bg-butter">BH</span>')
         self.assertContains(response, '<span class="card-avatar card-avatar-more">+3</span>')
         self.assertNotContains(response, ">CD</span>")
         # "5 going" is still on the card for screen readers
@@ -1367,10 +1371,10 @@ class CardAvatarTest(TestCase):
         self.add_people(["Sari Kusuma", "Budi Hartono", "Citra Dewi"])
         User.objects.create_user(username="ben", password="tomatoes123")
         self.client.login(username="ben", password="tomatoes123")
-        card_initials = self.card(self.client.get(self.list_url)).card_initials
+        card_avatars = self.card(self.client.get(self.list_url)).card_avatars
         rsvp = self.client.post(reverse("events:rsvp_event_ajax", args=[self.event.id]), {"going": "true"})
-        self.assertEqual(rsvp.json()["attendee_initials"][:2], card_initials)
-        self.assertEqual(card_initials, ["SK", "BH"])
+        self.assertEqual(rsvp.json()["attendee_avatars"][:2], card_avatars)
+        self.assertEqual([person["initials"] for person in card_avatars], ["SK", "BH"])
 
     def test_next_up_card_keeps_its_text(self):
         # Only the cards in the grid get avatars, "Next up" still says "N going"
@@ -1383,6 +1387,27 @@ class CardAvatarTest(TestCase):
         response = self.client.get(self.list_url)
         self.assertContains(response, ".card-avatar {")
         self.assertContains(response, ".card-avatar-more {")
+        self.assertContains(response, '@source inline("bg-brand-soft bg-pink bg-lilac bg-butter object-cover");')
+
+    def test_profile_picture_replaces_the_initials(self):
+        self.add_people(["Sari Kusuma"])
+        sari = User.objects.get(username="sari")
+        sari.profile.profile_picture = "https://example.com/sari.jpg"
+        sari.profile.save()
+        response = self.client.get(self.list_url)
+        self.assertContains(response, '<img src="https://example.com/sari.jpg" alt="" class="card-avatar object-cover">')
+        self.assertNotContains(response, ">SK</span>")
+
+    def test_cards_load_avatars_without_a_query_per_person(self):
+        # select_related("profile") in the attendees Prefetch: more people going doesn't mean more queries
+        self.add_people(["Sari Kusuma"])
+        with CaptureQueriesContext(connection) as one_person:
+            self.client.get(self.list_url)
+        self.add_people(["Budi Hartono", "Citra Dewi", "Dimas Putra"])
+        with CaptureQueriesContext(connection) as four_people:
+            self.client.get(self.list_url)
+        self.assertEqual(len(four_people), len(one_person))
+
 
 
 class HideNavbarTest(TestCase):
@@ -1463,5 +1488,6 @@ class ThemePlantTest(TestCase):
 
     def test_detail_page_without_theme_plant(self):
         response = self.client.get(reverse("events:show_event", args=[self.seed_swap.id]))
-        self.assertNotContains(response, "/encyclopedia/")
+        # The navbar always links to /encyclopedia/, so check for a plant page link instead
+        self.assertNotContains(response, 'href="/encyclopedia/test-')
         self.assertNotContains(response, "?plant=")

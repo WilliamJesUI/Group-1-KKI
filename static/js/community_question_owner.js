@@ -41,7 +41,7 @@
 
     if (deleteBtn) {
         deleteBtn.addEventListener('click', async () => {
-            if (!confirm('Delete this question? This cannot be undone.')) return;
+            if (!await confirmDelete({ title: 'Delete this question?', message: "This can't be undone." })) return;
             deleteBtn.disabled = true;
             try {
                 const response = await fetch(deleteBtn.dataset.endpoint, {

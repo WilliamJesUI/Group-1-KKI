@@ -25,6 +25,10 @@ Photos, icons and the logo used in Grow Your Garden. All photos are from [Pexels
 
 Icons in `static/img/icons/` are from [Lucide](https://lucide.dev) (ISC license).
 
+## Descriptions
+
+Plant descriptions come from [Wikipedia](https://en.wikipedia.org) (CC BY-SA 4.0). Each plant page links to its article.
+
 ## Logo
 
 The tomato logo (`static/img/logo-tomato.png`) was hand-drawn by William.

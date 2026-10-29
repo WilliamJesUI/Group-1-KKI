@@ -39,9 +39,10 @@ def show_questions(request):
 
     questions = (
         Question.objects
-        .select_related("plant")
+        .select_related("plant", "author__profile")
         .filter(Q(title__icontains=query) | Q(plant__name__icontains=query))
-        .annotate(answer_count=Count("answers"))
+        # distinct=True: with two Counts in one query, each would otherwise count the other's rows too
+        .annotate(answer_count=Count("answers", distinct=True), vote_count=Count("voters", distinct=True))
     )
 
 
@@ -85,6 +86,22 @@ def show_questions(request):
     if request.GET.get("partial") == "1":
         return render(request, "question_cards.html", context)
     return render(request, "question_list.html", context)
+
+def popular_plants_ajax(request):
+    popular_plants = (
+            Plant.objects
+            .annotate(question_count=Count("questions"))
+            .filter(question_count__gt=0)
+            .order_by("-question_count", "name")[:5]
+        )
+
+    context = {
+        "popular_plants" : popular_plants,
+        # Keeps the chosen plant highlighted after the box refreshes
+        "selected_plant": request.GET.get("plant", "").strip(),
+    }
+    return render(request, "popular_plants_container.html", context)
+
 
 def show_question_thread(request, question_id):
     question = get_object_or_404(Question, id=question_id)
@@ -154,7 +171,8 @@ def create_question_ajax(request):
         question.author = request.user
         save_question_from_form(question, form)
         return JsonResponse({"url" : reverse("community:show_questions")}, status=201)
-    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+    first_error = next(iter(form.errors.values()))[0]
+    return JsonResponse({"message": first_error, "errors": form.errors.get_json_data()}, status=400)
 
 @require_POST
 def update_question_ajax(request, question_id):
@@ -233,7 +251,7 @@ def vote_question_ajax(request, question_id):
 @require_POST
 def create_answer_ajax(request, question_id):
     if not request.user.is_authenticated:
-        return JsonResponse({"message" : "Please log in to ask a question!"}, status=403)
+        return JsonResponse({"message" : "Please log in to answer!"}, status=403)
 
     try:
         question = Question.objects.get(id=question_id)
@@ -247,7 +265,8 @@ def create_answer_ajax(request, question_id):
         answer.question = question
         save_answer_from_form(answer, form)
         return JsonResponse({"url" : reverse("community:show_question_thread", args=[question.id])}, status=201)
-    return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+    first_error = next(iter(form.errors.values()))[0]
+    return JsonResponse({"message": first_error, "errors": form.errors.get_json_data()}, status=400)
 
 
 @require_POST

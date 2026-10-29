@@ -4,27 +4,8 @@
 {% block title %}Events - Grow Your Garden{% endblock title %}
 
 {% block meta %}
-{% comment %}
-Attendee avatars on the event cards (Figma "Event Card"). They're classes here instead of Tailwind classes in the HTML
-because event_rsvp.js draws new avatars after an RSVP, and the Tailwind CDN only builds styles for classes it has
-already seen on the page. These are ready from the start, so a new avatar never shows up unstyled.
-{% endcomment %}
-<style type="text/tailwindcss">
-    @layer components {
-        .card-avatar {
-            @apply flex size-[30px] items-center justify-center rounded-full border-[1.5px] border-ink text-[9px] font-bold leading-[1.2];
-        }
-        .card-avatar-lilac {
-            @apply bg-lilac;
-        }
-        .card-avatar-pink {
-            @apply bg-pink;
-        }
-        .card-avatar-more {
-            @apply bg-brand-soft;
-        }
-    }
-</style>
+{# Avatar circle styles for the event cards #}
+{% include "event_card_styles.html" %}
 {% endblock meta %}
 
 {% block content %}
