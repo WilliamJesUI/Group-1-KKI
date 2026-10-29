@@ -5,7 +5,7 @@
 <style>
   .encyclopedia-screen { height: calc(100vh - 176px); min-height: 500px; display:flex; flex-direction:column; }
   .encyclopedia-card-scroll { flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:2px 5px 8px 0; scrollbar-gutter:stable; }
-  .encyclopedia-collection-bar { flex:0 0 auto; position:sticky; bottom:0; z-index:10; box-shadow:0 -8px 16px rgba(238,240,234,.8); }
+  .encyclopedia-collection-bar { flex:0 0 auto; position:sticky; bottom:15px; z-index:10; box-shadow:0 -8px 16px rgba(238,240,234,.8); }
   .bookmark-button { width:36px; height:36px; display:grid; place-items:center; border:2px solid #17241b; border-radius:50%; background:#fff; }
   .bookmark-icon { width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2.3; stroke-linecap:round; stroke-linejoin:round; }
   .collection-picker { position:absolute; right:0; top:42px; z-index:20; width:230px; padding:12px; border:2px solid #17241b; border-radius:14px; background:#fff; box-shadow:0 8px 20px #17241b22; }
@@ -40,7 +40,7 @@
   </div>
   <p class="text-[11px] text-ink-soft">Showing {{ result_count }} of {{ plant_count }} plants</p>
   </div>
-  <div class="encyclopedia-card-scroll">
+  <div>
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
     {% for plant in plants %}
     <article class="group overflow-visible rounded-xl border-2 border-ink bg-white transition hover:-translate-y-0.5 hover:shadow-md">
