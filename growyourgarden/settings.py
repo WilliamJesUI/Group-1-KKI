@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'events',
     'accounts',
     'plants',
+    'encyclopedia',
 ]
 
 MIDDLEWARE = [

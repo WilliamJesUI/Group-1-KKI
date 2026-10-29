@@ -84,13 +84,16 @@
             </div>
         </section>
         
-        {% include 'popular_plants_container.html' %}
+        <div id="popular-plants-wrapper" data-endpoint="{% url 'community:popular_plants_ajax' %}">
+            {% include "popular_plants_container.html" %}
+        </div>
 
     </aside>
     {% include "question_form_modal.html" %}
 </div>
 
 <script src="{% static 'js/csrf.js' %}"></script>
+<script src="{% static 'js/community_popular_plants.js' %}"></script>
 <script src="{% static 'js/community_question_filters.js' %}"></script>
 <script src="{% static 'js/community_question_form.js' %}"></script>
 {% endblock content %}
