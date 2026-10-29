@@ -580,3 +580,34 @@ class PlantPageQuestionsAndEventsTests(EncyclopediaTestData):
         self.assertContains(response, "No questions about sweet basil yet.")
         self.assertContains(response, "No upcoming events with sweet basil yet.")
         self.assertContains(response, f'?plant={self.basil.slug}')
+
+
+class FigmaDetailsTests(EncyclopediaTestData):
+    """Small details that match the Figma Encyclopedia and Plant Guide screens."""
+
+    def test_category_label_is_singular(self):
+        self.assertEqual(self.basil.category_label, "Herb")
+        self.assertEqual(Plant(category="").category_label, "Plant")
+
+    def test_cards_show_singular_category_and_icons(self):
+        response = self.client.get(self.index_url)
+        self.assertContains(response, ">Herb</p>")
+        self.assertNotContains(response, "☼")
+
+    def test_collection_count_uses_singular_for_one(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.index_url)
+        self.assertContains(response, "1 collection<")
+
+    def test_detail_page_has_figma_buttons(self):
+        response = self.client.get(reverse("encyclopedia:detail", args=[self.basil.slug]))
+        self.assertContains(response, "Save to collection")
+        self.assertContains(response, 'data-share-url="http://testserver/encyclopedia/')
+        self.assertContains(response, "js/share_link.js")
+        self.assertNotContains(response, "Browse plants")
+
+    def test_detail_page_hides_trefle_species_id(self):
+        self.basil.trefle_id = 64847
+        self.basil.save()
+        response = self.client.get(reverse("encyclopedia:detail", args=[self.basil.slug]))
+        self.assertNotContains(response, "Trefle species ID")
