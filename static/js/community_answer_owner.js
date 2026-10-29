@@ -31,7 +31,7 @@
 
         const deleteBtn = event.target.closest('[data-delete-answer]');
         if (deleteBtn) {
-            if (!confirm('Delete this answer? This cannot be undone.')) return;
+            if (!await confirmDelete({ title: 'Delete this answer?', message: "This can't be undone." })) return;
             deleteBtn.disabled = true;
             try {
                 const response = await fetch(deleteBtn.dataset.endpoint, {
