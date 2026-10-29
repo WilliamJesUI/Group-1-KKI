@@ -41,8 +41,6 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "william-jesiel-growyourgarden.pws.cs
 CSRF_TRUSTED_ORIGINS = ["https://william-jesiel-growyourgarden.pws.cs.ui.ac.id"]
 
 
-
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -142,11 +140,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'Asia/Jakarta'
-
 USE_I18N = True
-
 USE_TZ = True
 
 
