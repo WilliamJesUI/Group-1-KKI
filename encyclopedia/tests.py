@@ -207,6 +207,30 @@ class EncyclopediaDirectoryTests(EncyclopediaTestData):
         response = self.client.get(self.index_url, {"category": "flowers", "difficulty": "hard"})
         self.assertContains(response, '<input type="hidden" name="category" value="flowers">', html=True)
         self.assertContains(response, '<input type="hidden" name="difficulty" value="hard">', html=True)
+    
+    def test_partial_sends_only_the_results(self):
+        response = self.client.get(self.index_url, {"q": "basil", "partial": "1"})
+        self.assertTemplateUsed(response, "plant_results.html")
+        self.assertTemplateNotUsed(response, "encyclopedia.html")
+        self.assertContains(response, "Sweet Basil")
+        self.assertNotContains(response, "What should you grow next?")
+
+    def test_full_page_loads_the_live_search_script(self):
+        response = self.client.get(self.index_url)
+        self.assertTemplateUsed(response, "plant_results.html")
+        self.assertContains(response, "js/encyclopedia_search.js")
+
+    def test_page_url_leaves_out_partial(self):
+        # "Save to collection" sends you back here, so it must be the full page, not just the results
+        response = self.client.get(self.index_url, {"q": "basil", "category": "herbs", "partial": "1"})
+        self.assertEqual(response.context["page_url"], "/encyclopedia/?q=basil&category=herbs")
+
+    def test_empty_category_lights_up_all(self):
+        # The search form always sends category=, which means every category
+        response = self.client.get(self.index_url, {"q": "", "category": "", "difficulty": ""})
+        pills = {pill["label"]: pill for pill in response.context["category_pills"]}
+        self.assertTrue(pills["All"]["active"])
+        self.assertEqual(response.context["result_count"], 3)
 
     def test_difficulty_badge_color_matches_level(self):
         self.assertEqual(self.basil.difficulty_badge_class, "bg-brand-soft")
