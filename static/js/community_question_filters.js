@@ -14,6 +14,7 @@
 
     const pills = document.querySelectorAll('#question-filter-pills [data-filter]');
     const filterInput = searchForm.querySelector('input[name="filter"]');
+    const plantInput = searchForm.querySelector('input[name="plant"]');
     const DEFAULT_FILTER = 'latest';
 
     let latestRequest = 0; // so an old, slow response can't replace newer cards
@@ -24,6 +25,10 @@
         const params = new URLSearchParams({ filter: filter });
         if (query) {
             params.set('q', query);
+        }
+        // Keep the plant from the Popular Plants box, so search and pills stay inside that plant
+        if (plantInput && plantInput.value) {
+            params.set('plant', plantInput.value);
         }
         return '?' + params.toString();
     }
@@ -49,6 +54,22 @@
         if (searchInput.value.trim() !== query) {
             searchInput.value = query;
         }
+    }
+
+
+    // Remember the chosen plant and highlight it in the Popular Plants box
+    function showPlant(slug) {
+        if (!plantInput) {
+            return;
+        }
+        plantInput.value = slug;
+        document.querySelectorAll('a[data-plant]').forEach((link) => {
+            if (link.dataset.plant === slug) {
+                link.setAttribute('aria-current', 'true');
+            } else {
+                link.removeAttribute('aria-current');
+            }
+        });
     }
 
     // history: 'push' adds a back-button step, 'replace' changes the current one, 'none' leaves it
@@ -99,6 +120,20 @@
         loadCards(params.get('filter') || DEFAULT_FILTER, params.get('q') || '', 'push');
     });
 
+    // Clicks on a plant in the Popular Plants box: show that plant's questions without a reload.
+    // Clicking the plant that's already chosen shows every question again.
+    document.addEventListener('click', (event) => {
+        const link = event.target.closest('a[data-plant]');
+        if (!link || !plantInput || event.ctrlKey || event.metaKey || event.shiftKey) {
+            return;
+        }
+        event.preventDefault();
+        clearTimeout(typingTimer);
+        const slug = plantInput.value === link.dataset.plant ? '' : link.dataset.plant;
+        showPlant(slug);
+        loadCards(filterInput.value, searchInput.value.trim(), 'push');
+    });
+
     // Typing: wait 300ms after the user stops, so we don't send a request per letter
     searchInput.addEventListener('input', () => {
         updatePillLinks(searchInput.value.trim()); // pills keep the typed text right away
@@ -118,6 +153,7 @@
     // Back/forward button: load the cards for the URL we went back to
     window.addEventListener('popstate', () => {
         const params = new URLSearchParams(window.location.search);
+        showPlant(params.get('plant') || '');
         loadCards(params.get('filter') || DEFAULT_FILTER, params.get('q') || '', 'none');
     });
 

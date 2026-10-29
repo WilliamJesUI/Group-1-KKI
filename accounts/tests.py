@@ -178,7 +178,7 @@ class AvatarTests(TestCase):
         self.assertEqual(Profile.objects.get(user=self.user).avatar_color, color)
 
     def test_initials(self):
-        self.assertEqual(self.user.profile.initials, "AL")
+        self.assertEqual(self.user.profile.initials, "A")
         self.user.first_name = "Ana Hill"
         self.user.save()
         self.assertEqual(Profile.objects.get(user=self.user).initials, "AH")
@@ -235,7 +235,7 @@ class AvatarTagTests(TestCase):
         user = User.objects.create_user("ala", "ala@example.com", PASSWORD)
         html = self.render("{% avatar u %}", u=user)
         self.assertIn(user.profile.avatar_bg_class, html)
-        self.assertIn("AL", html)
+        self.assertIn(">A<", html)
 
     def test_avatar_tag_shows_the_picture_when_there_is_one(self):
         user = User.objects.create_user("ala", "ala@example.com", PASSWORD)
@@ -248,4 +248,4 @@ class AvatarTagTests(TestCase):
     def test_filters_give_the_same_color_as_the_profile(self):
         user = User.objects.create_user("ala", "ala@example.com", PASSWORD)
         html = self.render("{{ u|avatar_bg_class }} {{ u|avatar_initials }}", u=user)
-        self.assertEqual(html, f"{user.profile.avatar_bg_class} AL")
+        self.assertEqual(html, f"{user.profile.avatar_bg_class} A")

@@ -251,3 +251,35 @@ A few things to know:
 - Taps go through a toast to whatever is under it, so a toast never blocks a button on phones.
 - Toasts appear behind an open popup (popovers sit on top of everything). Show the toast after the popup closes.
 - Toasts slide in from the right and slide back out when they leave, like the Figma prototype. People who turned on "reduce motion" get a plain fade instead. That's handled for you.
+
+
+## 13. "Are you sure?" pop-up before deleting
+
+Don't use the browser's `confirm()` box. It looks different on every browser and doesn't match Figma. Every page already has our own pop-up (`templates/confirm_delete_modal.html`, with the same look and animation as the Events delete pop-up). You open it in one of two ways.
+
+**From JavaScript (AJAX deletes).** `confirmDelete()` waits for the click and gives back `true` for "Yes, delete" and `false` for Cancel, Esc or a click outside. Your function must be `async`:
+
+```js
+deleteButton.addEventListener('click', async () => {
+    if (!await confirmDelete({ title: 'Delete this answer?', message: "This can't be undone." })) return;
+    // ... your fetch() that deletes it ...
+});
+```
+
+You can change the red button's text too: `confirmDelete({ title: 'Remove Sweet basil?', confirmLabel: 'Yes, remove' })`.
+
+**On a normal form, no JavaScript needed.** Add `data-confirm-title` (and optionally `data-confirm-message`) to the `<form>`. The form is only sent after "Yes, delete":
+
+```html
+<form method="post" action="{% url 'encyclopedia:delete_collection' item.id %}"
+      data-confirm-title="Delete this collection?"
+      data-confirm-message="Only the list goes away. The plants stay in the encyclopedia.">
+    {% csrf_token %}
+    <button type="submit">Delete</button>
+</form>
+```
+
+A few things to know:
+- "Cancel" is focused when it opens, so pressing Enter never deletes by accident.
+- The title and message are shown as plain text, so it's safe to put a user's own text (like a plant or collection name) in them.
+- This only asks. Your view must still check the user is allowed to delete (owner or moderator).

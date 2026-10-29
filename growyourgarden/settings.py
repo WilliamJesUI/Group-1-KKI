@@ -24,11 +24,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-y=^b&m2xwj27yo4j)e45o4*3sr2+f&i*uldpi9s&tr3iseztj+'
+PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# SECURITY WARNING: keep the secret key used in production secret!
+# PWS reads the real key from its environment variables. The fallback is only for running locally.
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-y=^b&m2xwj27yo4j)e45o4*3sr2+f&i*uldpi9s&tr3iseztj+')
+
+# Debug pages on your laptop, hidden on PWS (PRODUCTION=True there)
+DEBUG = not PRODUCTION
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "william-jesiel-growyourgarden.pws.cs.ui.ac.id"]
 
@@ -36,8 +39,6 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "william-jesiel-growyourgarden.pws.cs
 # this https address is ours. Without it every POST (forms and fetch) gets a 403 on PWS.
 # If the PWS address changes, update it here and in ALLOWED_HOSTS.
 CSRF_TRUSTED_ORIGINS = ["https://william-jesiel-growyourgarden.pws.cs.ui.ac.id"]
-
-PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 
 
 # Application definition
@@ -53,6 +54,9 @@ INSTALLED_APPS = [
     'community',
     'events',
     'accounts',
+    'achievements',
+    'plants',
+    'encyclopedia',
 ]
 
 MIDDLEWARE = [
@@ -136,11 +140,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'Asia/Jakarta'
-
 USE_I18N = True
-
 USE_TZ = True
 
 
@@ -156,6 +157,9 @@ WHITENOISE_USE_FINDERS = True
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Plant API token. Comes from .env on a laptop and from the PWS Environment tab online.
+TREFLE_TOKEN = os.getenv('TREFLE_TOKEN', '')
 
 LOGIN_URL = 'profile:login'
 LOGIN_REDIRECT_URL = 'profile:show_profile'

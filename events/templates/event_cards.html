@@ -2,7 +2,7 @@
 {% comment %}
 The grid of event cards, or a message when there are none.
 Used by event_list.html, and sent on its own when the filters ask for new cards.
-Needs: event_list (events, each with is_going, card_initials and card_more_going set by mark_going in the view),
+Needs: event_list (events, each with is_going, card_avatars and card_more_going set by mark_going in the view),
 selected_filter and query (for the empty message). The avatar classes (.card-avatar...) are in event_list.html.
 {% endcomment %}
 {% if event_list %}
@@ -34,6 +34,10 @@ selected_filter and query (for the empty message). The avatar classes (.card-ava
         </div>
 
         <div class="flex flex-col gap-2 p-4">
+            {% if event.theme_plant %}
+            {# Plant tag (Figma "Plant Tag"): the event's theme plant from the shared plant list #}
+            <a href="{% url 'encyclopedia:detail' event.theme_plant.slug %}" class="relative z-10 w-fit rounded-lg bg-pink px-2 py-1 text-[11px] font-black uppercase leading-none tracking-[0.06em] hover:bg-pink/70">{{ event.theme_plant.name }}</a>
+            {% endif %}
             <h2 class="font-display text-xl leading-[1.3]">
                 <a href="{% url 'events:show_event' event.id %}" class="after:absolute after:inset-0 focus-visible:outline-none">{{ event.name }}</a>
             </h2>
@@ -54,15 +58,19 @@ selected_filter and query (for the empty message). The avatar classes (.card-ava
                 from them (aria-hidden), so the count is read out once. event_rsvp.js redraws both after an RSVP.
                 {% endcomment %}
                 <div class="flex items-center">
-                    <div data-card-avatars="{{ event.id }}" aria-hidden="true" class="flex -space-x-2{% if not event.card_initials %} hidden{% endif %}">
-                        {% for initials in event.card_initials %}
-                        <span class="card-avatar {% if forloop.first %}card-avatar-lilac{% else %}card-avatar-pink{% endif %}">{{ initials }}</span>
+                    <div data-card-avatars="{{ event.id }}" aria-hidden="true" class="flex -space-x-2{% if not event.card_avatars %} hidden{% endif %}">
+                        {% for person in event.card_avatars %}
+                        {% if person.picture %}
+                        <img src="{{ person.picture }}" alt="" class="card-avatar object-cover">
+                        {% else %}
+                        <span class="card-avatar {{ person.bg_class }}">{{ person.initials }}</span>
+                        {% endif %}
                         {% endfor %}
                         {% if event.card_more_going %}
                         <span class="card-avatar card-avatar-more">+{{ event.card_more_going }}</span>
                         {% endif %}
                     </div>
-                    <p data-going-label="{{ event.id }}" class="flex items-center gap-2 text-[13px] font-extrabold{% if event.card_initials %} sr-only{% endif %}">
+                    <p data-going-label="{{ event.id }}" class="flex items-center gap-2 text-[13px] font-extrabold{% if event.card_avatars %} sr-only{% endif %}">
                         <img src="{% static 'img/icons/users.svg' %}" alt="" width="16" height="16">
                         <span><span data-going-count="{{ event.id }}">{{ event.attendees.count }}</span> going</span>
                     </p>

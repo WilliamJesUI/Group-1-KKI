@@ -81,6 +81,8 @@ More info and examples: docs/TEAM-GUIDE.md
     <script src="{% static 'js/csrf.js' %}"></script>
     {# showToast("Title", "Message") for pop-up notifications. Also in <head>, so your scripts can use it anywhere. #}
     <script src="{% static 'js/toast.js' %}"></script>
+    {# confirmDelete({ title, message }) opens the shared "Are you sure?" pop-up. Use it instead of confirm(). #}
+    <script src="{% static 'js/confirm_delete.js' %}"></script>
     {% block meta %} {% endblock meta %}
 </head>
 
@@ -96,6 +98,8 @@ More info and examples: docs/TEAM-GUIDE.md
       messages.success(request, "Event published\nYou can find it on the Events page.")
     toast.js splits it at the first line break. One line is fine too, then it's just a title.
     {% endcomment %}
+    {# The shared delete pop-up, opened by confirmDelete() (static/js/confirm_delete.js) #}
+    {% include "confirm_delete_modal.html" %}
     {% for message in messages %}
     <span hidden data-toast-message="{{ message }}" data-toast-type="{% if message.level_tag == 'error' %}error{% else %}success{% endif %}"></span>
     {% endfor %}

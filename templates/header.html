@@ -1,4 +1,10 @@
-{% load static %}
+{% load static accounts_tags %}
+{% comment %}
+The navbar at the top of every page (Figma "Navbar", not the "Page Header" component).
+base.html already includes it, so don't include it again in your page.
+The .nav-tab and .nav-tab-active styles are in base.html, and static/js/navbar.js needs the ids nav-toggle and nav-menu.
+{% endcomment %}
+{# "app" is the app_name from the urls.py of the page you're on. It decides which tab is highlighted. #}
 {% with app=request.resolver_match.app_name %}
 <header class="border-b-2 border-ink bg-surface">
     <div class="mx-auto flex max-w-[1180px] flex-wrap items-center justify-between gap-x-4 px-4 py-4 sm:px-6 lg:h-[86px] lg:flex-nowrap lg:py-0">
@@ -16,15 +22,22 @@
         </button>
 
         <div id="nav-menu" class="invisible flex max-h-0 w-full flex-col overflow-hidden opacity-0 transition-all duration-250 ease-out motion-reduce:transition-opacity data-open:visible data-open:max-h-[40rem] data-open:opacity-100 lg:visible lg:max-h-none lg:w-auto lg:flex-1 lg:flex-row lg:items-center lg:justify-between lg:overflow-visible lg:pl-10 lg:opacity-100 lg:transition-none">
+            {% comment %}
+            Your tab lights up when app_name in your urls.py matches the name in the if below
+            (garden, events, encyclopedia, community, achievements, profile).
+            To link your tab, replace href="#" with your page, e.g. href="{% url 'community:show_questions' %}".
+            {% endcomment %}
             <nav class="mt-4 flex flex-col gap-1 border-t border-line pt-4 lg:mt-0 lg:flex-row lg:rounded-full lg:border-2 lg:border-ink lg:bg-brand-soft lg:px-2 lg:py-1">
                 <a href="{% url 'garden:show_garden' %}" class="nav-tab {% if app == 'garden' %}nav-tab-active{% endif %}">Garden</a>
                 <a href="{% url 'events:show_events' %}" class="nav-tab {% if app == 'events' %}nav-tab-active{% endif %}">Events</a>
-                <a href="#" class="nav-tab {% if app == 'encyclopedia' %}nav-tab-active{% endif %}">Encyclopedia</a>
-                <a href="#" class="nav-tab {% if app == 'community' %}nav-tab-active{% endif %}">Community</a>
-                <a href="#" class="nav-tab {% if app == 'achievements' %}nav-tab-active{% endif %}">Achievements</a>
+                <a href="{% url 'encyclopedia:show_encyclopedia' %}" class="nav-tab {% if app == 'encyclopedia' %}nav-tab-active{% endif %}">Encyclopedia</a>
+                <a href="{% url 'community:show_questions' %}" class="nav-tab {% if app == 'community' %}nav-tab-active{% endif %}">Community</a>
+                <a href="{% url 'achievements:show_achievements' %}" class="nav-tab {% if app == 'achievements' %}nav-tab-active{% endif %}">Achievements</a>
                 <a href="{% url 'profile:show_profile' %}" class="nav-tab {% if app == 'profile' %}nav-tab-active{% endif %}">Profile</a>
             </nav>
 
+            {# Logged in: letter avatar + name. Logged out: Log in / Register (links are "#" until the auth pages exist). #}
+            {# The avatar letter and the name both use first_name, or username when first_name is empty, so they always match. #}
             {% if user.is_authenticated %}
             <div class="mt-4 flex items-center gap-3 border-t border-line pt-4 lg:mt-0 lg:border-0 lg:pt-0">
                 <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink bg-brand-soft font-extrabold">{{ user.first_name|default:user.username|first|upper }}</span>

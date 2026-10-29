@@ -12,14 +12,25 @@
 
     <div class="min-w-0 flex-1">
       <!-- author row -->
-      <div class="flex flex-wrap items-center gap-2 text-sm">
-        <span class="card-avatar card-avatar-lilac">{{ answer.author.username|slice:":2"|upper }}</span>
+      <a class="flex w-fit flex-wrap items-center gap-2 text-sm transition-transform duration-150 hover:scale-102" href="{% url 'profile:show_user_profile' answer.author.username %}">
+        <!-- Author profile picture -->
+        {% with profile=answer.author.profile %}
+          {% if profile.profile_picture %}
+            <span class="card-avatar relative overflow-hidden !p-0">
+              <img src="{{ profile.profile_picture }}"
+                  alt="Profile picture of {{ profile.display_name }}"
+                  class="absolute inset-0 m-0 size-full max-w-none object-cover">
+            </span>
+          {% else %}
+            <span class="card-avatar {{ profile.avatar_bg_class }}">{{ profile.initials }}</span>
+          {% endif %}
+        {% endwith %}
         <span class="font-semibold">{{ answer.author.get_full_name|default:answer.author.username }}</span>
         <span class="text-ink-soft">· {{ answer.created_at|timesince }} ago</span>
         {% if is_top %}
         <span class="rounded-full border-2 border-ink bg-green-200 px-3 py-0.5 text-xs font-extrabold uppercase tracking-wider text-green-900">Top answer</span>
         {% endif %}
-      </div>
+      </a>
 
       <!-- body -->
       <p data-answer-body class="mt-2 whitespace-pre-line text-[15px] leading-relaxed">{{ answer.body }}</p>
