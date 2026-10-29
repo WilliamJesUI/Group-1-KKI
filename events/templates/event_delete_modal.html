@@ -18,9 +18,9 @@ Browsers that don't know starting: or transition-discrete simply skip the animat
         <p class="text-sm text-ink-soft">This can't be undone. Everyone who RSVP'd will lose it from their list.</p>
         <div class="flex justify-end gap-3">
             <button type="button" popovertarget="delete-event-modal" popovertargetaction="hide" class="rounded-full border-2 border-ink bg-surface px-6 py-3 text-[15px] font-extrabold hover:bg-brand-tint transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Cancel</button>
-            <form method="post" action="{% url 'events:delete_event' event.id %}">
+            <form id="delete-event-form" method="post" action="{% url 'events:delete_event' event.id %}">
                 {% csrf_token %}
-                <button type="submit" class="rounded-full border-2 border-ink bg-danger px-6 py-3 text-[15px] font-extrabold text-white hover:bg-danger-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Yes, delete</button>
+                <button type="submit" class="rounded-full border-2 border-ink bg-danger px-6 py-3 text-[15px] font-extrabold text-white hover:bg-danger-hover disabled:opacity-60 transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Yes, delete</button>
             </form>
         </div>
     </div>

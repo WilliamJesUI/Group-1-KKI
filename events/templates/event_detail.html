@@ -26,6 +26,12 @@
 
     <div class="flex flex-col gap-8 lg:flex-row lg:items-start">
         <div class="flex min-w-0 flex-1 flex-col gap-4">
+            {% if event.theme_plant %}
+            <div class="flex flex-wrap items-center gap-3">
+                <a href="/encyclopedia/{{ event.theme_plant.slug }}/" class="relative z-10 w-fit rounded-lg bg-pink px-2 py-1 text-[11px] font-black uppercase leading-none tracking-[0.06em] hover:bg-pink/70">{{ event.theme_plant.name }}</a>
+                <a href="{% url 'events:show_events' %}?plant={{ event.theme_plant.slug }}" class="text-[13px] font-bold text-ink-soft hover:text-brand hover:underline">More {{ event.theme_plant.name }} events →</a>
+            </div>
+            {% endif %}
             <h1 class="font-display text-[32px] leading-[1.1] sm:text-[40px]">{{ event.name }}</h1>
             <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-soft">
                 <p class="flex items-center gap-2">
@@ -105,4 +111,5 @@
 {% include "event_delete_modal.html" %}
 {% endif %}
 <script src="{% static 'js/event_rsvp.js' %}"></script>
+<script src="{% static 'js/event_delete.js' %}"></script>
 {% endblock content %}
