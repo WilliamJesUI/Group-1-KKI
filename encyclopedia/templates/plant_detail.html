@@ -1,5 +1,10 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}{{ plant.name }} | Plant Guide{% endblock %}
+{% block meta %}
+{# Avatar circle styles for the event cards in "Events growing ..." #}
+{% include "event_card_styles.html" %}
+{% endblock meta %}
 {% block content %}
 <style>
 .plant-detail-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}
@@ -25,7 +30,7 @@
     <div class="pt-1">
       <div class="flex items-center gap-2">
         <span class="text-[10px] font-black uppercase tracking-wider text-gold">{{ plant.get_category_display|default:"Plant" }}</span>
-        <span class="rounded-full border border-ink bg-brand-soft px-2 py-0.5 text-[9px] font-black uppercase">{{ plant.get_difficulty_display|default:"Easy" }}</span>
+        <span class="rounded-full border border-ink {{ plant.difficulty_badge_class }} px-2 py-0.5 text-[9px] font-black uppercase">{{ plant.get_difficulty_display|default:"Easy" }}</span>
       </div>
       <h1 class="mt-2 font-display text-4xl sm:text-5xl">{{ plant.name }}</h1>
       <p class="mt-1 text-xs italic text-ink-soft">{{ plant.scientific_name }}</p>
@@ -97,6 +102,53 @@
         </div>
     </div>
   </div>
+  {# "Questions about basil" (Figma Plant Guide): the 3 newest Community questions about this plant #}
+  <section class="mt-10">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 class="font-display text-[28px] leading-tight">Questions about {{ plant.name|lower }}</h2>
+        <p class="mt-1 text-xs text-ink-soft">Asked and answered by our community</p>
+      </div>
+      <a href="{% url 'community:show_questions' %}?plant={{ plant.slug }}" class="rounded-full border-2 border-ink bg-white px-5 py-2.5 text-sm font-extrabold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100">Ask about {{ plant.name|lower }}</a>
+    </div>
+    {% if questions %}
+    <ul class="mt-4 divide-y divide-line overflow-hidden rounded-2xl border-2 border-ink bg-white">
+      {% for question in questions %}
+      <li>
+        <a href="{% url 'community:show_question_thread' question.id %}" class="group flex items-center justify-between gap-4 px-5 py-4 transition-colors duration-150 ease-out hover:bg-brand-tint focus-visible:bg-brand-tint focus-visible:outline-none">
+          <span class="min-w-0">
+            <span class="block truncate text-sm font-extrabold">{{ question.title }}</span>
+            <span class="mt-1 block text-xs text-ink-soft">{{ question.answer_count }} answer{{ question.answer_count|pluralize }} · {{ question.author.get_full_name|default:question.author.username }}</span>
+          </span>
+          <img src="{% static 'img/icons/chevron-right.svg' %}" alt="" width="18" height="18" class="shrink-0 transition-transform duration-150 ease-out group-hover:translate-x-0.5">
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% if question_total > 3 %}
+    <a href="{% url 'community:show_questions' %}?plant={{ plant.slug }}" class="mt-3 inline-block text-xs font-extrabold text-brand hover:underline">See all {{ question_total }} questions ›</a>
+    {% endif %}
+    {% else %}
+    <p class="mt-4 rounded-2xl border-2 border-dashed border-ink/30 bg-white/60 px-5 py-6 text-center text-sm text-ink-soft">No questions about {{ plant.name|lower }} yet. Be the first to ask.</p>
+    {% endif %}
+  </section>
+
+  {# "Events growing basil": the next upcoming events with this theme plant, same cards as the Events page #}
+  <section class="mt-10">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <h2 class="font-display text-[28px] leading-tight">Events growing {{ plant.name|lower }}</h2>
+      {% if event_total > 3 %}
+      <a href="{% url 'events:show_events' %}?plant={{ plant.slug }}" class="text-xs font-extrabold text-brand hover:underline">See all {{ event_total }} events ›</a>
+      {% endif %}
+    </div>
+    <div class="mt-4">
+      {% if plant_events %}
+      {% include "event_cards.html" with event_list=plant_events %}
+      {% else %}
+      <p class="rounded-2xl border-2 border-dashed border-ink/30 bg-white/60 px-5 py-6 text-center text-sm text-ink-soft">No upcoming events with {{ plant.name|lower }} yet. <a href="{% url 'events:show_events' %}" class="font-extrabold text-brand hover:underline">Browse events</a></p>
+      {% endif %}
+    </div>
+  </section>
   <section class="mt-7 border-t border-line pt-5">
     <h2 class="font-display text-2xl">Growing guide</h2>
     <p class="mt-1 text-xs text-ink-soft">Practical care notes for {{ plant.name }}</p>
@@ -120,4 +172,7 @@
   </section>
 </article>
 </div>
+{# RSVP buttons on the event cards #}
+<script src="{% static 'js/event_rsvp.js' %}"></script>
+
 {% endblock %}
