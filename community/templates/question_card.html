@@ -3,7 +3,7 @@
 
           <!-- vote box -->
           <div class="flex size-[64px] shrink-0 flex-col items-center justify-center rounded-xl border-2 border-ink bg-brand-tint text-center">
-            <span class="text-sm font-extrabold">{{ question.voters.count|default:0 }}</span>
+            <span class="text-sm font-extrabold">{{ question.vote_count }}</span>
             <span class="text-xs text-ink-soft">votes</span>
           </div>
 
@@ -38,8 +38,8 @@
               {% if question.plant %}
               <span class="rounded-md bg-brand-tint px-2.5 py-1 text-xs font-extrabold uppercase tracking-wide text-ink">{{ question.plant.name }}</span>
               {% endif %}
-              {% if question.answers.count > 0 %}
-              <span>{{ question.answers.count }} answer{{ question.answer_count|pluralize }}</span>
+              {% if question.answer_count > 0 %}
+              <span>{{ question.answer_count }} answer{{ question.answer_count|pluralize }}</span>
               {% else %}
               <span>No answers yet...</span>
               {% endif %}

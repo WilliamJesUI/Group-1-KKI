@@ -14,6 +14,7 @@
 
     const pills = document.querySelectorAll('#question-filter-pills [data-filter]');
     const filterInput = searchForm.querySelector('input[name="filter"]');
+    const plantInput = searchForm.querySelector('input[name="plant"]');
     const DEFAULT_FILTER = 'latest';
 
     let latestRequest = 0; // so an old, slow response can't replace newer cards
@@ -24,6 +25,10 @@
         const params = new URLSearchParams({ filter: filter });
         if (query) {
             params.set('q', query);
+        }
+        // Keep the plant from the Popular Plants box, so search and pills stay inside that plant
+        if (plantInput && plantInput.value) {
+            params.set('plant', plantInput.value);
         }
         return '?' + params.toString();
     }

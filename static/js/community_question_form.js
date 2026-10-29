@@ -22,19 +22,22 @@ async function createQuestion(event) {
 
             showToast('Question posted', 'It is now live in the community.');
             questionForm.reset();
+            document.getElementById('ask-question-modal').hidePopover();
+
+            // Only count it once the server said it worked
+            const countCard = document.getElementById('questions-asked-card');
+            countCard.textContent = Number(countCard.textContent) + 1;
             if (window.reloadQuestionCards) {
                 window.reloadQuestionCards();
+                if (window.refreshPopularPlants) {
+                    window.refreshPopularPlants();
+                }
             }
     } catch (error) {
         console.error('Error creating question:', error);
+        showToast('Network error', 'Please check your connection and try again.', 'error');
     } finally {
         submitButton.disabled = false;
-        window.reloadQuestionCards();
-        window.refreshPopularPlants()
-        document.getElementById('ask-question-modal').hidePopover();
-        
-        const n = Number(document.getElementById('questions-asked-card').innerHTML);
-        document.getElementById('questions-asked-card').innerHTML = n + 1; 
     }
 }
 
