@@ -18,7 +18,7 @@
           <a href="?collection={{ item.id }}" class="min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm font-bold {% if collection.id == item.id %}border-ink bg-brand-soft{% else %}border-line hover:bg-brand-tint{% endif %}">{{ item.name }} 
             <span class="text-xs font-normal">({{ item.plants.count }})</span>
           </a>
-          <form method="post" action="{% url 'encyclopedia:delete_collection' item.id %}" onsubmit="return confirm('Delete this collection? The plants themselves will not be deleted.');">
+          <form method="post" action="{% url 'encyclopedia:delete_collection' item.id %}" data-confirm-title="Delete this collection?" data-confirm-message="Only the list goes away. The plants stay in the encyclopedia.">
             {% csrf_token %}
             <button aria-label="Delete {{ item.name }}" title="Delete collection" class="flex size-9 items-center justify-center rounded-full border border-ink bg-white text-danger hover:bg-pink">×</button>
           </form>
