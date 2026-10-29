@@ -1,15 +1,15 @@
 from django.http import Http404, HttpResponse, JsonResponse
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.core.exceptions import PermissionDenied
 from django.db.models import Prefetch, Q
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 from events.forms import EventForm
 from events.models import Event
+from plants.models import Plant
 
 
 def get_initials(user):
@@ -70,7 +70,7 @@ def show_events(request):
     # prefetch_related loads the attendees of all events in one extra query, instead of one query per card
     # for the avatars, "N going" and the RSVP button. Prefetch(...) sorts them by id, the same order the event
     # page and the RSVP answer use, so the avatars don't jump around after an RSVP.
-    all_events = Event.objects.defer("cover_image").prefetch_related(
+    all_events = Event.objects.defer("cover_image").select_related("theme_plant").prefetch_related(
         Prefetch("attendees", queryset=User.objects.order_by("pk"))
     )
 
@@ -79,16 +79,21 @@ def show_events(request):
     if selected_filter not in dict(EVENT_FILTERS):
         selected_filter = "upcoming"
     events = filter_events(all_events, selected_filter, request.user)
-    # ?q=seed searches inside the selected filter. icontains = "contains, ignoring upper/lower case".
-    # TODO: also search the theme plant once the shared Plant model is merged.
+    # ?q=seed searches inside the selected filter, in the event name or its theme plant's name.
+    # icontains = "contains, ignoring upper/lower case". Q(...) | Q(...) means "this OR that".
     query = request.GET.get("q", "").strip()
     if query:
-        events = events.filter(name__icontains=query)
+        events = events.filter(Q(name__icontains=query) | Q(theme_plant__name__icontains=query))
+    # ?plant=tomato shows only events with that theme plant. Unknown slugs are ignored.
+    plant_slug = request.GET.get("plant", "").strip()
+    selected_plant = Plant.objects.filter(slug=plant_slug).first() if plant_slug else None
+    if selected_plant:
+        events = events.filter(theme_plant=selected_plant)
     events = mark_going(list(events), request.user)
 
     # ?partial=1 comes from event_filters.js: send only the cards, it swaps them into the page
     if request.GET.get("partial") == "1":
-        context = {"event_list": events, "selected_filter": selected_filter, "query": query}
+        context = {"event_list": events, "selected_filter": selected_filter, "query": query, "selected_plant": selected_plant}
         return render(request, "event_cards.html", context)
 
     # The soonest event that hasn't started yet, for the "Next up" card. It ignores the filters.
@@ -104,6 +109,7 @@ def show_events(request):
         "next_event_when": get_when_label(next_event.start_time) if next_event else "",
         # An empty form for the "Host an event" pop-up
         "form": EventForm(),
+        "selected_plant": selected_plant,
     }
     return render(request, "event_list.html", context)
 
@@ -111,7 +117,7 @@ def show_events(request):
 # ensure_csrf_cookie: the RSVP button uses fetch, which needs the csrftoken cookie even on pages without a form
 @ensure_csrf_cookie
 def show_event(request, event_id):
-    event = get_object_or_404(Event.objects.defer("cover_image"), pk=event_id)
+    event = get_object_or_404(Event.objects.defer("cover_image").select_related("theme_plant"), pk=event_id)
     going_count = event.attendees.count()
     context = {
         "event": event,
@@ -231,10 +237,14 @@ def rsvp_event_ajax(request, event_id):
 
 @require_POST
 def delete_event(request, event_id):
+    # Not @login_required: fetch needs a JSON error it can read, not a redirect
+    if not request.user.is_authenticated:
+        return JsonResponse({"message": "Please log in to delete this event."}, status=403)
     event = get_object_or_404(Event, pk=event_id)
-    # Only the host may delete. Visitors who aren't logged in never equal the host, so they're stopped here too.
-    if request.user != event.host:
-        raise PermissionDenied
+    # Hiding the Delete button isn't enough, anyone could send this request with fetch, so check the host here too
+    if event.host != request.user:
+        return JsonResponse({"message": "Only the host can delete this event."}, status=403)
     event.delete()
+    # event_delete.js goes to this url, and the Events page shows this message as a toast
     messages.success(request, "Event deleted\nIt's off the Events page now.")
-    return redirect("events:show_events")
+    return JsonResponse({"url": reverse("events:show_events")})

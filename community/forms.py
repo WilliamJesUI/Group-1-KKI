@@ -1,10 +1,20 @@
 from django import forms
 from .models import Question, Answer
+from plants.models import Plant
 
 class QuestionForm(forms.ModelForm):
+    plant = forms.ModelChoiceField(
+        queryset=Plant.objects.order_by("name"),
+        required=False,
+        empty_label="No plant tag",
+        widget=forms.Select(attrs={
+            "class": "w-full rounded-[11px] border-2 border-ink bg-white px-5 py-3",
+        }),
+    )
+
     class Meta:
         model = Question
-        fields =    ["title", "body"]
+        fields =    ["title", "body", "plant"]
         widgets = {
             "title" : forms.TextInput(attrs={"placeholder": "e.g. Why are my tomato leaves curling?", "autocomplete":"off",
                                        "class": "w-full rounded-full border-2 border-ink bg-white px-5 py-3",}),

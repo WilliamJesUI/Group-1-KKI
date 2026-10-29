@@ -33,6 +33,32 @@ def detect_image_type(data):
     return None
 
 
+class PlantSelect(forms.Select):
+    """A normal plant dropdown, plus each plant's photo, scientific name and category on its <option>.
+    static/js/plant_picker.js reads these data-* attributes to draw the plant picker.
+    Any form with a ForeignKey to Plant can use it (from events.forms import PlantSelect),
+    for example in Meta.widgets: "plant": PlantSelect(attrs={"class": INPUT_CLASS})"""
+
+    def __init__(self, attrs=None):
+        # data-plant-picker tells plant_picker.js to turn this <select> into the picker
+        attrs = dict(attrs or {})  # a copy, so we never change a dict that someone else passed in
+        attrs["data-plant-picker"] = ""
+        super().__init__(attrs)
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        # For a model's options, value has the Plant in value.instance.
+        # The empty "Choose a theme plant..." option has no plant, so it gets no data-* attributes.
+        plant = getattr(value, "instance", None)
+        if plant:
+            # The picker only shows small circles, so ask PlantNet for its small copy (/s/)
+            # instead of the original full size photo (/o/), which can be several MB
+            option["attrs"]["data-image"] = plant.image_url.replace("/image/o/", "/image/s/")
+            option["attrs"]["data-scientific"] = plant.scientific_name
+            option["attrs"]["data-category"] = plant.category
+        return option
+
+
 class EventForm(ModelForm):
     # The model stores start_time and end_time as full date + time values.
     # The form asks for one date and two times, like the Figma design, and combines them in clean().
@@ -60,14 +86,18 @@ class EventForm(ModelForm):
 
     class Meta:
         model = Event
-        fields = ["name", "location", "description", "what_to_bring", "cover_photo_url"]
+        fields = ["name", "theme_plant", "location", "description", "what_to_bring", "cover_photo_url"]
         labels = {
             "name": "Event name",
+            "theme_plant": "Theme plant",
             "what_to_bring": "What to bring",
             "cover_photo_url": "Cover photo",
         }
         widgets = {
             "name": forms.TextInput(attrs={"placeholder": "e.g. Community Seed Swap", "class": INPUT_CLASS}),
+            # A dropdown of every plant in the shared plant list (plants app).
+            # plant_picker.js turns it into a search box with photos. Without JS it stays a normal dropdown.
+            "theme_plant": PlantSelect(attrs={"class": INPUT_CLASS}),
             "location": forms.TextInput(attrs={"placeholder": "e.g. Menteng Urban Farm", "class": INPUT_CLASS}),
             "description": forms.Textarea(attrs={
                 "placeholder": "What will people do?",
@@ -93,6 +123,8 @@ class EventForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # The first, empty choice of the dropdown (Figma: "Choose a theme plant...")
+        self.fields["theme_plant"].empty_label = "Choose a theme plant..."
         # When editing an existing event, fill the date and time boxes from its start_time and end_time.
         # Checks start_time, not pk: our UUID id is made right away, so even a new, unsaved event has a pk.
         if self.instance.start_time:

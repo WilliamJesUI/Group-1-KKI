@@ -5,6 +5,11 @@ from django.utils import timezone
 
 from achievements.models import CheckIn, ClaimedBadge, Milestone, UserMetric
 
+BADGE_RULES = {
+    "events_hosted": lambda user: user.hosted_events.count(),
+    "events_rsvped": lambda user: user.rsvped_events.count(),
+    "plants_saved": None,   # Encyclopedia belum ada
+}
 
 def record_progress(user, metric, amount=1):
     """Add to a user's counter. Other modules call this, e.g. record_progress(request.user, "answers_given")."""
@@ -16,6 +21,9 @@ def get_metric(user, metric):
     # Visitors who are not logged in have no progress
     if not user.is_authenticated:
         return 0
+    rule = BADGE_RULES.get(metric)
+    if rule is not None:
+        return rule(user)
     # The streak comes from check-ins, every other metric is a stored counter
     if metric == "checkin_streak":
         return current_streak(user)

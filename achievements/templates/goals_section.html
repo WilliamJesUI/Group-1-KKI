@@ -1,0 +1,62 @@
+{% load static %}
+{# "My goals": the logged-in user's goals. The buttons are wired up by static/js/achievements_goals.js #}
+<section class="mt-8" id="goals">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+            <h2 class="font-display text-xl leading-tight">My goals</h2>
+            <p class="text-[13px] text-ink-soft">Pick a plant, set a target and log your progress.</p>
+        </div>
+        {% if goals %}
+        <button type="button" data-goal-new class="rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Start a goal</button>
+        {% endif %}
+    </div>
+
+    <div class="mt-4 grid gap-4 lg:grid-cols-2">
+        {% for goal in goals %}
+        <article data-goal-card="{{ goal.id }}" data-title="{{ goal.title }}" data-plant="{{ goal.plant }}" data-target="{{ goal.target }}" data-finish-by="{{ goal.finish_by|date:'Y-m-d' }}" data-reason="{{ goal.reason }}" class="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-surface p-[18px]">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <h3 class="font-display text-xl leading-tight">{{ goal.title }}</h3>
+                    <p class="text-xs text-ink-soft">{{ goal.plant }}{% if goal.finish_by %} &middot; Finish by {{ goal.finish_by|date:"D, j M Y" }}{% endif %}</p>
+                </div>
+                <span data-complete-label class="{% if not goal.is_complete %}hidden {% endif %}shrink-0 rounded-full bg-brand-soft px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em]">Complete</span>
+            </div>
+            {% if goal.reason %}<p class="text-sm text-ink-soft">{{ goal.reason }}</p>{% endif %}
+            <div>
+                <div class="h-2 rounded-full bg-brand-tint" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ goal.percent }}" aria-label="{{ goal.title }} progress">
+                    <div class="h-full rounded-full bg-brand" style="width: {{ goal.percent }}%"></div>
+                </div>
+                <p class="mt-1.5 text-xs text-ink-soft"><span data-done>{{ goal.done }}</span> of {{ goal.target }} done</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" data-goal-log data-url="{% url 'achievements:log_progress' goal.id %}" class="{% if goal.is_complete %}hidden {% endif %}rounded-full border-2 border-ink bg-brand px-4 py-2 text-[13px] font-extrabold text-white hover:bg-brand-hover">Log progress</button>
+                <button type="button" data-goal-edit data-url="{% url 'achievements:edit_goal' goal.id %}" class="rounded-full border-2 border-ink bg-surface px-4 py-2 text-[13px] font-extrabold hover:bg-brand-tint">Edit</button>
+                <button type="button" data-goal-delete data-url="{% url 'achievements:delete_goal' goal.id %}" class="rounded-full border-2 border-ink bg-surface px-4 py-2 text-[13px] font-extrabold hover:bg-pink">Delete</button>
+            </div>
+        </article>
+        {% empty %}
+        <div class="lg:col-span-2 flex justify-center py-4">
+            <div class="w-full max-w-lg rounded-3xl border-2 border-dashed border-gray-300 bg-white p-8 text-center flex flex-col items-center justify-center gap-3">
+                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-brand-tint/60 text-brand">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                </div>
+                <h3 class="font-display text-2xl font-bold text-ink">No goals yet</h3>
+                <p class="text-sm text-ink-soft max-w-xs">
+                    {% if user.is_authenticated %}
+                        Start a goal for a plant you're growing to track your progress.
+                    {% else %}
+                        Log in to set targets and track your plant growing goals.
+                    {% endif %}
+                </p>
+                {% if user.is_authenticated %}
+                <button type="button" data-goal-new class="mt-2 rounded-full border-2 border-ink bg-brand px-6 py-2.5 text-sm font-extrabold text-white hover:bg-brand-hover">Start a goal</button>
+                {% else %}
+                <a href="{% url 'profile:login' %}" class="mt-2 inline-block rounded-full border-2 border-ink bg-brand px-6 py-2.5 text-sm font-extrabold text-white hover:bg-brand-hover">Log in to start a goal</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
