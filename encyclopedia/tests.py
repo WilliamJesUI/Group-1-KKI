@@ -8,6 +8,8 @@ from django.test import RequestFactory, TestCase
 from django.utils import timezone
 from django.urls import reverse
 
+from community.models import Answer, Question
+from events.models import Event
 from plants.models import Plant
 from .models import PlantCollection, SavedPlant
 from .views import PLANT_TIPS, _require_authenticated, care_guide_for
@@ -502,3 +504,55 @@ class AdditionalFailurePathTests(EncyclopediaTestData):
         saved_ids = list(SavedPlant.objects.values_list("pk", flat=True))
         self.assertEqual(saved_ids[0], second.pk)
         self.assertEqual(saved_ids[1], first.pk)
+
+class PlantPageQuestionsAndEventsTests(EncyclopediaTestData):
+    """The "Questions about ..." and "Events growing ..." sections on a plant page (Figma Plant Guide)."""
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse("encyclopedia:detail", args=[self.basil.slug])
+
+    def make_event(self, name, days, plant=None):
+        start = timezone.now() + timedelta(days=days)
+        return Event.objects.create(
+            name=name, description="Bring gloves", location="Kemang", start_time=start,
+            end_time=start + timedelta(hours=2), host=self.user, theme_plant=plant or self.basil,
+        )
+
+    def test_shows_newest_three_questions_with_answer_counts(self):
+        for title in ["First", "Second", "Third", "Fourth"]:
+            question = Question.objects.create(author=self.user, title=title, plant=self.basil)
+        Answer.objects.create(question=question, author=self.other_user, body="Pinch it")
+        Question.objects.create(author=self.user, title="About tomatoes", plant=self.tomato)
+        response = self.client.get(self.url)
+        questions = list(response.context["questions"])
+        self.assertEqual([q.title for q in questions], ["Fourth", "Third", "Second"])
+        self.assertEqual(questions[0].answer_count, 1)
+        self.assertEqual(response.context["question_total"], 4)
+        self.assertContains(response, "See all 4 questions")
+        self.assertNotContains(response, "About tomatoes")
+
+    def test_shows_only_upcoming_events_with_this_plant(self):
+        soon = self.make_event("Basil swap", 3)
+        later = self.make_event("Basil walk", 10)
+        self.make_event("Old basil day", -5)
+        self.make_event("Tomato day", 3, plant=self.tomato)
+        response = self.client.get(self.url)
+        self.assertEqual(response.context["plant_events"], [soon, later])
+        self.assertEqual(response.context["event_total"], 2)
+        self.assertContains(response, "Basil swap")
+        self.assertNotContains(response, "Old basil day")
+
+    def test_event_cards_know_if_the_user_is_going(self):
+        event = self.make_event("Basil swap", 3)
+        event.attendees.add(self.user)
+        self.client.force_login(self.user)
+        response = self.client.get(self.url)
+        self.assertTrue(response.context["plant_events"][0].is_going)
+        self.assertIn("csrftoken", response.cookies)
+
+    def test_empty_sections_show_a_message(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, "No questions about sweet basil yet.")
+        self.assertContains(response, "No upcoming events with sweet basil yet.")
+        self.assertContains(response, f'?plant={self.basil.slug}')
