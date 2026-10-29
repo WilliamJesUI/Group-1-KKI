@@ -2,36 +2,43 @@
 // One click listener for the whole page, so it works for every RSVP button, wherever it is.
 // getCookie comes from static/js/csrf.js.
 
-const AVATAR_COLORS = ['bg-lilac', 'bg-pink', 'bg-butter', 'bg-brand-soft'];
 const AVATAR_CLASS = 'flex size-10 items-center justify-center rounded-full border-2 border-ink text-xs font-bold';
 
-// Make an avatar circle like the ones in event_detail.html
-function makeAvatar(text, colorClass, overlap) {
+// Make one avatar from the RSVP answer (avatar_data in events/views.py): the person's photo,
+// or their initials on their own color, the same as everywhere else on the site
+function makeAvatar(person, sizeClasses) {
+    if (person.picture) {
+        const photo = document.createElement('img');
+        photo.src = person.picture;
+        photo.alt = '';
+        photo.className = `${sizeClasses} object-cover`;
+        return photo;
+    }
     const avatar = document.createElement('span');
-    avatar.className = `${overlap ? '-mr-2 ' : ''}${AVATAR_CLASS} ${colorClass}`;
-    avatar.textContent = text; // textContent, not innerHTML, so names can't inject HTML
+    avatar.className = `${sizeClasses} ${person.bg_class}`;
+    avatar.textContent = person.initials; // textContent, not innerHTML, so names can't inject HTML
     return avatar;
 }
 
-// Make an avatar circle like the ones on the event cards (event_cards.html).
-// .card-avatar and its colors are defined in event_list.html, so they're styled right away.
-function makeCardAvatar(text, colorClass) {
-    const avatar = document.createElement('span');
-    avatar.className = `card-avatar ${colorClass}`;
-    avatar.textContent = text;
-    return avatar;
+// The "+N" circle for everyone without an avatar
+function makeMore(count, sizeClasses) {
+    const more = document.createElement('span');
+    more.className = sizeClasses;
+    more.textContent = `+${count}`;
+    return more;
 }
 
-// Card footers: up to 2 avatars (lilac, pink), a green "+N" for everyone else, or "0 going" when nobody is going
+// Card footers: up to 2 avatars, a green "+N" for everyone else, or "0 going" when nobody is going.
+// .card-avatar is defined in event_card_styles.html, so it's styled right away.
 function updateCardAvatars(eventId, result) {
     document.querySelectorAll(`[data-card-avatars="${eventId}"]`).forEach((row) => {
         row.replaceChildren(); // remove the old avatars
-        result.attendee_initials.slice(0, 2).forEach((initials, i) => {
-            row.append(makeCardAvatar(initials, i === 0 ? 'card-avatar-lilac' : 'card-avatar-pink'));
+        result.attendee_avatars.slice(0, 2).forEach((person) => {
+            row.append(makeAvatar(person, 'card-avatar'));
         });
         const more = result.going_count - 2;
         if (more > 0) {
-            row.append(makeCardAvatar(`+${more}`, 'card-avatar-more'));
+            row.append(makeMore(more, 'card-avatar card-avatar-more'));
         }
         row.classList.toggle('hidden', result.going_count === 0);
     });
@@ -48,13 +55,13 @@ function updateGoing(eventId, result) {
     });
     document.querySelectorAll(`[data-attendee-avatars="${eventId}"]`).forEach((row) => {
         row.replaceChildren(); // remove the old avatars
-        result.attendee_initials.forEach((initials, i) => {
-            row.append(makeAvatar(initials, AVATAR_COLORS[i % AVATAR_COLORS.length], true));
+        result.attendee_avatars.forEach((person) => {
+            row.append(makeAvatar(person, `-mr-2 ${AVATAR_CLASS}`));
         });
         if (result.more_going > 0) {
-            row.append(makeAvatar(`+${result.more_going}`, 'bg-lilac', false));
+            row.append(makeMore(result.more_going, `${AVATAR_CLASS} bg-lilac`));
         }
-        row.classList.toggle('hidden', result.attendee_initials.length === 0);
+        row.classList.toggle('hidden', result.attendee_avatars.length === 0);
     });
     updateCardAvatars(eventId, result);
 }
