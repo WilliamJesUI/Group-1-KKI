@@ -49,7 +49,10 @@
 
 ## 4. External Public API Integration
 *   **API Name:** Trefle.io (https://trefle.io/)
-*   **Usage:** Trefle is an open botanical data source indexing over a million plants. Albhero's module will use this API to fetch detailed, scientifically accurate plant data to populate our shared database with a minimum of 50 main data records. All other modules will read from this shared database to satisfy their individual API filtering requirements.
+*   **Usage:** Trefle is an open botanical data source indexing over 400,000 plant species. Albhero's module will use this API to fetch detailed, scientifically accurate plant data to populate our shared database with a minimum of 50 main data records. All other modules will read from this shared database to satisfy their individual API filtering requirements
+*   **Docs:** https://docs.trefle.io/ (section 8 explains how we use it)
+* See [8. How Our API Part Works](#8-how-our-api-part-works) for the details.
+
 
 ## 5. Application User Roles
 *   **Gardener (Regular User):** Can browse the encyclopedia, post photos of their garden, claim achievements, RSVP to events, and participate in the Q&A forum.
@@ -58,3 +61,80 @@
 ## 6. Project Links
 *   **Figma Design:** [https://www.figma.com/design/Rgarm0NKaaezYTwWCWxCSb/Untitled?node-id=0-1&t=0N0NtdJeEtON4oHQ-1](https://www.figma.com/design/Rgarm0NKaaezYTwWCWxCSb/Untitled?node-id=0-1&t=0N0NtdJeEtON4oHQ-1)
 *   **PWS Deployment:** [https://william-jesiel-growyourgarden.pws.cs.ui.ac.id](https://william-jesiel-growyourgarden.pws.cs.ui.ac.id)
+
+
+## 7. Running It Locally
+
+You need Python 3.10 or newer and git.
+
+1. Clone the repo and go into it:
+   ```bash
+   git clone https://github.com/WilliamJesUI/Group-1-KKI.git
+   cd Group-1-KKI
+   ```
+2. Make a virtual environment and turn it on:
+   ```bash
+   python -m venv env
+   source env/bin/activate        # Windows: env\Scripts\activate
+   ```
+3. Install the packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Make a file called `.env` in the project folder (it's ignored by git). For local work it only needs:
+   ```
+   PRODUCTION=False
+   TREFLE_TOKEN=your-token-here
+   ```
+   The token is only needed to rebuild the plant list (see section 8). Without it the site still runs, because the plants are already saved in the repo.
+   With `PRODUCTION=False` you get Django's debug pages and a local SQLite database. On PWS we set `PRODUCTION=True`, which turns debug off and uses PostgreSQL. PWS also has `SECRET_KEY`, `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_PORT`, `SCHEMA` and `TREFLE_TOKEN` in its Environs tab. None of those values are in the repo.
+5. Set up the database and make an account for the admin page:
+   ```bash
+   python manage.py migrate
+   python manage.py createsuperuser
+   ```
+   `migrate` also loads our starter plant list into the database.
+6. Start the server:
+   ```bash
+   python manage.py runserver
+   ```
+   Then open http://127.0.0.1:8000/. The admin page is at http://127.0.0.1:8000/admin/.
+
+## 8. How Our API Part Works
+
+Our plant data comes from [Trefle](https://trefle.io/) ([documentation](https://docs.trefle.io/)), an open botanical database. Instead of calling Trefle on every page load, we fetch the plants once and keep them in our own database. That keeps the site fast, and it keeps working even when Trefle is down.
+
+1. We wrote a list of the plants we want in `plants/data/plant_list.csv` (name, scientific name, category).
+2. The command `python manage.py build_plant_list` looks up each plant on Trefle and saves the results in `plants/data/plants.json`.
+3. When the site deploys, a data migration loads that file into the shared `Plant` table, so the live site starts with all the plants.
+4. Every module links to the `Plant` table (for example, an event's theme plant), so each module can filter its own data by plant.
+
+| File | What it does |
+|---|---|
+| `plants/models.py` | The `Plant` model: name, category, difficulty, sunlight, watering, photo and more |
+| `plants/services/http.py` | One small function that calls an API and turns any failure into a simple error |
+| `plants/services/trefle.py` | Searches Trefle and fetches one species. Answers are cached for a day |
+| `plants/mapping.py` | Turns Trefle's raw numbers into the words our design uses (for example "Full sun", "Easy") |
+| `plants/management/commands/build_plant_list.py` | The command that builds `plants.json` from the plant list |
+| `plants/data/plants.json` | The saved plants that get loaded on deploy |
+
+- **The Trefle token stays private.** It lives in `.env` on our laptops and in the PWS Environs tab, never in the code or on GitHub.
+- **Trefle doesn't have everything.** It has no watering info and only some sunlight info, so `plants/mapping.py` fills the gaps with simple rules. Plants filled in this way are marked `care_estimated`, and their page says the care tips are a general guide.
+
+To rebuild the plant list yourself: get a free token at [trefle.io](https://trefle.io/), put it in `.env` as `TREFLE_TOKEN`, then run `python manage.py build_plant_list` (it takes a few minutes, because it waits between requests) and `python manage.py migrate`.
+
+Plant data: [Trefle](https://trefle.io/), CC BY 4.0. Photo credits are in [docs/CREDITS.md](docs/CREDITS.md).
+
+## 9. Running the Tests
+
+```bash
+python manage.py test
+```
+
+To see the test coverage:
+
+```bash
+pip install coverage
+coverage run --source='.' manage.py test
+coverage report
+```
