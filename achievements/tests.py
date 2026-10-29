@@ -68,7 +68,7 @@ class PageTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["unlocked"], 0)
-        self.assertContains(response, "Log in to track")
+        self.assertContains(response, "Log in to start a goal")
         self.assertNotContains(response, "Claim badge")
 
     def test_page_shows_a_claim_button_for_a_finished_milestone(self):
