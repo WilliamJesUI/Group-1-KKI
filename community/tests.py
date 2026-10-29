@@ -129,6 +129,34 @@ class QuestionListTest(CommunityTestCase):
         response = self.client.get(self.url, {"filter": "mine"})
         self.assertEqual(self.titles(response)[0], "Why is my basil yellow?")
 
+class PopularPlantsBoxTest(CommunityTestCase):
+    """The Popular Plants box that community_popular_plants.js refreshes after a new question."""
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse("community:popular_plants_ajax")
+
+    def test_shows_at_most_five_plants_like_the_page(self):
+        for number in range(6):
+            plant = Plant.objects.create(name=f"Plant {number}", slug=f"plant-{number}")
+            Question.objects.create(author=self.ben, title=f"Q {number}", plant=plant)
+        response = self.client.get(self.url)
+        self.assertEqual(len(response.context["popular_plants"]), 5)
+
+    def test_keeps_the_chosen_plant_highlighted(self):
+        response = self.client.get(self.url, {"plant": "test-basil"})
+        self.assertEqual(response.context["selected_plant"], "test-basil")
+        self.assertContains(response, 'data-plant="test-basil"')
+        self.assertContains(response, 'aria-current="true"')
+
+    def test_uses_small_photos(self):
+        self.basil.image_url = "https://bs.plantnet.org/image/o/abc"
+        self.basil.save()
+        response = self.client.get(self.url)
+        self.assertContains(response, "https://bs.plantnet.org/image/s/abc")
+        self.assertNotContains(response, "/image/o/abc")
+
+
 
 class QuestionThreadTest(CommunityTestCase):
     def setUp(self):
