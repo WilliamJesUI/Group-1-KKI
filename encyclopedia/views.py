@@ -1,9 +1,13 @@
 from urllib.parse import urlencode
 
 from django.contrib import messages
-from django.db.models import Count, Q
+from django.contrib.auth.models import User
+from django.db.models import Count, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
+from events.models import Event
+from events.views import filter_events, mark_going
 from plants.models import Plant
 
 from .models import PlantCollection, SavedPlant
@@ -417,8 +421,10 @@ def encyclopedia(request):
     )
 
 
+# ensure_csrf_cookie: the RSVP buttons on the event cards use fetch, which needs the csrftoken cookie
+@ensure_csrf_cookie
 def plant_detail(request, slug):
-    """Display a plant's detail page and its growing guide."""
+    """Display a plant's detail page, its growing guide, and the questions and events about it."""
     plant = get_object_or_404(Plant, slug=slug)
     collections = (
         PlantCollection.objects.filter(user=request.user)
@@ -430,10 +436,35 @@ def plant_detail(request, slug):
         if request.user.is_authenticated
         else set()
     )
+    
+    # "Questions about basil" (Figma Plant Guide): the 3 newest Community questions tagged with this plant.
+    # annotate(answer_count=...) counts the answers in the same query, select_related loads the author with it.
+    questions = (
+        plant.questions.select_related("author")
+        .annotate(answer_count=Count("answers"))
+        .order_by("-created_at")[:3]
+    )
+    question_total = plant.questions.count()
+
+    # "Events growing basil": the next 3 upcoming events with this theme plant, as normal event cards.
+    # Same upcoming rule and avatars/RSVP setup as the Events page (filter_events and mark_going from events/views.py).
+    events = filter_events(
+        Event.objects.defer("cover_image").select_related("theme_plant").prefetch_related(
+            Prefetch("attendees", queryset=User.objects.order_by("pk"))
+        ).filter(theme_plant=plant),
+        "upcoming",
+        request.user,
+    ).order_by("start_time")
+    event_total = events.count()
+    events = mark_going(list(events[:3]), request.user)
 
     return render(
         request, "plant_detail.html", {
             "plant": plant,
+            "questions": questions,
+            "question_total": question_total,
+            "plant_events": events,
+            "event_total": event_total,
             "is_saved": bool(saved_ids),
             "saved_collection_ids": saved_ids,
             "collections": collections,
