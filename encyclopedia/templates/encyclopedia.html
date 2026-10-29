@@ -33,14 +33,20 @@
         <img src="{% static 'img/icons/search.svg' %}" alt="" class="size-4 opacity-60">
         <input id="plant-search" name="q" value="{{ query }}" placeholder="Search over {{ plant_count }} plant guides..." class="w-full bg-transparent text-sm outline-none" />
       </div>
+      {% if category != "all" %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+      {% if difficulty %}<input type="hidden" name="difficulty" value="{{ difficulty }}">{% endif %}
       <p class="mt-2 text-[10px] text-ink-soft">Try “tomato”, “basil” or “mint”</p>
     </form>
   </div>
-  <div class="mb-3 flex flex-wrap items-center justify-between gap-3"><div class="flex flex-wrap gap-2">
-    <a href="?{% if query %}q={{ query|urlencode }}&{% endif %}" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100 {% if category == 'all' %}bg-brand-soft{% else %}bg-white{% endif %}">All</a>
-    <a href="?category=herbs{% if query %}&q={{ query|urlencode }}{% endif %}" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100 {% if category == 'herbs' %}bg-brand-soft{% else %}bg-white{% endif %}">Herb</a>
-    <a href="?category=vegetables{% if query %}&q={{ query|urlencode }}{% endif %}" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100 {% if category == 'vegetables' %}bg-brand-soft{% else %}bg-white{% endif %}">Vegetable</a>
-    <a href="?category=flowers{% if query %}&q={{ query|urlencode }}{% endif %}" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100 {% if category == 'flowers' %}bg-brand-soft{% else %}bg-white{% endif %}">Flower</a>
+  <div class="mb-3 flex flex-wrap items-center justify-between gap-3"><div class="flex flex-wrap items-center gap-2">
+    {# Category pills, a divider, then level pills. Each link keeps the other filters (filter_url in views.py). #}
+    {% for pill in category_pills %}
+    <a href="{{ pill.url }}" {% if pill.active %}aria-current="page"{% endif %} class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100 {% if pill.active %}bg-brand-soft{% else %}bg-white{% endif %}">{{ pill.label }}</a>
+    {% endfor %}
+    <span class="hidden h-[34px] w-0.5 rounded-full bg-ink/35 sm:block" aria-hidden="true"></span>
+    {% for pill in difficulty_pills %}
+    <a href="{{ pill.url }}" {% if pill.active %}aria-current="page"{% endif %} aria-label="{{ pill.label }} level{% if pill.active %}, tap again to show every level{% endif %}" class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100 {% if pill.active %}bg-brand-soft{% else %}bg-white{% endif %}">{{ pill.label }}</a>
+    {% endfor %}
   </div>
   <p class="text-[11px] text-ink-soft">Showing {{ result_count }} of {{ plant_count }} plants</p>
   </div>
