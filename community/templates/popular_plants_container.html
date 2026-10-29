@@ -8,12 +8,13 @@
   <ul class="mt-4 flex flex-col gap-2">
     {% for plant in popular_plants %}
     <li>
-      <a href="{% if plant.slug == selected_plant %}{% url 'community:show_questions' %}{% else %}?plant={{ plant.slug }}{% endif %}" 
+      {# data-plant: community_question_filters.js loads this plant's questions without a reload. Clicking the chosen plant again shows every question. #}
+      <a href="{% if plant.slug == selected_plant %}{% url 'community:show_questions' %}{% else %}?plant={{ plant.slug }}{% endif %}" data-plant="{{ plant.slug }}"
          {% if plant.slug == selected_plant %}aria-current="true"{% endif %}
          class="flex items-center gap-3 rounded-xl border-2 border-ink px-3 py-2 transition duration-150 ease-out hover:border-brand hover:bg-brand-tint aria-[current=true]:bg-brand-soft focus-visible:border-brand focus-visible:outline-none">
 
         {% if plant.image_url %}
-        <img src="{{ plant.image_url }}" alt="" loading="lazy"
+        <img src="{{ plant.thumb_image_url }}" alt="" loading="lazy" width="36" height="36"
              class="size-9 shrink-0 rounded-full border-[1.5px] border-ink object-cover">
         {% else %}
         <span class="card-avatar card-avatar-more shrink-0">{{ plant.name|slice:":2"|upper }}</span>
