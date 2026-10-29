@@ -27,10 +27,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-y=^b&m2xwj27yo4j)e45o4*3sr2+f&i*uldpi9s&tr3iseztj+'
+# PWS reads the real key from its environment variables. The fallback is only for running locally.
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-y=^b&m2xwj27yo4j)e45o4*3sr2+f&i*uldpi9s&tr3iseztj+')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Debug pages on your laptop, hidden on PWS (PRODUCTION=True there)
+DEBUG = not PRODUCTION
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "william-jesiel-growyourgarden.pws.cs.ui.ac.id"]
 
