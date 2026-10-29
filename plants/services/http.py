@@ -1,7 +1,7 @@
 import requests
 
-# Some APIs block requests that don't say who they are
-USER_AGENT = "GrowYourGarden/1.0 (PBP student project, Universitas Indonesia)"
+# Some APIs block requests that don't say who they are. Wikipedia also wants a way to contact us (the repo link).
+USER_AGENT = "GrowYourGarden/1.0 (PBP student project, Universitas Indonesia; https://github.com/WilliamJesUI/Group-1-KKI)"
 # requests waits forever by default. A slow API would freeze the page, so we give up after 8 seconds.
 TIMEOUT_SECONDS = 8
 
