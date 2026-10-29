@@ -49,6 +49,11 @@ class Plant(models.Model):
     image_credit_url = models.URLField(max_length=500, blank=True)
     trefle_id = models.IntegerField(unique=True, null=True, blank=True)
     info_source = models.CharField(max_length=200, blank=True)  # like "Trefle, Wikipedia"
+        
+    @property
+    def difficulty_badge_class(self):
+        """Background color for the Easy / Medium / Hard tag: green, yellow, pink."""
+        return {"easy": "bg-brand-soft", "medium": "bg-butter", "hard": "bg-pink"}.get(self.difficulty, "bg-brand-soft")
 
     @property
     def card_image_url(self):
