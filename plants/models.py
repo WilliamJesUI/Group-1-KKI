@@ -59,6 +59,11 @@ class Plant(models.Model):
     def card_image_url(self):
         """Medium-size photo for cards. PlantNet /o/ is the full original, which is slow to load."""
         return self.image_url.replace("/image/o/", "/image/m/")
+    
+    @property
+    def thumb_image_url(self):
+        """Small photo for little round thumbnails (like Community's Popular Plants), a few KB instead of a few MB."""
+        return self.image_url.replace("/image/o/", "/image/s/")
 
     class Meta:
         ordering = ["name"]
