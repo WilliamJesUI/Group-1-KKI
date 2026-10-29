@@ -345,7 +345,7 @@ def _require_authenticated(request):
     return True
 
 CATEGORY_PILLS = [("all", "All"), ("herbs", "Herb"), ("vegetables", "Vegetable"), ("flowers", "Flower")]
-DIFFICULTY_PILLS = [("", "Any level"), ("easy", "Easy"), ("medium", "Medium"), ("hard", "Hard")]
+DIFFICULTY_PILLS = [("easy", "Easy"), ("medium", "Medium"), ("hard", "Hard")]
 
 
 def filter_url(query, category, difficulty):
@@ -374,7 +374,7 @@ def encyclopedia(request):
         difficulty = ""
 
     # How many plants each level has with the current search and category (before the level filter),
-    # so the pills can say "Easy 12" and a level with 0 plants is hidden
+    # so a level with 0 plants gets no pill
     level_counts = dict(plants.values_list("difficulty").annotate(count=Count("id")))
     if difficulty:
         plants = plants.filter(difficulty=difficulty)
@@ -383,11 +383,11 @@ def encyclopedia(request):
         {"label": label, "url": filter_url(query, value, difficulty), "active": category == value}
         for value, label in CATEGORY_PILLS
     ]
+    # Level pills (Easy / Medium / Hard). Clicking the active one again turns it off.
     difficulty_pills = [
-        {"label": label, "value": value, "url": filter_url(query, category, value), "active": difficulty == value,
-         "count": level_counts.get(value, 0) if value else sum(level_counts.values())}
+        {"label": label, "url": filter_url(query, category, "" if difficulty == value else value), "active": difficulty == value}
         for value, label in DIFFICULTY_PILLS
-        if not value or level_counts.get(value)
+        if level_counts.get(value)
     ]
 
     collections = PlantCollection.objects.none()
