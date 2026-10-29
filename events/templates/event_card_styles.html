@@ -1,19 +1,16 @@
 {% comment %}
-Included in the meta block of every page that shows event cards (event_list.html, encyclopedia plant_detail.html).
+Included in the meta block of every page that shows event avatars (event_list.html, event_detail.html,
+encyclopedia plant_detail.html).
 Attendee avatars on the event cards (Figma "Event Card"). They're classes here instead of Tailwind classes in the HTML
 because event_rsvp.js draws new avatars after an RSVP, and the Tailwind CDN only builds styles for classes it has
 already seen on the page. These are ready from the start, so a new avatar never shows up unstyled.
+@source inline(...) does the same for the 4 avatar colors (accounts AVATAR_BG_CLASSES) and object-cover for photos.
 {% endcomment %}
 <style type="text/tailwindcss">
+    @source inline("bg-brand-soft bg-pink bg-lilac bg-butter object-cover");
     @layer components {
         .card-avatar {
             @apply flex size-[30px] items-center justify-center rounded-full border-[1.5px] border-ink text-[9px] font-bold leading-[1.2];
-        }
-        .card-avatar-lilac {
-            @apply bg-lilac;
-        }
-        .card-avatar-pink {
-            @apply bg-pink;
         }
         .card-avatar-more {
             @apply bg-brand-soft;

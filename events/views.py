@@ -7,16 +7,21 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
+from accounts.templatetags.accounts_tags import avatar_bg_class, avatar_initials, get_profile
 from events.forms import EventForm
 from events.models import Event
 from plants.models import Plant
 
 
-def get_initials(user):
-    # "Rina Wulandari" becomes "RW". Users without a name get the first two letters of their username.
-    if user.first_name:
-        return (user.first_name[:1] + user.last_name[:1]).upper()
-    return user.username[:2].upper()
+def avatar_data(user):
+    # Uses Sarah's avatar helpers (accounts_tags), so a person has the same letters, color and photo on every page.
+    # A dict instead of HTML, because event_rsvp.js also redraws the avatars from the RSVP answer.
+    profile = get_profile(user)
+    return {
+        "initials": avatar_initials(user),
+        "bg_class": avatar_bg_class(user),
+        "picture": profile.profile_picture if profile else "",
+    }
 
 
 def get_when_label(start_time):
@@ -58,7 +63,7 @@ def mark_going(events, user):
     for event in events:
         attendees = event.attendees.all()
         event.is_going = user.is_authenticated and user in attendees
-        event.card_initials = [get_initials(attendee) for attendee in attendees[:2]]
+        event.card_avatars = [avatar_data(attendee) for attendee in attendees[:2]]
         event.card_more_going = max(len(attendees) - 2, 0)
     return events
 
@@ -71,7 +76,7 @@ def show_events(request):
     # for the avatars, "N going" and the RSVP button. Prefetch(...) sorts them by id, the same order the event
     # page and the RSVP answer use, so the avatars don't jump around after an RSVP.
     all_events = Event.objects.defer("cover_image").select_related("theme_plant").prefetch_related(
-        Prefetch("attendees", queryset=User.objects.order_by("pk"))
+        Prefetch("attendees", queryset=User.objects.select_related("profile").order_by("pk"))
     )
 
     # ?filter=month in the URL picks a filter. Anything unknown falls back to Upcoming.
@@ -123,9 +128,8 @@ def show_event(request, event_id):
         "event": event,
         "going_count": going_count,
         # Only the first 4 attendees get an avatar, the rest are shown as "+N"
-        "attendee_initials": [get_initials(user) for user in event.attendees.order_by("pk")[:4]],
+        "attendee_avatars": [avatar_data(user) for user in event.attendees.select_related("profile").order_by("pk")[:4]],
         "more_going": max(going_count - 4, 0),
-        "host_initials": get_initials(event.host),
         "host_event_count": event.host.hosted_events.count(),
         # Split the text box into a list, skipping empty lines
         "bring_list": [line.strip() for line in event.what_to_bring.splitlines() if line.strip()],
@@ -230,7 +234,7 @@ def rsvp_event_ajax(request, event_id):
         "going": event.attendees.filter(pk=request.user.pk).exists(),
         "going_count": going_count,
         # For redrawing the avatars on the event page and on the cards
-        "attendee_initials": [get_initials(user) for user in event.attendees.order_by("pk")[:4]],
+        "attendee_avatars": [avatar_data(user) for user in event.attendees.select_related("profile").order_by("pk")[:4]],
         "more_going": max(going_count - 4, 0),
     })
 
