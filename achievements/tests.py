@@ -184,6 +184,26 @@ class ClaimTests(TestCase):
         self.client.force_login(self.user)
         self.assertEqual(self.client.get(self.url).status_code, 405)
 
+    def ajax(self):
+        return self.client.post(self.url, headers={"x-requested-with": "XMLHttpRequest"})
+
+    def test_ajax_claim_answers_with_json(self):
+        record_progress(self.user, "plants_added")
+        self.client.force_login(self.user)
+        response = self.ajax()
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["state"], "PENDING")
+        self.assertTrue(response.json()["message"].startswith("Claim submitted!"))
+        again = self.ajax()
+        self.assertEqual((again.status_code, again.json()["state"]), (200, "PENDING"))
+
+    def test_ajax_claim_errors(self):
+        self.assertEqual(self.ajax().status_code, 403)
+        self.client.force_login(self.user)
+        response = self.ajax()
+        self.assertEqual((response.status_code, response.json()["state"]), (400, ""))
+        self.assertIn("Not ready yet", response.json()["message"])
+
 
 class CheckInViewTests(TestCase):
     def setUp(self):
