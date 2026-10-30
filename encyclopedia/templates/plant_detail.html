@@ -68,7 +68,7 @@
         {% if plant.photo_credit_url %}<a href="{{ plant.photo_credit_url }}" target="_blank" rel="noopener noreferrer" class="underline">{{ plant.photo_credit }}</a>{% else %}{{ plant.photo_credit }}{% endif %}{% endif %}
       </p>
       {# Figma buttons: green "Save to collection" + white "Share guide" #}
-      <div class="mt-4 flex flex-wrap items-center gap-3">
+      <div data-ajax-region="save" class="mt-4 flex flex-wrap items-center gap-3">
         {% if user.is_authenticated and collections %}
         <details class="relative">
           <summary class="inline-flex cursor-pointer list-none items-center gap-2 rounded-full border-2 border-ink bg-brand px-6 py-3 text-sm font-extrabold text-white transition duration-150 ease-out hover:bg-brand-hover active:scale-[0.97] motion-reduce:active:scale-100">
@@ -76,7 +76,7 @@
           </summary>
           <div class="detail-picker"><p class="mb-2 text-xs font-extrabold">Save {{ plant.name }} to…</p>
             {% for collection in collections %}
-            <form method="post" action="{% url 'encyclopedia:toggle_saved' plant.slug %}" class="mb-2">
+            <form method="post" data-ajax-form action="{% url 'encyclopedia:toggle_saved' plant.slug %}" class="mb-2">
               {% csrf_token %}
               <input type="hidden" name="collection_id" value="{{ collection.id }}">
               <input type="hidden" name="next" value="{% url 'encyclopedia:detail' plant.slug %}">

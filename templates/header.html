@@ -25,7 +25,7 @@ The .nav-tab and .nav-tab-active styles are in base.html, and static/js/navbar.j
             {% comment %}
             Your tab lights up when app_name in your urls.py matches the name in the if below
             (garden, events, encyclopedia, community, achievements, profile).
-            To link your tab, replace href="#" with your page, e.g. href="{% url 'community:show_questions' %}".
+            Each tab links with {% url %}, e.g. href="{% url 'community:show_questions' %}".
             {% endcomment %}
             <nav class="mt-4 flex flex-col gap-1 border-t border-line pt-4 lg:mt-0 lg:flex-row lg:rounded-full lg:border-2 lg:border-ink lg:bg-brand-soft lg:px-2 lg:py-1">
                 <a href="{% url 'garden:show_garden' %}" class="nav-tab {% if app == 'garden' %}nav-tab-active{% endif %}">Garden</a>

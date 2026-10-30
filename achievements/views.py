@@ -17,6 +17,9 @@ from achievements.services import build_milestones, can_claim, check_in_today, g
 def show_achievements(request):
     user = request.user
     selected_plant_slug = request.GET.get("plant", "")
+    # Opening this page once a day is the check-in that keeps the day streak going
+    if user.is_authenticated:
+        check_in_today(user)
 
     cards = build_milestones(user)
 

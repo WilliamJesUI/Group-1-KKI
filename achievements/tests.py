@@ -90,8 +90,9 @@ class PageTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.url)
         self.assertContains(response, "Claim badge")
-        # A plain counter finishes First Sprout. Herb Garden only counts real herbs, so it stays at 0.
-        self.assertEqual(response.context["milestones_in_progress"], 1)
+        # A plain counter finishes First Sprout, and opening the page starts 7 Day Streak (day 1 of 7).
+        # Herb Garden only counts real herbs, so it stays at 0.
+        self.assertEqual(response.context["milestones_in_progress"], 2)
 
     def test_progress_percent_rounds_down(self):
         record_progress(self.user, "answers_given", 3)
@@ -531,3 +532,26 @@ class PlantMilestoneTests(TestCase):
         tomato_goal = Goal.objects.create(user=self.user, title="Tomatoes", plant=self.tomato, target=5)
         ProgressLog.objects.create(goal=tomato_goal, amount=3)
         self.assertEqual(self.progress(self.tomato_time), 100)
+
+
+class DailyCheckInTests(TestCase):
+    """The day streak needs check-ins, so opening the Achievements page checks you in for today."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("streaky", password="pw")
+        self.url = reverse("achievements:show_achievements")
+
+    def test_visiting_the_page_checks_you_in_once_a_day(self):
+        self.client.force_login(self.user)
+        self.client.get(self.url)
+        self.client.get(self.url)
+        self.assertEqual(CheckIn.objects.filter(user=self.user, date=timezone.localdate()).count(), 1)
+        self.assertEqual(current_streak(self.user), 1)
+
+    def test_visitors_are_not_checked_in(self):
+        self.client.get(self.url)
+        self.assertEqual(CheckIn.objects.count(), 0)
+
+    def test_page_explains_how_the_streak_works(self):
+        self.client.force_login(self.user)
+        self.assertContains(self.client.get(self.url), "Opening this page once a day checks you in")
