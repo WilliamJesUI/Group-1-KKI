@@ -3,7 +3,9 @@ from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import redirect_to_login
 from django.contrib.auth.models import User
+from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -88,14 +90,15 @@ def demo_data_on():
 
 
 def get_profile_stats(user):
-    # The four numbers in the stats bar. The Garden, Achievements and Encyclopedia modules are not merged yet,
-    # so for now everything is 0. When a module lands, replace its 0 with a real count, for example:
-    #   garden_posts   = GardenPost.objects.filter(author=user).count()
-    #   appreciations  = Like.objects.filter(post__author=user).count()
+    # The four numbers in the stats bar. Garden posts and appreciations come from the Garden app.
+    # Achievements and plants growing are 0 until those modules are connected, for example:
     #   achievements   = UserAchievement.objects.filter(user=user, is_verified=True).count()
     #   plants_growing = UserPlant.objects.filter(user=user).count()
-    garden_posts = 0
-    appreciations = 0
+    from garden.models import Post  # imported here so the two apps don't import each other when Django starts
+
+    garden_posts = Post.objects.filter(author=user).count()
+    # Appreciations = every like on any of this user's posts
+    appreciations = Post.likes.through.objects.filter(post__author=user).count()
     achievements = 0
     plants_growing = 0
     if demo_data_on():
@@ -115,14 +118,30 @@ def get_recent_badges(user):
 
 
 def get_garden_snapshots(user):
-    # Up to 4 items for the "My garden" grid. The template reads snapshot.image_url, snapshot.likes
-    # and snapshot.caption (used as the alt text). TODO: fill from the Garden module, e.g. the user's 4 newest posts.
-    return DEMO_SNAPSHOTS if demo_data_on() else []
+    # The 4 newest garden posts of this user, for the "My garden" grid. The template reads snapshot.image_url
+    # (empty for a post without a photo), snapshot.likes and snapshot.caption.
+    if demo_data_on():
+        return DEMO_SNAPSHOTS
+    from garden.models import Post
+
+    posts = (
+        Post.objects.filter(author=user)
+        .defer("photo")  # we only need the photo's address, not the photo itself
+        .annotate(like_count=Count("likes", distinct=True))
+        .order_by("-created_at")[:4]
+    )
+    return [{"image_url": post.photo_src, "likes": post.like_count, "caption": post.caption} for post in posts]
 
 
-class ProfileView(LoginRequiredMixin, TemplateView):
-    # /profile/ shows the logged-in user. /profile/<username>/ shows someone else (that is what "Share profile" copies).
+class ProfileView(TemplateView):
+    # /profile/<username>/ is public: anyone with the link can look at it, logged in or not (that is what "Share profile"
+    # copies). /profile/ means "my profile", so that one needs a login.
     template_name = "accounts/profile.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if "username" not in kwargs and not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

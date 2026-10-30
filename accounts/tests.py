@@ -249,3 +249,86 @@ class AvatarTagTests(TestCase):
         user = User.objects.create_user("ala", "ala@example.com", PASSWORD)
         html = self.render("{{ u|avatar_bg_class }} {{ u|avatar_initials }}", u=user)
         self.assertEqual(html, f"{user.profile.avatar_bg_class} A")
+
+
+class PublicProfileTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("ben", "ben@example.com", PASSWORD)
+        Profile.objects.filter(user=self.user).update(bio="Tomatoes only", location="South Jakarta")
+        self.url = reverse("profile:show_user_profile", args=["ben"])
+
+    def test_anyone_can_open_a_profile_without_logging_in(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "@ben")
+        self.assertContains(response, "Tomatoes only")
+        self.assertContains(response, "South Jakarta")
+
+    def test_visitors_see_no_edit_button_and_no_email(self):
+        response = self.client.get(self.url)
+        self.assertNotContains(response, reverse("profile:edit_profile"))
+        self.assertNotContains(response, "ben@example.com")
+
+    def test_another_logged_in_user_sees_no_edit_button(self):
+        self.client.force_login(User.objects.create_user("sam", "sam@example.com", PASSWORD))
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, reverse("profile:edit_profile"))
+
+    def test_the_owner_sees_the_edit_button_on_their_own_public_page(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.url)
+        self.assertContains(response, reverse("profile:edit_profile"))
+
+    def test_unknown_username_is_a_404(self):
+        response = self.client.get(reverse("profile:show_user_profile", args=["nobody"]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_my_profile_still_needs_a_login(self):
+        response = self.client.get(reverse("profile:show_profile"))
+        self.assertRedirects(response, reverse("profile:login") + "?next=" + reverse("profile:show_profile"))
+
+
+class GardenSnapshotsTests(TestCase):
+    def setUp(self):
+        from garden.models import Post
+
+        self.Post = Post
+        self.user = User.objects.create_user("ben", "ben@example.com", PASSWORD)
+        self.fan = User.objects.create_user("sam", "sam@example.com", PASSWORD)
+        self.url = reverse("profile:show_user_profile", args=["ben"])
+
+    def make_post(self, caption, **extra):
+        return self.Post.objects.create(author=self.user, caption=caption, **extra)
+
+    def test_profile_shows_only_the_four_newest_posts(self):
+        for number in range(1, 7):
+            self.make_post(f"Post number {number}.")
+        response = self.client.get(self.url)
+        for number in (3, 4, 5, 6):
+            self.assertContains(response, f"Post number {number}.")
+        for number in (1, 2):
+            self.assertNotContains(response, f"Post number {number}.")
+
+    def test_a_post_with_a_photo_link_shows_its_photo(self):
+        self.make_post("First tomatoes", image_url="https://images.pexels.com/photos/1/a.jpg")
+        response = self.client.get(self.url)
+        self.assertContains(response, "https://images.pexels.com/photos/1/a.jpg")
+
+    def test_other_peoples_posts_are_not_shown(self):
+        self.Post.objects.create(author=self.fan, caption="Sam's basil")
+        self.assertNotContains(self.client.get(self.url), "basil")
+
+    def test_stats_count_posts_and_appreciations(self):
+        from accounts.views import get_profile_stats
+
+        first = self.make_post("One")
+        second = self.make_post("Two")
+        first.likes.add(self.fan)
+        second.likes.add(self.fan, self.user)
+        stats = {label: value for value, label in get_profile_stats(self.user)}
+        self.assertEqual(stats["Garden posts"], "2")
+        self.assertEqual(stats["Appreciations"], "3")
+
+    def test_empty_profile_shows_the_empty_message(self):
+        self.assertContains(self.client.get(self.url), "No garden posts yet")

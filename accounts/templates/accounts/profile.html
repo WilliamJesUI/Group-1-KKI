@@ -78,17 +78,24 @@
                     <h2 class="font-display text-2xl">{% if is_owner %}My garden{% else %}{{ display_name }}’s garden{% endif %}</h2>
                     <p class="text-sm text-ink-soft">Snapshots from {% if is_owner %}your{% else %}their{% endif %} green space</p>
                 </div>
-                {% comment %}TODO: point this at the Garden page once it exists{% endcomment %}
-                <a href="#" class="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-[0.08em] text-brand hover:underline">
+                {# The Garden feed can only filter to "my posts", so other people's profiles have no View all #}
+                {% if is_owner %}
+                <a href="{% url 'garden:show_garden' %}?filter=mine" class="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-[0.08em] text-brand hover:underline">
                     View all <img src="{% static 'img/icons/chevron-right.svg' %}" alt="" width="16" height="16">
                 </a>
+                {% endif %}
             </div>
 
             {% if snapshots %}
             <div class="mt-4 grid gap-3 sm:grid-cols-2">
                 {% for snapshot in snapshots %}
                 <div class="relative aspect-[387/190] overflow-hidden rounded-2xl bg-brand-soft">
-                    <img src="{{ snapshot.image_url }}" alt="{{ snapshot.caption }}" class="size-full object-cover">
+                    {% if snapshot.image_url %}
+                    <img src="{{ snapshot.image_url }}" alt="{{ snapshot.caption }}" loading="lazy" class="size-full object-cover">
+                    {% else %}
+                    {# A post without a photo shows its text instead #}
+                    <p class="line-clamp-5 px-5 pt-5 pb-12 text-sm text-ink">{{ snapshot.caption }}</p>
+                    {% endif %}
                     <span class="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-lg bg-ink/70 px-2 py-1 text-xs font-bold text-white">
                         <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                         {{ snapshot.likes }}
@@ -99,7 +106,7 @@
             {% else %}
             <div class="mt-4 rounded-2xl border-2 border-dashed border-line bg-surface px-6 py-10 text-center">
                 <p class="font-display text-xl">No garden posts yet</p>
-                <p class="mt-1 text-sm text-ink-soft">{% if is_owner %}Photos you post to the Garden page will show up here.{% else %}{{ display_name }} hasn’t posted any snapshots yet.{% endif %}</p>
+                <p class="mt-1 text-sm text-ink-soft">{% if is_owner %}Your 4 newest posts from the Garden page will show up here.{% else %}{{ display_name }} hasn’t posted any snapshots yet.{% endif %}</p>
             </div>
             {% endif %}
         </section>
@@ -157,7 +164,7 @@
         const link = window.location.origin + event.currentTarget.dataset.path;
         try {
             await navigator.clipboard.writeText(link);
-            showToast("Link copied", "Anyone with an account can open this profile.");
+            showToast("Link copied", "Anyone with this link can open your profile.");
         } catch (error) {
             showToast("Couldn't copy the link", link, "error");
         }
