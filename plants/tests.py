@@ -10,7 +10,7 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from plants import mapping
-from plants.management.commands import add_wikipedia_text
+from plants.management.commands import add_wikipedia_text, build_plant_list
 from plants.models import Plant
 from plants.services import wikipedia
 from plants.services.http import ApiError
@@ -199,3 +199,72 @@ class PlantPhotoTest(TestCase):
                 self.assertEqual(saved_photo_credits()["mint"]["credit"], "Photo by Ann")
             saved_plant_photos.cache_clear()
             saved_photo_credits.cache_clear()
+
+
+class MorePlantsTest(TestCase):
+    """build_plant_list only asks Trefle about new CSV rows, and migration 0005 only adds plants that aren't there yet."""
+
+    def build(self, folder, csv_rows, saved, *args):
+        Path(folder, "plant_list.csv").write_text(
+            "english_name,scientific_name,category\n" + "".join(f"{row}\n" for row in csv_rows), encoding="utf-8"
+        )
+        Path(folder, "plants.json").write_text(json.dumps(saved), encoding="utf-8")
+        found = [{"id": 7, "scientific_name": "Ranunculus asiaticus"}]
+        with patch.object(build_plant_list, "DATA_DIR", Path(folder)), \
+                patch.object(build_plant_list, "PAUSE_SECONDS", 0), \
+                patch("plants.services.trefle.search", return_value=found) as search, \
+                patch("plants.services.trefle.species", return_value={}), \
+                patch("plants.mapping.from_trefle", return_value={"name": "Ranunculus", "category": "flowers"}):
+            out = StringIO()
+            call_command("build_plant_list", *args, stdout=out)
+        return json.loads(Path(folder, "plants.json").read_text(encoding="utf-8")), search, out.getvalue()
+
+    def test_keeps_old_plants_and_adds_only_new_ones(self):
+        old = {"slug": "tomato", "name": "Tomato", "description": "Kept."}
+        with tempfile.TemporaryDirectory() as folder:
+            saved, search, _ = self.build(folder, ["Tomato,Solanum lycopersicum,vegetables",
+                                                  "Ranunculus,Ranunculus asiaticus,flowers"], [old])
+        search.assert_called_once_with("Ranunculus asiaticus")
+        self.assertEqual(saved[0], old)
+        self.assertEqual(saved[1]["slug"], "ranunculus")
+
+    def test_all_asks_about_every_plant_again(self):
+        with tempfile.TemporaryDirectory() as folder:
+            saved, search, out = self.build(folder, ["Tomato,Solanum lycopersicum,vegetables"],
+                                            [{"slug": "tomato", "name": "Tomato"}], "--all")
+        search.assert_called_once_with("Solanum lycopersicum")
+        self.assertEqual(saved, [])
+        self.assertIn("missing 1: Tomato", out)
+
+    def test_trefle_error_is_reported(self):
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(build_plant_list.trefle, "search", side_effect=ApiError("down")):
+            Path(folder, "plant_list.csv").write_text("english_name,scientific_name,category\nPeony,Paeonia lactiflora,flowers\n")
+            out = StringIO()
+            with patch.object(build_plant_list, "DATA_DIR", Path(folder)):
+                call_command("build_plant_list", stdout=out)
+        self.assertIn("error on Peony: down", out.getvalue())
+
+    def test_migration_adds_only_missing_plants(self):
+        migration = import_module("plants.migrations.0005_load_more_plants")
+        tomato = Plant.objects.get(slug="tomato")
+        Plant.objects.filter(slug="sweet-basil").update(image_url="")
+        rows = [
+            {"slug": "tomato", "name": "Changed", "image_url": "https://example.com/new.jpg"},
+            {"slug": "sweet-basil", "image_url": "https://example.com/basil.jpg", "image_credit": "Photo by Ann"},
+            {"slug": "tomato-again", "name": "Same species", "trefle_id": tomato.trefle_id},
+            {"slug": "ranunculus", "name": "Ranunculus", "category": "flowers", "trefle_id": 999999, "not_a_field": 1},
+        ]
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "plants.json"
+            path.write_text(json.dumps(rows), encoding="utf-8")
+            with patch.object(migration, "DATA_FILE", path):
+                migration.load_new_plants(django_apps, None)
+                migration.load_new_plants(django_apps, None)  # running twice adds nothing twice
+        tomato.refresh_from_db()
+        self.assertEqual(tomato.name, "Tomato")
+        self.assertNotEqual(tomato.image_url, "https://example.com/new.jpg")  # it had a photo, so it keeps it
+        basil = Plant.objects.get(slug="sweet-basil")
+        self.assertEqual((basil.image_url, basil.image_credit), ("https://example.com/basil.jpg", "Photo by Ann"))
+        self.assertFalse(Plant.objects.filter(slug="tomato-again").exists())
+        self.assertEqual(Plant.objects.get(slug="ranunculus").category, "flowers")
