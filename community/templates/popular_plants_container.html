@@ -1,7 +1,7 @@
 <section id="popular-plants" class="rounded-2xl border-2 border-ink bg-white p-5">
   <div class="flex items-baseline justify-between gap-3">
     <h2 class="font-display text-[20px] leading-tight">Popular Plants</h2>
-    <!-- TODO: Add encyclopedia page link -->
+    <a href="{% url 'encyclopedia:index' %}" class="text-xs font-extrabold text-brand hover:underline">See all</a>
   </div>
 
   {% if popular_plants %}

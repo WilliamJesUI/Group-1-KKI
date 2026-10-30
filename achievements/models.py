@@ -94,7 +94,7 @@ class Goal(models.Model):
     # "Start a goal" form: one goal is about one plant, e.g. "Harvest 5 tomatoes"
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="goals")
     title = models.CharField(max_length=100)
-    # Plain text for now. When the Encyclopedia module is merged this becomes a ForeignKey to its Plant model.
+    # The shared plant list, so goals can be filtered by plant and link to the Encyclopedia.
     plant = models.ForeignKey("plants.Plant", on_delete=models.PROTECT, related_name="goals")
     # "How many times?" The goal is finished when the logged amounts add up to this number.
     target = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(1000)])

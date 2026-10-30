@@ -15,7 +15,7 @@ class Question(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     voters = models.ManyToManyField(User)
     plant = models.ForeignKey(
-        "plants.Plant",            # change "plants" to the app that holds Plant
+        "plants.Plant",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,                # the tag is optional
