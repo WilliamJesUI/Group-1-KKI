@@ -223,6 +223,9 @@ My prompt strategy: I first studied the steps to build the module and wrote my o
 
 Limitations: the AI sometimes made mistakes or misunderstood instructions. For example, when I removed the authentication module (which was only there for testing), the AI's version also removed the whole login and register button from the header. Each time this happened I fixed the code by hand and left most of the AI's version out of the final result.
 
+**Meuthia (Achievements)**
+I used AI mostly to guide my learning and help fix errors while building the Achievements module. I wrote my own code first and used AI to explain the parts I didn't understand, then compared its suggestions with my code to find and fix mistakes. The AI sometimes misunderstood what I wanted or gave code that didn't fit our project, so I checked and fixed those parts myself before using anything. After the AI gave its response, i always made sure to think, question, verity, and reflect.
+
 ### Where the AI fell short, and what we fixed by hand
 
 | What went wrong | How we noticed | What we did |
