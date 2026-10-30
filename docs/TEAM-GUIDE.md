@@ -313,3 +313,11 @@ def pin_post(request, post_id):
 ```
 
 In templates, show the Delete button with the same rule. In the view, set it on each item (`item.can_delete = can_delete(request.user, item.author)`) and use `{% if item.can_delete %}` in the template. The `message` in the JSON 403 works with `showToast()` (section 12), so the page can just show it.
+
+## 15. The landing page shows your module
+
+The home page at `/` (the `home` app) shows a small preview of every module: the newest Garden posts, the next events, a shelf of plants, the newest questions and the most claimed badges. It reads your tables in `home/services.py`, and only reads, never writes.
+
+- Each part is wrapped in `safely()`. If your table breaks, only your part shows an empty state, the rest of the page still loads.
+- If you rename a model field that the landing page uses (for example `Post.image_url`, `Event.start_time`, `Question.title`, `Milestone.icon`), run `python manage.py test home` before you push. Those tests break first and tell you what to fix.
+- Your URL names are used there too (`garden:show_garden`, `events:show_event`, `encyclopedia:detail`, `community:show_question_thread`, `achievements:show_achievements`). Keep the names the same.
