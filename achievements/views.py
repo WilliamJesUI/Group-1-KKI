@@ -134,9 +134,12 @@ def create_goal_ajax(request):
         goal = form.save(commit=False)
         goal.user = request.user
         goal.save()
+        # The page adds the card itself (achievements_goals.js), so it needs the goal back, not a reload.
         # The text before \n is the toast's title, the rest is the smaller message under it
-        messages.success(request, "Goal started\nLog progress on it whenever you can.")
-        return JsonResponse({"id": goal.id}, status=201)
+        return JsonResponse(
+            {"id": goal.id, "goal": serialize_goal(goal), "message": "Goal started\nLog progress on it whenever you can."},
+            status=201,
+        )
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 

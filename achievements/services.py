@@ -1,9 +1,9 @@
 from datetime import timedelta
 
-from django.db.models import F
+from django.db.models import F, Q, Sum
 from django.utils import timezone
 
-from achievements.models import CheckIn, ClaimedBadge, Milestone, UserMetric
+from achievements.models import CheckIn, ClaimedBadge, Milestone, ProgressLog, UserMetric
 
 
 def get_stored_metric(user, metric):
@@ -12,15 +12,31 @@ def get_stored_metric(user, metric):
     return counter.value if counter else 0
 
 
+def plants_in_garden(user):
+    """Different plants this user saved in the Encyclopedia (any collection, or the old saved list)."""
+    from plants.models import Plant  # imported here so the apps don't import each other at start-up
+
+    return Plant.objects.filter(Q(collections__user=user) | Q(saved_by__user=user)).distinct().count()
+
+
+def harvests_logged(user):
+    """Everything logged with "Log progress" on the user's goals counts as a harvest."""
+    return ProgressLog.objects.filter(goal__user=user).aggregate(total=Sum("amount"))["total"] or 0
+
+
+# How each milestone metric is counted from the other modules. The keys are Milestone.METRIC_CHOICES,
+# plus a few older names that milestones made in /admin/ may still use.
 BADGE_RULES = {
-    "events_hosted": lambda user: user.hosted_events.count() if hasattr(user, "hosted_events") else 0,
-    "events_rsvped": lambda user: user.rsvped_events.count() if hasattr(user, "rsvped_events") else 0,
-    "plants_saved": lambda user: user.saved_plants.count() if hasattr(user, "saved_plants") else 0,
-    "posts_shared": lambda user: user.garden_posts.count() if hasattr(user, "garden_posts") else 0,
-    "answers_given": lambda user: (
-        (user.answers.count() if hasattr(user, "answers") else 0) +
-        get_stored_metric(user, "answers_given")
-    ),
+    "plants_added": plants_in_garden,
+    "plant_collector": plants_in_garden,
+    "plants_saved": plants_in_garden,
+    "harvests_logged": harvests_logged,
+    "host": lambda user: user.hosted_events.count(),
+    "events_hosted": lambda user: user.hosted_events.count(),
+    "event_goer": lambda user: user.rsvped_events.count(),
+    "events_rsvped": lambda user: user.rsvped_events.count(),
+    "posts_shared": lambda user: user.garden_posts.count(),
+    "answers_given": lambda user: user.answers.count(),
 }
 
 def record_progress(user, metric, amount=1):
@@ -35,10 +51,11 @@ def get_metric(user, metric):
         return 0
     rule = BADGE_RULES.get(metric)
     if rule is not None:
+        # Real data from the other modules, plus anything added with record_progress()
         try:
-            return rule(user)
+            return rule(user) + get_stored_metric(user, metric)
         except Exception:
-            return 0
+            return get_stored_metric(user, metric)
     # The streak comes from check-ins, every other metric is a stored counter
     if metric == "checkin_streak":
         return current_streak(user)

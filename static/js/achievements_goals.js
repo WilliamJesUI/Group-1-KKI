@@ -122,6 +122,13 @@ function updateCard(goalId, result) {
         card.querySelector('[data-complete-label]').classList.remove('hidden');
     }
 }
+// Goal text typed by the user goes into innerHTML below, so turn < > & " ' into safe characters first
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text ?? '';
+    return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function renderOrUpdateGoalCard(goal) {
     let card = document.querySelector(`[data-goal-card="${goal.id}"]`);
 
@@ -134,6 +141,7 @@ function renderOrUpdateGoalCard(goal) {
         card.dataset.reason = goal.reason;
 
         card.querySelector('h3').textContent = goal.title;
+        card.querySelector('h3 + p').textContent = goal.plant_name + (goal.finish_by_formatted ? ' \u00b7 Finish by ' + goal.finish_by_formatted : '');
         card.querySelector('[data-done]').textContent = goal.done;
         
         const bar = card.querySelector('[role="progressbar"]');
@@ -159,14 +167,14 @@ function renderOrUpdateGoalCard(goal) {
         article.innerHTML = `
             <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
-                    <h3 class="font-display text-xl leading-tight">${goal.title}</h3>
-                    <p class="text-xs text-ink-soft">${goal.plant_name}${goal.finish_by_formatted ? ' &middot; Finish by ' + goal.finish_by_formatted : ''}</p>
+                    <h3 class="font-display text-xl leading-tight">${escapeHtml(goal.title)}</h3>
+                    <p class="text-xs text-ink-soft">${escapeHtml(goal.plant_name)}${goal.finish_by_formatted ? ' &middot; Finish by ' + goal.finish_by_formatted : ''}</p>
                 </div>
                 <span data-complete-label class="${!goal.is_complete ? 'hidden ' : ''}shrink-0 rounded-full bg-brand-soft px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em]">Complete</span>
             </div>
-            ${goal.reason ? `<p class="text-sm text-ink-soft">${goal.reason}</p>` : ''}
+            ${goal.reason ? `<p class="text-sm text-ink-soft">${escapeHtml(goal.reason)}</p>` : ''}
             <div>
-                <div class="h-2 rounded-full bg-brand-tint" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${goal.percent}" aria-label="${goal.title} progress">
+                <div class="h-2 rounded-full bg-brand-tint" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${goal.percent}" aria-label="${escapeHtml(goal.title)} progress">
                     <div class="h-full rounded-full bg-brand" style="width: ${goal.percent}%"></div>
                 </div>
                 <p class="mt-1.5 text-xs text-ink-soft"><span data-done>${goal.done}</span> of ${goal.target} done</p>
@@ -178,6 +186,7 @@ function renderOrUpdateGoalCard(goal) {
             </div>
         `;
         grid.appendChild(article);
+        document.querySelector('[data-goal-new-header]')?.classList.remove('hidden');
     }
 }
 
@@ -199,7 +208,7 @@ if (goalForm) {
         }
     });
 
-    // Start and edit: reload so the new list shows, the toast comes from the server (Django messages)
+    // Start and edit: the card is added or updated in place, no reload
     goalForm.addEventListener('submit', (event) => {
         event.preventDefault();
         sendForm(goalForm, (result) => {
