@@ -567,3 +567,10 @@ class LiveMilestoneRefreshTests(TestCase):
         response = self.client.get(reverse("achievements:show_achievements"))
         for region in ("growth", "stats", "milestones"):
             self.assertContains(response, f'data-ajax-region="{region}"')
+
+    def test_goal_cards_refresh_after_an_edit(self):
+        # Editing a goal changes its "x of y done" text and reason, so the goal list reloads too
+        user = User.objects.create_user("lia", password="pw")
+        self.client.force_login(user)
+        response = self.client.get(reverse("achievements:show_achievements"))
+        self.assertContains(response, 'data-ajax-region="goals"')
