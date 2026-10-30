@@ -5,6 +5,7 @@ from django.contrib.auth import password_validation
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.urls import reverse
+from events.forms import PlantSelect  # the plant dropdown with photos, also used by the event form
 
 from accounts.models import GROWING_STYLE_CHOICES, Profile, ProfileImage
 
@@ -194,7 +195,9 @@ class EditProfileForm(AriaInvalidMixin, forms.ModelForm):
         widgets = {
             "bio": forms.Textarea(attrs={"rows": 4, "placeholder": "Tell other gardeners about yourself", "class": TEXTAREA_CLASS}),
             "location": forms.TextInput(attrs={"placeholder": "e.g. South Jakarta", "class": INPUT_CLASS}),
-            "favorite_plant": forms.TextInput(attrs={"placeholder": "e.g. Cherry Tomato", "class": INPUT_CLASS}),
+            # A dropdown of every plant in the shared plant list. static/js/plant_picker.js turns it into a search box
+            # with photos (see edit_profile.html). Without JavaScript it stays a normal dropdown.
+            "favorite_plant": PlantSelect(attrs={"class": INPUT_CLASS}),
             "growing_style": forms.Select(attrs={"class": INPUT_CLASS}),
         }
 
@@ -202,6 +205,8 @@ class EditProfileForm(AriaInvalidMixin, forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Replace Django's "---------" with friendlier text for the empty choice
         self.fields["growing_style"].choices = [("", "Choose a growing style")] + GROWING_STYLE_CHOICES
+        # The first, empty choice of the plant dropdown
+        self.fields["favorite_plant"].empty_label = "Choose your favorite plant..."
         self.initial["display_name"] = self.instance.user.first_name
         # For each image: what is saved now (the template shows a preview), and was it uploaded or pasted?
         # An uploaded photo is saved as one of our own addresses, which starts with "/".

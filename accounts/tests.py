@@ -88,15 +88,18 @@ class ProfilePageTests(TestCase):
         self.assertContains(response, "@ben")
 
     def test_edit_profile_saves_changes(self):
+        from plants.models import Plant
+
+        plant = Plant.objects.create(name="Test Tomato", slug="test-tomato-save")
         self.client.force_login(self.user)
         response = self.client.post(reverse("profile:edit_profile"), {
             "bio": "Learning composting", "location": "South Jakarta",
-            "favorite_plant": "Cherry Tomato", "growing_style": "Balcony garden",
+            "favorite_plant": plant.pk, "growing_style": "Balcony garden",
             "profile_picture": "", "cover_image": "",
         })
         self.assertRedirects(response, reverse("profile:show_profile"))
         profile = Profile.objects.get(user=self.user)
-        self.assertEqual(profile.favorite_plant, "Cherry Tomato")
+        self.assertEqual(profile.favorite_plant, plant)
         self.assertEqual(profile.growing_style, "Balcony garden")
 
     def test_edit_profile_refuses_http_image_links(self):
@@ -392,3 +395,50 @@ class RecentBadgesTests(TestCase):
         self.assertNotContains(self.client.get(self.url), f'href="{link}" class="text-[11px]')
         self.client.force_login(self.user)
         self.assertContains(self.client.get(self.url), f'href="{link}" class="text-[11px]')
+
+
+class FavoritePlantTests(TestCase):
+    def setUp(self):
+        from plants.models import Plant
+
+        self.plant = Plant.objects.create(name="Test Tomato", slug="test-tomato")
+        self.user = User.objects.create_user("ben", "ben@example.com", PASSWORD)
+        self.client.force_login(self.user)
+
+    def edit(self, **extra):
+        data = {"display_name": "", "bio": "", "location": "", "favorite_plant": "", "growing_style": ""}
+        data.update(extra)
+        return self.client.post(reverse("profile:edit_profile"), data)
+
+    def test_pick_a_favorite_plant_from_the_list(self):
+        self.edit(favorite_plant=self.plant.pk)
+        self.assertEqual(Profile.objects.get(user=self.user).favorite_plant, self.plant)
+
+    def test_the_edit_page_offers_the_plant_list_as_a_picker(self):
+        response = self.client.get(reverse("profile:edit_profile"))
+        self.assertContains(response, "data-plant-picker")
+        self.assertContains(response, "Test Tomato")
+        self.assertContains(response, "js/plant_picker.js")
+
+    def test_the_favorite_plant_shows_on_the_profile_and_links_to_the_encyclopedia(self):
+        self.edit(favorite_plant=self.plant.pk)
+        response = self.client.get(reverse("profile:show_profile"))
+        self.assertContains(response, "Test Tomato")
+        self.assertContains(response, reverse("encyclopedia:detail", args=["test-tomato"]))
+
+    def test_the_favorite_plant_can_be_cleared(self):
+        self.edit(favorite_plant=self.plant.pk)
+        self.edit(favorite_plant="")
+        self.assertIsNone(Profile.objects.get(user=self.user).favorite_plant)
+
+    def test_a_plant_that_does_not_exist_is_refused(self):
+        response = self.edit(favorite_plant=999999)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("favorite_plant", response.context["form"].errors)
+        self.assertIsNone(Profile.objects.get(user=self.user).favorite_plant)
+
+    def test_deleting_the_plant_keeps_the_profile(self):
+        self.edit(favorite_plant=self.plant.pk)
+        self.plant.delete()
+        profile = Profile.objects.get(user=self.user)
+        self.assertIsNone(profile.favorite_plant)
