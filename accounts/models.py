@@ -50,9 +50,11 @@ class Profile(models.Model):
     # (cover_image is the banner. The field keeps its first name so no migration is needed to rename it.)
     profile_picture = models.URLField(blank=True, max_length=500)
     cover_image = models.URLField(blank=True, max_length=500)
-    # TODO: once the shared Plant model (Encyclopedia) is merged, this can become a ForeignKey to it.
-    # README: "select your favorite plant from the API database".
-    favorite_plant = models.CharField(max_length=100, blank=True)
+    # Chosen from the shared plant list (plants app), like the theme plant of an event. If that plant is ever
+    # deleted, the profile stays and the favorite plant is simply empty (SET_NULL).
+    favorite_plant = models.ForeignKey(
+        "plants.Plant", on_delete=models.SET_NULL, null=True, blank=True, related_name="favorited_by"
+    )
     growing_style = models.CharField(max_length=50, blank=True, choices=GROWING_STYLE_CHOICES)
     # Color of the initials avatar. Picked at random once and never changed by the app.
     avatar_color = models.CharField(max_length=10, choices=AVATAR_COLORS, default=random_avatar_color)
