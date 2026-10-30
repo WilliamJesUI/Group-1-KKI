@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
+from growyourgarden.permissions import ajax_redirects
 from events.models import Event
 from events.views import filter_events, mark_going
 from plants.models import Plant
@@ -488,6 +489,7 @@ def plant_detail(request, slug):
 
 
 @require_POST
+@ajax_redirects
 def toggle_saved(request, slug):
     """Add or remove a plant from the collection selected by the current user."""
     if not request.user.is_authenticated:
@@ -517,6 +519,7 @@ def toggle_saved(request, slug):
 
 
 @require_POST
+@ajax_redirects
 def create_collection(request):
     """Create a collection for the authenticated user."""
     if not _require_authenticated(request):
@@ -537,6 +540,7 @@ def create_collection(request):
 
 
 @require_POST
+@ajax_redirects
 def delete_collection(request, collection_id):
     """Delete one collection owned by the authenticated user."""
     if not _require_authenticated(request):
@@ -553,6 +557,7 @@ def delete_collection(request, collection_id):
     return redirect("encyclopedia:collection")
 
 
+@ajax_redirects
 def my_collection(request):
     """Show the user's collections and handle collection renaming."""
     if not request.user.is_authenticated:
@@ -590,6 +595,7 @@ def my_collection(request):
 
 
 @require_POST
+@ajax_redirects
 def remove_from_collection(request, slug):
     """Remove a plant from one collection and clean up its saved bookmark if needed."""
     if not request.user.is_authenticated:
