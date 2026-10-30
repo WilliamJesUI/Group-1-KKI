@@ -363,8 +363,9 @@ class GoalViewTests(TestCase):
         response = self.client.post(reverse("achievements:create_goal"), {**self.data, "title": "Water basil"})
         self.assertEqual(response.status_code, 201)
         self.assertTrue(Goal.objects.filter(user=self.user, title="Water basil").exists())
-        self.assertIn("Goal started", self.json_messages(response)[0])
-        self.assertIn("Log progress on it whenever you can.", self.json_messages(response)[0])
+        self.assertEqual(response.json()["message"], "Goal started\nLog progress on it whenever you can.")
+        # The page adds the new card from this, so it shows without a refresh
+        self.assertEqual(response.json()["goal"]["title"], "Water basil")
 
     def test_create_with_errors_returns_them_as_json(self):
         self.client.force_login(self.user)
