@@ -478,3 +478,14 @@ class GoalViewTests(TestCase):
         self.assertContains(response, "Pending approval")
         self.assertNotContains(response, "Claim badge")
         self.assertEqual(response.context["unlocked"], 0)
+
+
+class GoodNeighborWordingTests(TestCase):
+    """Good Neighbor counts answers written (answering one question twice counts as 2), so the text must say answers."""
+
+    def test_good_neighbor_says_answers(self):
+        badge = Milestone.objects.get(slug="good-neighbor")
+        self.assertEqual(badge.description, "Write 10 answers")
+
+    def test_metric_label_says_answers(self):
+        self.assertEqual(dict(Milestone.METRIC_CHOICES)["answers_given"], "Answers written")
