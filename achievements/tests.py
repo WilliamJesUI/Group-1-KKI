@@ -127,7 +127,7 @@ class ClaimTests(TestCase):
         response = self.client.post(self.url)
         self.assertRedirects(response, reverse("achievements:show_achievements"))
         self.assertTrue(ClaimedBadge.objects.filter(user=self.user, milestone__slug="first-sprout").exists())
-        self.assertIn("Badge claimed", self.messages(response)[0])
+        self.assertIn("Claim submitted!", self.messages(response)[0])
 
     def test_claim_is_refused_without_progress(self):
         self.client.force_login(self.user)

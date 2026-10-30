@@ -62,17 +62,21 @@ class UserMetric(models.Model):
 
 
 class ClaimedBadge(models.Model):
-    # A row exists once the user has pressed "Claim badge" for a finished milestone
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="claimed_badges")
-    milestone = models.ForeignKey(Milestone, on_delete=models.CASCADE, related_name="claims")
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending Approval'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    milestone = models.ForeignKey(Milestone, on_delete=models.CASCADE)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
     claimed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["user", "milestone"], name="one_claim_per_milestone")]
-
+        unique_together = ("user", "milestone")
     def __str__(self):
         return f"{self.user.username} claimed {self.milestone.title}"
-
 
 class CheckIn(models.Model):
     # One row per user per day. The streak is the number of days in a row ending today (or yesterday).

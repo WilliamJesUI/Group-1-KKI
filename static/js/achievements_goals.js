@@ -21,8 +21,12 @@ function clearErrors(form) {
 function showErrors(form, errors) {
     for (const [field, fieldErrors] of Object.entries(errors)) {
         const message = form.querySelector(`[data-error-for="${field}"]`) || form.querySelector('[data-error-for="__all__"]');
-        message.textContent = fieldErrors.map((error) => error.message).join(' ');
-        message.classList.remove('hidden');
+        if (message) {
+            message.textContent = Array.isArray(fieldErrors) 
+                ? fieldErrors.map((error) => error.message || error).join(' ')
+                : fieldErrors;
+            message.classList.remove('hidden');
+        }
         const input = form.elements[field];
         if (input) {
             input.setAttribute('aria-invalid', 'true');
@@ -33,13 +37,13 @@ function showErrors(form, errors) {
 // Sends a form with fetch. onSuccess(result) returns true when the page is about to reload.
 async function sendForm(form, onSuccess) {
     const submitButton = form.querySelector('button[type="submit"]');
-    submitButton.disabled = true;
+    if (submitButton) submitButton.disabled = true;
     clearErrors(form);
     let leavingPage = false;
     try {
         const response = await fetch(form.action, {
             method: 'POST',
-            headers: { 'X-CSRFToken': getCookie('csrftoken') }, // getCookie comes from static/js/csrf.js
+            headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' }, // getCookie comes from static/js/csrf.js
             body: new FormData(form),
         });
         const result = await response.json().catch(() => ({}));
@@ -98,7 +102,9 @@ function openLogModal(card, logUrl) {
 }
 
 function openDeleteModal(card, deleteUrl) {
+    clearErrors(deleteForm);
     deleteForm.action = deleteUrl;
+    deleteForm.dataset.goalId = card.dataset.goalCard;
     deleteModal.querySelector('[data-delete-title]').textContent = card.dataset.title;
     deleteModal.showPopover();
 }
@@ -106,6 +112,7 @@ function openDeleteModal(card, deleteUrl) {
 // The progress card changes in place after "Save progress", so the page doesn't reload
 function updateCard(goalId, result) {
     const card = document.querySelector(`[data-goal-card="${goalId}"]`);
+    if (!card) return;
     card.querySelector('[data-done]').textContent = result.done;
     const bar = card.querySelector('[role="progressbar"]');
     bar.setAttribute('aria-valuenow', result.percent);
@@ -113,6 +120,64 @@ function updateCard(goalId, result) {
     if (result.is_complete) {
         card.querySelector('[data-goal-log]').classList.add('hidden');
         card.querySelector('[data-complete-label]').classList.remove('hidden');
+    }
+}
+function renderOrUpdateGoalCard(goal) {
+    let card = document.querySelector(`[data-goal-card="${goal.id}"]`);
+
+    if (card) {
+        // UPDATE Card
+        card.dataset.title = goal.title;
+        card.dataset.plant = goal.plant_id;
+        card.dataset.target = goal.target;
+        card.dataset.finishBy = goal.finish_by;
+        card.dataset.reason = goal.reason;
+
+        card.querySelector('h3').textContent = goal.title;
+        card.querySelector('[data-done]').textContent = goal.done;
+        
+        const bar = card.querySelector('[role="progressbar"]');
+        if (bar) {
+            bar.setAttribute('aria-valuenow', goal.percent);
+            bar.firstElementChild.style.width = `${goal.percent}%`;
+        }
+    } else {
+        // CREATE Card
+        const emptyState = document.querySelector('#goals .border-dashed')?.closest('.lg\\:col-span-2');
+        if (emptyState) emptyState.remove();
+
+        const grid = document.querySelector('#goals .grid');
+        const article = document.createElement('article');
+        article.setAttribute('data-goal-card', goal.id);
+        article.setAttribute('data-title', goal.title);
+        article.setAttribute('data-plant', goal.plant_id);
+        article.setAttribute('data-target', goal.target);
+        article.setAttribute('data-finish-by', goal.finish_by);
+        article.setAttribute('data-reason', goal.reason);
+        article.className = 'flex flex-col gap-3 rounded-2xl border-2 border-ink bg-surface p-[18px]';
+
+        article.innerHTML = `
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <h3 class="font-display text-xl leading-tight">${goal.title}</h3>
+                    <p class="text-xs text-ink-soft">${goal.plant_name}${goal.finish_by_formatted ? ' &middot; Finish by ' + goal.finish_by_formatted : ''}</p>
+                </div>
+                <span data-complete-label class="${!goal.is_complete ? 'hidden ' : ''}shrink-0 rounded-full bg-brand-soft px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em]">Complete</span>
+            </div>
+            ${goal.reason ? `<p class="text-sm text-ink-soft">${goal.reason}</p>` : ''}
+            <div>
+                <div class="h-2 rounded-full bg-brand-tint" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${goal.percent}" aria-label="${goal.title} progress">
+                    <div class="h-full rounded-full bg-brand" style="width: ${goal.percent}%"></div>
+                </div>
+                <p class="mt-1.5 text-xs text-ink-soft"><span data-done>${goal.done}</span> of ${goal.target} done</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" data-goal-log data-url="/achievements/goals/${goal.id}/log/" class="${goal.is_complete ? 'hidden ' : ''}rounded-full border-2 border-ink bg-brand px-4 py-2 text-[13px] font-extrabold text-white hover:bg-brand-hover">Log progress</button>
+                <button type="button" data-goal-edit data-url="/achievements/goals/${goal.id}/edit/" class="rounded-full border-2 border-ink bg-surface px-4 py-2 text-[13px] font-extrabold hover:bg-brand-tint">Edit</button>
+                <button type="button" data-goal-delete data-url="/achievements/goals/${goal.id}/delete/" class="rounded-full border-2 border-ink bg-surface px-4 py-2 text-[13px] font-extrabold hover:bg-pink">Delete</button>
+            </div>
+        `;
+        grid.appendChild(article);
     }
 }
 
@@ -137,9 +202,14 @@ if (goalForm) {
     // Start and edit: reload so the new list shows, the toast comes from the server (Django messages)
     goalForm.addEventListener('submit', (event) => {
         event.preventDefault();
-        sendForm(goalForm, () => {
-            window.location.reload();
-            return true;
+        sendForm(goalForm, (result) => {
+            if (result.goal) renderOrUpdateGoalCard(result.goal);
+            goalModal.hidePopover();
+            if (result.message && typeof showToast === 'function') {
+                const parts = result.message.split('\n');
+                showToast(parts[0], parts[1] || '', 'success');
+            }
+            return false;
         });
     });
 
@@ -148,7 +218,25 @@ if (goalForm) {
         sendForm(logForm, (result) => {
             updateCard(logForm.dataset.goalId, result);
             logModal.hidePopover();
-            showToast(result.title, result.message, 'success'); // showToast comes from static/js/toast.js
+            if (typeof showToast === 'function') {
+                showToast(result.title, result.message, 'success');
+            }
+            return false;
+        });
+    });
+    deleteForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        sendForm(deleteForm, (result) => {
+            const goalId = deleteForm.dataset.goalId || result.goal_id;
+            const card = document.querySelector(`[data-goal-card="${goalId}"]`);
+            if (card) {
+                card.remove();
+            }
+            deleteModal.hidePopover();
+            if (result.message && typeof showToast === 'function') {
+                const parts = result.message.split('\n');
+                showToast(parts[0], parts[1] || '', 'success');
+            }
             return false;
         });
     });

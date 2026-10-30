@@ -62,10 +62,12 @@ def claim_badge(request, slug):
     elif not can_claim(request.user, milestone):
         messages.error(request, "Not ready yet\nFinish the milestone first, or you already claimed this badge.")
     else:
-        ClaimedBadge.objects.get_or_create(user=request.user, milestone=milestone)
-        messages.success(request, f"Badge claimed\nYou unlocked {milestone.title}.")
+        claim, created = ClaimedBadge.objects.get_or_create(user=request.user, milestone=milestone)
+        if created:
+            messages.success(request, f"Claim submitted!\nWaiting for admin approval to unlock {milestone.title}.")
+        elif claim.status == 'PENDING':
+            messages.info(request, f"Pending\nYour claim for {milestone.title} is waiting for admin approval.")
     return redirect("achievements:show_achievements")
-
 
 @require_POST
 def check_in(request):
@@ -112,9 +114,12 @@ def edit_goal_ajax(request, goal_id):
         return error
     form = GoalForm(request.POST, instance=goal)
     if form.is_valid():
-        form.save()
-        messages.success(request, "Goal updated\nYour changes are saved.")
-        return JsonResponse({"id": goal.id})
+        goal = form.save()
+        return JsonResponse({
+            'status': 'success',
+            'message': "Goal updated\nYour changes are saved.",
+            'goal': serialize_goal(goal)
+        })
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 
@@ -144,13 +149,31 @@ def log_progress_ajax(request, goal_id):
         "message": toast[1],
     })
 
-
+def serialize_goal(goal):
+    return {
+        'id': goal.id,
+        'title': goal.title,
+        'plant_id': goal.plant.id if hasattr(goal.plant, 'id') else str(goal.plant),
+        'plant_name': str(goal.plant),
+        'target': goal.target,
+        'done': goal.done,
+        'percent': goal.percent,
+        'is_complete': goal.is_complete,
+        'finish_by': goal.finish_by.strftime('%Y-%m-%d') if goal.finish_by else '',
+        'finish_by_formatted': goal.finish_by.strftime('%a, %d %b %Y') if goal.finish_by else '',
+        'reason': goal.reason or ''
+    }
 @require_POST
 def delete_goal(request, goal_id):
-    goal = get_object_or_404(Goal, pk=goal_id)
-    # Only the owner may delete. Visitors who aren't logged in never equal the owner, so they're stopped here too.
-    if request.user != goal.user:
-        raise PermissionDenied
+    goal, err_response = get_own_goal(request, goal_id)
+    if err_response:
+        return err_response
     goal.delete()
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+        return JsonResponse({
+            'status': 'success',
+            'message': "Goal deleted\nIt's off your list now.",
+            'goal_id': goal_id
+        })
     messages.success(request, "Goal deleted\nIt's off your list now.")
     return redirect("achievements:show_achievements")

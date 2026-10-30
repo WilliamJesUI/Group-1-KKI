@@ -6,9 +6,9 @@ from django.utils import timezone
 from achievements.models import CheckIn, ClaimedBadge, Milestone, UserMetric
 
 BADGE_RULES = {
-    "events_hosted": lambda user: user.hosted_events.count(),
-    "events_rsvped": lambda user: user.rsvped_events.count(),
-    "plants_saved": None,   # Encyclopedia belum ada
+    "events_hosted": lambda user: user.hosted_events.count() if hasattr(user, "hosted_events") else 0,
+    "events_rsvped": lambda user: user.rsvped_events.count() if hasattr(user, "rsvped_events") else 0,
+    "plants_saved": lambda user: user.saved_plants.count() if hasattr(user, "saved_plants") else 0,
 }
 
 def record_progress(user, metric, amount=1):
@@ -23,7 +23,10 @@ def get_metric(user, metric):
         return 0
     rule = BADGE_RULES.get(metric)
     if rule is not None:
-        return rule(user)
+        try:
+            return rule(user)
+        except Exception:
+            return 0
     # The streak comes from check-ins, every other metric is a stored counter
     if metric == "checkin_streak":
         return current_streak(user)
@@ -52,19 +55,25 @@ def current_streak(user):
 
 def build_milestones(user):
     """One entry per milestone: percent done, and whether it is ready to claim or already claimed."""
-    claimed_ids = set()
+    claims_map = {}
     if user.is_authenticated:
-        claimed_ids = set(ClaimedBadge.objects.filter(user=user).values_list("milestone_id", flat=True))
+        claims = ClaimedBadge.objects.filter(user=user).values("milestone_id", "status")
+        claims_map = {claim["milestone_id"]: claim["status"] for claim in claims}
     cards = []
     for milestone in Milestone.objects.all():
         progress = min(get_metric(user, milestone.metric), milestone.target)
-        claimed = milestone.id in claimed_ids
+        claim_status = claims_map.get(milestone.id)
+        
+        is_approved = claim_status == "APPROVED"
+        is_pending = claim_status == "PENDING"
         cards.append({
             "milestone": milestone,
             # Whole numbers rounded down, so 99.6% never shows as 100% before it can be claimed
             "percent": progress * 100 // milestone.target,
-            "claimed": claimed,
-            "ready": progress >= milestone.target and not claimed,
+            "claimed": is_approved,
+            "pending": is_pending,
+            "status": claim_status,
+            "ready": progress >= milestone.target and not (is_approved or is_pending),
         })
     return cards
 
@@ -72,5 +81,13 @@ def build_milestones(user):
 def can_claim(user, milestone):
     if not user.is_authenticated:
         return False
-    already = ClaimedBadge.objects.filter(user=user, milestone=milestone).exists()
-    return not already and get_metric(user, milestone.metric) >= milestone.target
+    already_claimed = ClaimedBadge.objects.filter(
+        user=user, 
+        milestone=milestone, 
+        status__in=['PENDING', 'APPROVED']
+    ).exists()
+    
+    if already_claimed:
+        return False
+    progress = get_metric(user, milestone.metric)
+    return progress >= milestone.target
