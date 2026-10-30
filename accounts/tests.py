@@ -354,7 +354,7 @@ class RecentBadgesTests(TestCase):
     def claim(self, milestone, user=None):
         from achievements.models import ClaimedBadge
 
-        return ClaimedBadge.objects.create(user=user or self.user, milestone=milestone)
+        return ClaimedBadge.objects.create(user=user or self.user, milestone=milestone, status="APPROVED")
 
     def test_no_badges_shows_the_empty_message(self):
         self.assertContains(self.client.get(self.url), "No badges yet")

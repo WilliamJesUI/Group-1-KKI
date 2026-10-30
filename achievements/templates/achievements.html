@@ -89,7 +89,7 @@
             {% elif card.pending %}
             <span class="shrink-0 rounded-full bg-butter px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em]">Pending approval</span>
             {% elif card.ready %}
-            <form method="post" action="{% url 'achievements:claim_badge' card.milestone.slug %}" class="shrink-0">
+            <form method="post" action="{% url 'achievements:claim_badge' card.milestone.slug %}" class="shrink-0" data-claim-form>
                 {% csrf_token %}
                 <button type="submit" class="rounded-full border-2 border-ink bg-brand-tint px-4 py-2 text-[11px] font-black uppercase tracking-[0.08em] hover:bg-brand-soft">Claim badge</button>
             </form>
@@ -106,5 +106,5 @@
 {% include "goal_modals.html" %}
 <script src="{% static 'js/plant_picker.js' %}"></script>
 <script src="{% static 'js/achievements_goals.js' %}"></script>
-<script src="{% static 'js/achievements_goals.js' %}"></script>
+<script src="{% static 'js/achievements_claim.js' %}"></script>
 {% endblock content %}

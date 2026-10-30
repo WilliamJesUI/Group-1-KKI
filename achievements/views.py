@@ -81,21 +81,25 @@ def show_achievements(request):
 def claim_badge(request, slug):
     milestone = get_object_or_404(Milestone, slug=slug)
     if not request.user.is_authenticated:
-        messages.error(request, "Log in first\nYou need an account to claim badges.")
-        return redirect("achievements:show_achievements")
-
-    existing = ClaimedBadge.objects.filter(user=request.user, milestone=milestone).first()
-    if existing and existing.status == "PENDING":
-        messages.info(request, f"Pending\nYour claim for {milestone.title} is waiting for admin approval.")
-    elif existing and existing.status == "REJECTED":
-        messages.error(request, f"Claim rejected\nYour claim for {milestone.title} was not approved.")
-    elif existing:
-        messages.info(request, f"Already unlocked\nYou already have {milestone.title}.")
-    elif not can_claim(request.user, milestone):
-        messages.error(request, "Not ready yet\nFinish the milestone first.")
+        level, text, status = messages.ERROR, "Log in first\nYou need an account to claim badges.", 403
     else:
-        ClaimedBadge.objects.create(user=request.user, milestone=milestone)
-        messages.success(request, f"Claim submitted!\nWaiting for admin approval to unlock {milestone.title}.")
+        existing = ClaimedBadge.objects.filter(user=request.user, milestone=milestone).first()
+        if existing and existing.status == "PENDING":
+            level, text, status = messages.INFO, f"Pending\nYour claim for {milestone.title} is waiting for admin approval.", 200
+        elif existing and existing.status == "REJECTED":
+            level, text, status = messages.ERROR, f"Claim rejected\nYour claim for {milestone.title} was not approved.", 400
+        elif existing:
+            level, text, status = messages.INFO, f"Already unlocked\nYou already have {milestone.title}.", 200
+        elif not can_claim(request.user, milestone):
+            level, text, status = messages.ERROR, "Not ready yet\nFinish the milestone first.", 400
+        else:
+            ClaimedBadge.objects.create(user=request.user, milestone=milestone)
+            level, text, status = messages.SUCCESS, f"Claim submitted!\nWaiting for admin approval to unlock {milestone.title}.", 201
+    # achievements_claim.js sends the form with fetch, so it gets JSON and updates the card without a reload
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        state = existing.status if request.user.is_authenticated and existing else ("PENDING" if status == 201 else "")
+        return JsonResponse({"message": text, "state": state}, status=status)
+    messages.add_message(request, level, text)
     return redirect("achievements:show_achievements")
 
 @require_POST
