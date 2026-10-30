@@ -12,5 +12,5 @@
   </div>
 </form>
 {% else %}
-<a href="{% url 'profile:login' %}" class="mt-4 inline-block rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Log in to answer a question</a>
+<a href="{% url 'profile:login' %}?next={{ request.path|urlencode }}" class="mt-4 inline-block rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Log in to answer a question</a>
 {% endif %}
