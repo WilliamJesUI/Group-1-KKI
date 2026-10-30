@@ -4,7 +4,7 @@ from achievements.models import CheckIn, ClaimedBadge, Milestone, UserMetric
 
 @admin.register(Milestone)
 class MilestoneAdmin(admin.ModelAdmin):
-    list_display = ("title", "metric", "target", "plant", "order")
+    list_display = ("title", "metric", "target", "plant", "category", "order")
     prepopulated_fields = {"slug": ("title",)}
 
 @admin.register(ClaimedBadge)

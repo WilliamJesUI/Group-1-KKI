@@ -90,8 +90,8 @@ class PageTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.url)
         self.assertContains(response, "Claim badge")
-        # One plant finishes First Sprout and also starts Herb Garden (1 of 3), so two are in progress
-        self.assertEqual(response.context["milestones_in_progress"], 2)
+        # A plain counter finishes First Sprout. Herb Garden only counts real herbs, so it stays at 0.
+        self.assertEqual(response.context["milestones_in_progress"], 1)
 
     def test_progress_percent_rounds_down(self):
         record_progress(self.user, "answers_given", 3)

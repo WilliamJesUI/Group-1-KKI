@@ -50,6 +50,7 @@
         <div>
             <h2 class="font-display text-xl leading-tight">Milestones</h2>
             <p class="text-[13px] text-ink-soft">{{ milestones_in_progress }} of {{ total }} milestones in progress</p>
+            <p class="mt-1 max-w-[560px] text-xs text-ink-soft">Plants count when you post them in the Garden or save them in the Encyclopedia. Harvests count when you press "Log progress" on one of your goals below.</p>
         </div>
         <nav aria-label="Filter milestones by plant" class="flex gap-2">
             <a href="{% url 'achievements:show_achievements' %}"
