@@ -5,10 +5,21 @@ from django.utils import timezone
 
 from achievements.models import CheckIn, ClaimedBadge, Milestone, UserMetric
 
+
+def get_stored_metric(user, metric):
+    """Return a saved counter, including when no counter row exists yet."""
+    counter = UserMetric.objects.filter(user=user, metric=metric).first()
+    return counter.value if counter else 0
+
+
 BADGE_RULES = {
     "events_hosted": lambda user: user.hosted_events.count() if hasattr(user, "hosted_events") else 0,
     "events_rsvped": lambda user: user.rsvped_events.count() if hasattr(user, "rsvped_events") else 0,
     "plants_saved": lambda user: user.saved_plants.count() if hasattr(user, "saved_plants") else 0,
+    "answers_given": lambda user: (
+        (user.answers.count() if hasattr(user, "answers") else 0) +
+        get_stored_metric(user, "answers_given")
+    ),
 }
 
 def record_progress(user, metric, amount=1):
@@ -60,7 +71,7 @@ def build_milestones(user):
         claims = ClaimedBadge.objects.filter(user=user).values("milestone_id", "status")
         claims_map = {claim["milestone_id"]: claim["status"] for claim in claims}
     cards = []
-    for milestone in Milestone.objects.all():
+    for milestone in Milestone.objects.select_related("plant"):
         progress = min(get_metric(user, milestone.metric), milestone.target)
         claim_status = claims_map.get(milestone.id)
         

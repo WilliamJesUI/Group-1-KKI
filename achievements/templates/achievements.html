@@ -52,10 +52,18 @@
             <p class="text-[13px] text-ink-soft">{{ milestones_in_progress }} of {{ total }} milestones in progress</p>
         </div>
         <nav aria-label="Filter milestones by plant" class="flex gap-2">
+            <a href="{% url 'achievements:show_achievements' %}"
+            {% if not selected_plant %}aria-current="page"{% endif %}
+            class="rounded-full border-2 border-ink px-4 py-1.5 text-[13px] font-extrabold">
+                All
+            </a>
+
             {% for value, label in plant_filters %}
-            <a href="{% if value %}?plant={{ value }}{% else %}{% url 'achievements:show_achievements' %}{% endif %}"
-               {% if value == selected_plant %}aria-current="page"{% endif %}
-               class="rounded-full border-2 border-ink px-4 py-1.5 text-[13px] font-extrabold {% if value == selected_plant %}bg-brand-soft{% else %}bg-surface hover:bg-brand-tint{% endif %}">{{ label }}</a>
+            <a href="?plant={{ value }}"
+            {% if value == selected_plant %}aria-current="page"{% endif %}
+            class="rounded-full border-2 border-ink px-4 py-1.5 text-[13px] font-extrabold {% if value == selected_plant %}bg-brand-soft{% else %}bg-surface hover:bg-brand-tint{% endif %}">
+                {{ label }}
+            </a>
             {% endfor %}
         </nav>
     </div>
@@ -78,6 +86,8 @@
             <span class="flex shrink-0 items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-brand">
                 <img src="{% static 'img/icons/check.svg' %}" alt="" width="16" height="16">Claimed
             </span>
+            {% elif card.pending %}
+            <span class="shrink-0 rounded-full bg-butter px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em]">Pending approval</span>
             {% elif card.ready %}
             <form method="post" action="{% url 'achievements:claim_badge' card.milestone.slug %}" class="shrink-0">
                 {% csrf_token %}
@@ -88,7 +98,7 @@
             {% endif %}
         </article>
         {% empty %}
-        <p class="rounded-2xl border-2 border-dashed border-line p-8 text-center text-ink-soft lg:col-span-2">No milestones for this plant yet.</p>
+            <p class="text-sm text-ink-soft lg:col-span-2">No milestones for this plant yet</p>
         {% endfor %}
     </div>
 </section>

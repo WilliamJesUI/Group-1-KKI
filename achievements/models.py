@@ -26,7 +26,6 @@ class Milestone(models.Model):
         ("bg-[#b8fff8]", "Aqua"),
         ("bg-butter", "Butter"),
     ]
-    PLANT_CHOICES = [("", "All plants"), ("tomato", "Tomato"), ("herbs", "Herbs")]
 
     slug = models.SlugField(unique=True)
     title = models.CharField(max_length=60)
@@ -38,7 +37,7 @@ class Milestone(models.Model):
     icon = models.CharField(max_length=120)
     tone = models.CharField(max_length=30, choices=TONE_CHOICES, default="bg-brand-soft")
     # Which pill on the page shows this milestone. Empty means it only shows under "All plants".
-    plant_type = models.CharField(max_length=20, blank=True, choices=PLANT_CHOICES)
+    plant = models.ForeignKey("plants.Plant", null=True, blank=True, on_delete=models.SET_NULL, related_name="milestones")
     order = models.PositiveSmallIntegerField(default=0)
 
     class Meta:

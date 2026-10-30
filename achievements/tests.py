@@ -98,14 +98,36 @@ class PageTests(TestCase):
         slugs = [card["milestone"].slug for card in response.context["cards"]]
         self.assertEqual(slugs, ["tomato-time"])
 
+    def test_new_plant_filter_uses_the_milestone_relationship(self):
+        plant = make_plant("Dragon fruit", "fruits")
+        Milestone.objects.create(
+            slug="dragon-fruit-grower",
+            title="Grower Badge",
+            description="A badge for a new plant",
+            metric="plants_added",
+            target=4,
+            icon="img/icons/ach-sprout-lg.svg",
+            plant=plant,
+        )
+
+        response = self.client.get(self.url + f"?plant={plant.slug}")
+
+        self.assertEqual(response.context["selected_plant"], plant.slug)
+        self.assertEqual(
+            [card["milestone"].slug for card in response.context["cards"]],
+            ["dragon-fruit-grower"],
+        )
+        self.assertIn((plant.slug, plant.name), response.context["plant_filters"])
+
     def test_unknown_plant_filter_falls_back_to_all(self):
         response = self.client.get(self.url + "?plant=banana")
         self.assertEqual(len(response.context["cards"]), Milestone.objects.count())
 
     def test_filter_with_no_milestones_shows_empty_message(self):
-        Milestone.objects.filter(plant_type="herbs").delete()
-        response = self.client.get(self.url + "?plant=herbs")
-        self.assertContains(response, "No milestones for this plant yet")
+        plant = make_plant("No badge plant", "flowers")
+        response = self.client.get(self.url + f"?plant={plant.slug}")
+        self.assertEqual(response.context["selected_plant"], "")
+        self.assertEqual(len(response.context["cards"]), Milestone.objects.count())
 
     def test_percent_is_zero_with_no_milestones_at_all(self):
         Milestone.objects.all().delete()
@@ -418,3 +440,13 @@ class GoalViewTests(TestCase):
         response = self.client.get(self.page)
         self.assertContains(response, "Log in to start a goal")
         self.assertNotContains(response, "data-goal-new")
+
+    def test_pending_claim_shows_the_pending_label_not_the_button(self):
+        record_progress(self.user, "plants_added")
+        milestone = Milestone.objects.get(slug="first-sprout")
+        ClaimedBadge.objects.create(user=self.user, milestone=milestone, status="PENDING")
+        self.client.force_login(self.user)
+        response = self.client.get(self.page)
+        self.assertContains(response, "Pending approval")
+        self.assertNotContains(response, "Claim badge")
+        self.assertEqual(response.context["unlocked"], 0)
