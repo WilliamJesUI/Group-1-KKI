@@ -97,7 +97,7 @@ Motion lives in static/js/landing.js. Without JavaScript, or with reduced motion
     <figure>
         <div data-plate class="relative h-[420px] overflow-hidden rounded-3xl border-2 border-ink shadow-[4px_4px_0_0_var(--color-ink)] sm:h-[560px]">
             {# Cover photo from Pexels (photo 33352121), saved in static so the page doesn't wait on another site. Credit in docs/CREDITS.md #}
-            <img src="{% static 'img/landing-cover.jpg' %}" alt="Young people laughing while they work in a vegetable garden" fetchpriority="high" class="absolute inset-0 size-full object-cover">
+            <img src="{% static 'img/landing-cover.jpg' %}" alt="Young people laughing while they work in a vegetable garden" fetchpriority="high" class="absolute inset-0 size-full object-cover object-[50%_22%]">
             {% if week.plant %}
             <a href="{% url 'encyclopedia:detail' week.plant.slug %}" class="absolute bottom-5 left-5 right-5 flex items-center gap-4 rounded-3xl border-2 border-ink bg-white p-3.5 pr-6 shadow-[4px_4px_0_0_var(--color-ink)] transition duration-150 ease-out hover:-translate-x-0.5 hover:-translate-y-0.5 sm:right-auto motion-reduce:hover:translate-x-0 motion-reduce:hover:translate-y-0">
                 {% if week.plant.thumb_image_url %}<img src="{{ week.plant.thumb_image_url }}" alt="" class="size-16 shrink-0 rounded-full border-2 border-ink object-cover">{% endif %}
