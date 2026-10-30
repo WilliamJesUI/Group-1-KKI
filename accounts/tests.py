@@ -332,3 +332,63 @@ class GardenSnapshotsTests(TestCase):
 
     def test_empty_profile_shows_the_empty_message(self):
         self.assertContains(self.client.get(self.url), "No garden posts yet")
+
+
+class RecentBadgesTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("ben", "ben@example.com", PASSWORD)
+        self.other = User.objects.create_user("sam", "sam@example.com", PASSWORD)
+        self.url = reverse("profile:show_user_profile", args=["ben"])
+
+    def make_milestone(self, number, tone="bg-brand-soft"):
+        from achievements.models import Milestone
+
+        return Milestone.objects.create(
+            slug=f"badge-{number}", title=f"Badge {number}", description="Test badge", metric="plants_added",
+            target=1, icon="img/icons/ach-sprout-lg.svg", tone=tone,
+        )
+
+    def claim(self, milestone, user=None):
+        from achievements.models import ClaimedBadge
+
+        return ClaimedBadge.objects.create(user=user or self.user, milestone=milestone)
+
+    def test_no_badges_shows_the_empty_message(self):
+        self.assertContains(self.client.get(self.url), "No badges yet")
+
+    def test_a_claimed_badge_shows_on_the_profile_with_its_color(self):
+        self.claim(self.make_milestone(1, tone="bg-pink"))
+        response = self.client.get(self.url)
+        self.assertContains(response, "Badge 1")
+        self.assertContains(response, "bg-pink")
+        self.assertNotContains(response, "No badges yet")
+
+    def test_only_the_three_newest_claims_are_shown(self):
+        for number in range(1, 5):
+            self.claim(self.make_milestone(number))
+        response = self.client.get(self.url)
+        for number in (2, 3, 4):
+            self.assertContains(response, f"Badge {number}")
+        self.assertNotContains(response, "Badge 1")
+
+    def test_other_peoples_badges_are_not_shown(self):
+        self.claim(self.make_milestone(1), user=self.other)
+        self.assertNotContains(self.client.get(self.url), "Badge 1")
+
+    def test_a_finished_but_unclaimed_badge_is_not_shown(self):
+        self.make_milestone(1)
+        self.assertNotContains(self.client.get(self.url), "Badge 1")
+
+    def test_the_achievements_stat_counts_claimed_badges(self):
+        from accounts.views import get_profile_stats
+
+        self.claim(self.make_milestone(1))
+        self.claim(self.make_milestone(2))
+        stats = {label: value for value, label in get_profile_stats(self.user)}
+        self.assertEqual(stats["Achievements"], "2")
+
+    def test_view_all_is_only_for_the_owner(self):
+        link = reverse("achievements:show_achievements")
+        self.assertNotContains(self.client.get(self.url), f'href="{link}" class="text-[11px]')
+        self.client.force_login(self.user)
+        self.assertContains(self.client.get(self.url), f'href="{link}" class="text-[11px]')

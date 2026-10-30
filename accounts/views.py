@@ -73,9 +73,9 @@ def format_count(number):
 # All photos are already credited in docs/CREDITS.md (Garden posts and Plants rows).
 DEMO_STATS = (12, 1200, 8, 6)
 DEMO_BADGES = [
-    {"name": "First sprout", "color": "green"},
-    {"name": "Green thumb", "color": "pink"},
-    {"name": "Event regular", "color": "lilac"},
+    {"name": "First sprout", "tone": "bg-brand-soft", "icon": "img/icons/ach-sprout.svg"},
+    {"name": "Green thumb", "tone": "bg-pink", "icon": "img/icons/ach-award.svg"},
+    {"name": "Event regular", "tone": "bg-lilac", "icon": "img/icons/ach-calendar-lg.svg"},
 ]
 DEMO_SNAPSHOTS = [
     {"image_url": "https://images.pexels.com/photos/6314416/pexels-photo-6314416.jpeg?auto=compress&cs=tinysrgb&w=800", "likes": 128, "caption": "Balcony tomatoes"},
@@ -90,16 +90,18 @@ def demo_data_on():
 
 
 def get_profile_stats(user):
-    # The four numbers in the stats bar. Garden posts and appreciations come from the Garden app.
-    # Achievements and plants growing are 0 until those modules are connected, for example:
-    #   achievements   = UserAchievement.objects.filter(user=user, is_verified=True).count()
+    # The four numbers in the stats bar. Garden posts and appreciations come from the Garden app, achievements
+    # from the Achievements app. Plants growing is 0 until that module is connected, for example:
     #   plants_growing = UserPlant.objects.filter(user=user).count()
-    from garden.models import Post  # imported here so the two apps don't import each other when Django starts
+    # (apps are imported here so they don't import each other when Django starts)
+    from achievements.models import ClaimedBadge
+    from garden.models import Post
 
     garden_posts = Post.objects.filter(author=user).count()
     # Appreciations = every like on any of this user's posts
     appreciations = Post.likes.through.objects.filter(post__author=user).count()
-    achievements = 0
+    # Only badges the user has pressed "Claim badge" for count, same as on the Achievements page
+    achievements = ClaimedBadge.objects.filter(user=user).count()
     plants_growing = 0
     if demo_data_on():
         garden_posts, appreciations, achievements, plants_growing = DEMO_STATS
@@ -112,9 +114,18 @@ def get_profile_stats(user):
 
 
 def get_recent_badges(user):
-    # Up to 3 items for "Recent badges". The template reads badge.name and badge.color ("green", "pink" or "lilac").
-    # TODO: fill from the Achievement module, e.g. the user's 3 newest unlocked achievements.
-    return DEMO_BADGES if demo_data_on() else []
+    # The 3 badges this user claimed most recently, for "Recent badges". The template reads badge.name,
+    # badge.tone (the background class of the icon square) and badge.icon (a path inside static/),
+    # the same things the Achievements page shows for a milestone.
+    if demo_data_on():
+        return DEMO_BADGES
+    from achievements.models import ClaimedBadge
+
+    claims = ClaimedBadge.objects.filter(user=user).select_related("milestone").order_by("-claimed_at", "-id")[:3]
+    return [
+        {"name": claim.milestone.title, "tone": claim.milestone.tone, "icon": claim.milestone.icon}
+        for claim in claims
+    ]
 
 
 def get_garden_snapshots(user):
