@@ -58,6 +58,8 @@
 *   **Gardener (Regular User):** Can browse the encyclopedia, post photos of their garden, claim achievements, RSVP to events, and participate in the Q&A forum.
 *   **Admin/Moderator:** Has all Gardener privileges, plus the authority to verify achievement claims, moderate forum discussions, remove inappropriate social posts, and manage the event calendar.
 
+**How to make someone a moderator:** log in to `/admin/` with a superuser (`python manage.py createsuperuser` locally), open **Users**, pick the person, tick **Staff status** and save. A staff account sees a Delete button on every event, garden post, question and answer, and can approve or reject badge claims in `/admin/`.
+
 ## 6. Project Links
 *   **Figma Design:** [https://www.figma.com/design/Rgarm0NKaaezYTwWCWxCSb/Untitled?node-id=0-1&t=0N0NtdJeEtON4oHQ-1](https://www.figma.com/design/Rgarm0NKaaezYTwWCWxCSb/Untitled?node-id=0-1&t=0N0NtdJeEtON4oHQ-1)
 *   **PWS Deployment:** [https://william-jesiel-growyourgarden.pws.cs.ui.ac.id](https://william-jesiel-growyourgarden.pws.cs.ui.ac.id)
@@ -138,3 +140,28 @@ pip install coverage
 coverage run --source='.' manage.py test
 coverage report
 ```
+
+The same checks run automatically on every pull request and every push to `main` through GitHub Actions (`.github/workflows/tests.yml`). The run fails if a migration is missing or coverage drops under 80%.
+
+## 10. Screenshots
+
+| Landing page | Encyclopedia |
+|---|---|
+| ![Landing page](docs/screenshots/landing.png) | ![Encyclopedia](docs/screenshots/encyclopedia.png) |
+| **Plant page** | **Events** |
+| ![Plant page](docs/screenshots/plant-page.png) | ![Events](docs/screenshots/events.png) |
+| **Garden** | **Community** |
+| ![Garden](docs/screenshots/garden.png) | ![Community](docs/screenshots/community.png) |
+| **Achievements** | **Profile** |
+| ![Achievements](docs/screenshots/achievements.png) | ![Profile](docs/screenshots/profile.png) |
+| **Dark mode** (moon button next to your name) | |
+| ![Dark mode](docs/screenshots/dark-mode.png) | |
+
+## 11. Quality and Security Notes
+
+- **Custom login check for AJAX:** `growyourgarden/permissions.py` has an `ajax_login_required` decorator. A guest who clicks Like, RSVP or Delete gets a JSON 403 with a friendly message (shown as a toast) instead of a redirect page inside a fetch call.
+- **Owner or moderator only:** every edit and delete view checks the owner on the server (`can_delete`), not only by hiding buttons.
+- **CSRF on every fetch:** all AJAX calls send the `X-CSRFToken` header from `static/js/csrf.js`.
+- **API down plan:** plant data is fetched from Trefle once and saved in `plants/data/plants.json`, which a data migration loads. If Trefle is down the site still has all 78 plants. Live Trefle lookups are cached for a day with Django's cache.
+- **Lighter queries:** list pages use `select_related`, `prefetch_related` and `annotate` so a page doesn't run one query per card.
+- **Secrets stay out of git:** the database password and the Trefle token come from `.env` locally and from PWS Environs in production (`SECRET_KEY` can be set there too).
