@@ -76,6 +76,7 @@ function openGoalModal(card, editUrl) {
     document.getElementById('goal-modal-title').textContent = editing ? 'Edit goal' : 'Start a goal';
     document.getElementById('goal-submit').textContent = editing ? 'Save changes' : 'Start goal';
     if (editing) {
+        goalForm.elements['plant'].dispatchEvent(new Event('change', { bubbles: true }));
         goalForm.elements['title'].value = card.dataset.title;
         goalForm.elements['plant'].value = card.dataset.plant;
         goalForm.elements['target'].value = card.dataset.target;

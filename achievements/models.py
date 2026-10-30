@@ -90,7 +90,7 @@ class Goal(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="goals")
     title = models.CharField(max_length=100)
     # Plain text for now. When the Encyclopedia module is merged this becomes a ForeignKey to its Plant model.
-    plant = models.CharField(max_length=60)
+    plant = models.ForeignKey("plants.Plant", on_delete=models.PROTECT, related_name="goals")
     # "How many times?" The goal is finished when the logged amounts add up to this number.
     target = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(1000)])
     finish_by = models.DateField(blank=True, null=True)

@@ -2,6 +2,8 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
+from events.forms import PlantSelect
+from plants.models import Plant
 from achievements.models import Goal, ProgressLog
 
 # Tailwind classes for the inputs, the same ones events/forms.py uses (from Figma).
@@ -24,21 +26,12 @@ PICKER_CLASS = "min-w-0 flex-1 bg-transparent text-sm focus:outline-none [&::-we
 
 # Temporary list, taken from the Encyclopedia frame in Figma.
 # When the Encyclopedia module is merged, Goal.plant becomes a ForeignKey to its Plant model and this list goes away.
-PLANT_CHOICES = [
-    ("", "Choose a plant..."),
-    ("Sweet basil", "Sweet basil"),
-    ("Cherry tomato", "Cherry tomato"),
-    ("Rosemary", "Rosemary"),
-    ("Mint", "Mint"),
-    ("Marigold", "Marigold"),
-    ("Chili pepper", "Chili pepper"),
-]
-
 
 class GoalForm(forms.ModelForm):
-    plant = forms.ChoiceField(
-        choices=PLANT_CHOICES,
-        widget=forms.Select(attrs={"class": SELECT_CLASS}),
+    plant = forms.ModelChoiceField(
+        queryset=Plant.objects.all(),
+        empty_label="Choose a plant...",
+        widget=PlantSelect(attrs={"class": INPUT_CLASS}),
         error_messages={"required": "Please choose a plant."},
     )
 
