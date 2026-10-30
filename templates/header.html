@@ -49,6 +49,13 @@ The .nav-tab and .nav-tab-active styles are in base.html, and static/js/navbar.j
                         <span class="text-xs text-ink-soft">@{{ user.username }}</span>
                     </span>
                 </a>
+                {# Log out needs a POST form (Django 5 refuses a plain link) #}
+                <form method="post" action="{% url 'profile:logout' %}" class="ml-auto lg:ml-1">
+                    {% csrf_token %}
+                    <button type="submit" aria-label="Log out" title="Log out" class="grid size-10 place-items-center rounded-full border-2 border-ink bg-surface text-ink transition duration-150 ease-out hover:bg-brand-tint active:scale-[0.95] motion-reduce:active:scale-100">
+                        <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+                    </button>
+                </form>
             </div>
             {% else %}
             <div class="mt-4 flex items-center gap-3 border-t border-line pt-4 lg:mt-0 lg:gap-2 lg:border-0 lg:pt-0">

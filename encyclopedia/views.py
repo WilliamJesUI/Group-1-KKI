@@ -2,8 +2,10 @@ from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.contrib.auth.views import redirect_to_login
 from django.db.models import Count, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
 from events.models import Event
@@ -553,8 +555,9 @@ def delete_collection(request, collection_id):
 
 def my_collection(request):
     """Show the user's collections and handle collection renaming."""
-    if not _require_authenticated(request):
-        return redirect("encyclopedia:index")
+    if not request.user.is_authenticated:
+        # Guests log in first and then come straight back here
+        return redirect_to_login(request.get_full_path(), reverse("profile:login"))
 
     collections = PlantCollection.objects.filter(user=request.user)
     active_id = request.GET.get("collection", "").strip()
