@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from achievements.forms import GoalForm, ProgressLogForm
+from garden.models import Post
 from plants.models import Plant
 from achievements.models import CheckIn, ClaimedBadge, Goal, Milestone, ProgressLog
 from achievements.services import can_claim, check_in_today, current_streak, get_metric, record_progress
@@ -29,6 +30,12 @@ class ServicesTests(TestCase):
 
     def test_metric_is_zero_without_progress(self):
         self.assertEqual(get_metric(self.user, "answers_given"), 0)
+
+    def test_posts_shared_counts_the_users_garden_posts(self):
+        Post.objects.create(author=self.user, caption="First garden update")
+        Post.objects.create(author=self.user, caption="Another garden update")
+
+        self.assertEqual(get_metric(self.user, "posts_shared"), 2)
 
     def test_streak_counts_days_in_a_row(self):
         today = timezone.localdate()

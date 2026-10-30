@@ -16,6 +16,7 @@ BADGE_RULES = {
     "events_hosted": lambda user: user.hosted_events.count() if hasattr(user, "hosted_events") else 0,
     "events_rsvped": lambda user: user.rsvped_events.count() if hasattr(user, "rsvped_events") else 0,
     "plants_saved": lambda user: user.saved_plants.count() if hasattr(user, "saved_plants") else 0,
+    "posts_shared": lambda user: user.garden_posts.count() if hasattr(user, "garden_posts") else 0,
     "answers_given": lambda user: (
         (user.answers.count() if hasattr(user, "answers") else 0) +
         get_stored_metric(user, "answers_given")
