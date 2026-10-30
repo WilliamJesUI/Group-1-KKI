@@ -1,0 +1,11 @@
+{% comment %}
+The top of each module part on the landing page: "01 · GARDEN", a big title with an italic end, and a link.
+Use: {% include "home/spread_header.html" with number="01" module="Garden" title_id="garden-title" title="What grew" italic="this week." link_url=garden_url link_label="Open the garden" %}
+{% endcomment %}
+<div class="flex flex-wrap items-end justify-between gap-6 border-t-2 border-ink pt-6" data-rise>
+    <div>
+        <p class="text-xs font-black uppercase tracking-[0.08em] text-brand">{{ number }} · {{ module }}</p>
+        <h2 id="{{ title_id }}" class="mt-3 font-display text-[clamp(2.5rem,6vw,4.5rem)] leading-[1.02]">{{ title }} <em class="text-brand">{{ italic }}</em></h2>
+    </div>
+    <a href="{{ link_url }}" class="inline-flex items-center gap-1 rounded-full border-2 border-ink bg-brand-soft px-5 py-2.5 text-sm font-extrabold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100">{{ link_label }} <span aria-hidden="true">›</span></a>
+</div>

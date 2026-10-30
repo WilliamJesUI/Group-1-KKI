@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% load static accounts_tags %}
+
+{% block title %}Grow Your Garden{% endblock title %}
+
+{% comment %}
+The landing page at "/" (Figma: Landing section, "Landing / guest" and "Landing / logged in").
+It looks like a weekly garden magazine: a cover, "In this issue" (one row per module) and one part per module,
+all with real data from home/services.py. No navbar, like the TA asked, just the logo and Log in / Register.
+Motion lives in static/js/landing.js. Without JavaScript, or with reduced motion turned on, everything simply shows.
+{% endcomment %}
+
+{% block meta %}
+{% include "event_card_styles.html" %}
+{# Only hide things for the animations when JavaScript is on and the visitor hasn't asked for less motion #}
+<script>if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('js-motion');</script>
+<style>
+    /* Headline lines slide up out of a mask. The padding keeps the bottoms of g, p and italic letters visible. */
+    .reveal-line { display: block; overflow: hidden; padding-bottom: 0.14em; margin-bottom: -0.14em; }
+    .reveal-line > span { display: inline-block; }
+    .js-motion .reveal-line > span { transform: translateY(110%); transition: transform 500ms cubic-bezier(.22, 1, .36, 1); }
+    .js-motion.landing-ready .reveal-line > span { transform: none; }
+    /* Fade up 8px, like the pop-ups */
+    .js-motion [data-rise] { opacity: 0; transform: translateY(8px); transition: opacity 400ms ease-out, transform 400ms ease-out; }
+    .js-motion [data-rise].is-in { opacity: 1; transform: none; }
+    /* Photos open from the middle. The -8px keeps the hard shadow visible. */
+    .js-motion [data-plate] { clip-path: inset(12% 0 12% 0 round 24px); transition: clip-path 900ms cubic-bezier(.22, 1, .36, 1); }
+    .js-motion [data-plate].is-in { clip-path: inset(0 -8px -8px 0 round 24px); }
+    .js-motion [data-plate] img { transform: scale(1.06); transition: transform 900ms cubic-bezier(.22, 1, .36, 1); }
+    .js-motion [data-plate].is-in img { transform: none; }
+</style>
+{% endblock meta %}
+
+{% block header %}{% endblock header %}
+
+{% block content %}
+{# ---------- Masthead: logo, issue line, Log in / Register (or your avatar) ---------- #}
+<header class="flex flex-wrap items-center justify-between gap-4 border-b-2 border-ink pb-5">
+    <a href="{% url 'home:show_landing' %}" class="flex items-center gap-3">
+        <img src="{% static 'img/logo-tomato.png' %}" alt="" class="size-11">
+        <span class="font-display text-[22px]">Grow Your Garden</span>
+    </a>
+    <p class="hidden text-xs font-black uppercase tracking-[0.08em] text-ink-soft lg:block">
+        Issue {{ issue }} &nbsp;·&nbsp; {% if user.is_authenticated %}Your copy, {{ user.first_name|default:user.username|truncatechars:14 }}{% else %}Week of {{ week_start|date:"j M Y" }} &nbsp;·&nbsp; Free for neighbors{% endif %}
+    </p>
+    <div class="flex items-center gap-3">
+        {% if user.is_authenticated %}
+        <a href="{% url 'profile:show_profile' %}" aria-label="Your profile">{% avatar user %}</a>
+        <a href="{% url 'garden:show_garden' %}" class="rounded-full border-2 border-ink bg-brand px-5 py-2.5 text-sm font-extrabold text-white transition duration-150 ease-out hover:bg-brand-hover active:scale-[0.97] motion-reduce:active:scale-100">Go to your garden</a>
+        {% else %}
+        <a href="{% url 'profile:login' %}" class="rounded-full border-2 border-ink bg-white px-5 py-2.5 text-sm font-extrabold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100">Log in</a>
+        <a href="{% url 'profile:register' %}" class="rounded-full border-2 border-ink bg-brand px-5 py-2.5 text-sm font-extrabold text-white transition duration-150 ease-out hover:bg-brand-hover active:scale-[0.97] motion-reduce:active:scale-100">Register</a>
+        {% endif %}
+    </div>
+</header>
+
+{# ---------- Cover ---------- #}
+<section aria-labelledby="landing-title" class="pt-10 sm:pt-14">
+    <h1 id="landing-title" class="font-display text-[clamp(2.75rem,10.5vw,9rem)] leading-[1.02] tracking-[-0.02em]">
+        {% if user.is_authenticated %}
+        <span class="reveal-line"><span>Welcome back,</span></span>
+        <span class="reveal-line"><span style="transition-delay: 60ms">{{ user.first_name|default:user.username|truncatechars:12 }}. The garden</span></span>
+        <span class="reveal-line"><span style="transition-delay: 120ms">missed <em class="text-brand">you.</em></span></span>
+        {% else %}
+        <span class="reveal-line"><span>Plant together,</span></span>
+        <span class="reveal-line"><span style="transition-delay: 60ms">share the harvest,</span></span>
+        <span class="reveal-line"><span style="transition-delay: 120ms">meet the <em class="text-brand">neighbors.</em></span></span>
+        {% endif %}
+    </h1>
+
+    <div class="mt-8 flex flex-wrap items-end justify-between gap-6 pb-12" data-rise style="transition-delay: 250ms">
+        <div class="max-w-[560px]">
+            {% if user.is_authenticated and mine %}
+            <p class="text-lg leading-relaxed text-ink-soft">This week: {{ mine.new_posts }} new post{{ mine.new_posts|pluralize }}, {{ mine.new_events }} new event{{ mine.new_events|pluralize }} and {{ mine.answers_for_you }} new answer{{ mine.answers_for_you|pluralize }} on the street. Pick up where you left off.</p>
+            {% else %}
+            <p class="text-lg leading-relaxed text-ink-soft">Grow Your Garden is a website for gardeners on your street. Post what you grow, come to planting days, learn how to care for {{ numbers.plants|default:"lots of" }} plants and pick up badges on the way.</p>
+            {% endif %}
+            <div class="mt-6 flex flex-wrap gap-3">
+                {% if user.is_authenticated %}
+                <a href="{% url 'garden:show_garden' %}" class="rounded-full border-2 border-ink bg-brand px-5 py-2.5 text-sm font-extrabold text-white transition duration-150 ease-out hover:bg-brand-hover active:scale-[0.97] motion-reduce:active:scale-100">Go to your garden</a>
+                <a href="{% url 'events:show_events' %}?filter=mine" class="rounded-full border-2 border-ink bg-white px-5 py-2.5 text-sm font-extrabold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100">See my events</a>
+                {% else %}
+                <a href="{% url 'profile:register' %}" class="rounded-full border-2 border-ink bg-brand px-5 py-2.5 text-sm font-extrabold text-white transition duration-150 ease-out hover:bg-brand-hover active:scale-[0.97] motion-reduce:active:scale-100">Create an account</a>
+                <a href="#in-this-issue" class="rounded-full border-2 border-ink bg-white px-5 py-2.5 text-sm font-extrabold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100">Walk in, no account needed <span aria-hidden="true">↓</span></a>
+                {% endif %}
+            </div>
+        </div>
+        {% if posters %}
+        <p class="inline-flex items-center gap-2 rounded-full border-2 border-ink bg-butter px-3 py-1.5 text-xs font-black uppercase tracking-[0.08em]">
+            <span class="relative flex size-2" aria-hidden="true"><span class="absolute inline-flex size-full animate-ping rounded-full bg-brand opacity-60 motion-reduce:animate-none"></span><span class="relative inline-flex size-2 rounded-full bg-brand"></span></span>
+            {{ posters }} gardener{{ posters|pluralize }} posted this week
+        </p>
+        {% endif %}
+    </div>
+
+    {# Plate 1: the cover photo, with the plant of the week on it #}
+    <figure>
+        <div data-plate class="relative h-[420px] overflow-hidden rounded-3xl border-2 border-ink shadow-[4px_4px_0_0_var(--color-ink)] sm:h-[560px]">
+            {# Cover photo from Pexels (photo 33352121), saved in static so the page doesn't wait on another site. Credit in docs/CREDITS.md #}
+            <img src="{% static 'img/landing-cover.jpg' %}" alt="Young people laughing while they work in a vegetable garden" fetchpriority="high" class="absolute inset-0 size-full object-cover">
+            {% if week.plant %}
+            <a href="{% url 'encyclopedia:detail' week.plant.slug %}" class="absolute bottom-5 left-5 right-5 flex items-center gap-4 rounded-3xl border-2 border-ink bg-white p-3.5 pr-6 shadow-[4px_4px_0_0_var(--color-ink)] transition duration-150 ease-out hover:-translate-x-0.5 hover:-translate-y-0.5 sm:right-auto motion-reduce:hover:translate-x-0 motion-reduce:hover:translate-y-0">
+                {% if week.plant.thumb_image_url %}<img src="{{ week.plant.thumb_image_url }}" alt="" class="size-16 shrink-0 rounded-full border-2 border-ink object-cover">{% endif %}
+                <span>
+                    <span class="block text-[11px] font-black uppercase tracking-[0.08em] text-brand">Plant of the week</span>
+                    <span class="block font-display text-[28px] leading-tight">{{ week.plant.name }}</span>
+                    <span class="block text-[13px] font-bold text-ink-soft">{% if week.short_line %}{{ week.short_line }}{% else %}{{ week.plant.get_difficulty_display|default:"Easy" }}{% if week.plant.sunlight %} · {{ week.plant.get_sunlight_display }}{% endif %}{% endif %} · Read the care guide <span aria-hidden="true">›</span></span>
+                </span>
+            </a>
+            {% endif %}
+        </div>
+        <figcaption class="mt-3 text-xs font-bold text-ink-soft">Plate 1. Weekend planting with the neighbors.</figcaption>
+    </figure>
+</section>
+
+{# ---------- In this issue: one row per module, each jumps to its part below ---------- #}
+<section id="in-this-issue" aria-labelledby="issue-title" class="scroll-mt-6 pt-28">
+    <div class="flex flex-wrap items-end justify-between gap-4 border-b-2 border-ink pb-5">
+        <h2 id="issue-title" class="text-xs font-black uppercase tracking-[0.08em]">In this issue</h2>
+        {% if numbers %}
+        <dl class="flex flex-wrap items-center gap-x-6 gap-y-2">
+            {% for value, label in numbers_list %}
+            <div class="flex items-baseline gap-2 {% if not forloop.first %}sm:border-l-2 sm:border-ink sm:pl-6{% endif %}">
+                <dd class="font-display text-5xl leading-none" data-count="{{ value }}">{{ value }}</dd>
+                <dt class="text-[15px] font-bold text-ink-soft">{{ label }}</dt>
+            </div>
+            {% endfor %}
+        </dl>
+        {% endif %}
+    </div>
+    <ol>
+        {% for row in contents %}
+        <li class="border-b-2 border-ink">
+            <a href="#spread-{{ row.slug }}" class="group grid grid-cols-[3rem_1fr_auto] items-center gap-x-4 gap-y-1 px-2 py-5 transition-colors duration-200 hover:bg-brand-tint focus-visible:bg-brand-tint focus-visible:outline-none sm:grid-cols-[4.5rem_minmax(0,28rem)_1fr_auto_auto] sm:gap-x-6 sm:px-4">
+                <span class="font-display text-3xl text-ink-soft sm:text-[40px]">{{ row.number }}</span>
+                <span class="font-display text-[clamp(1.75rem,8vw,3.75rem)] leading-none transition-colors duration-200 group-hover:italic group-hover:text-brand group-focus-visible:italic group-focus-visible:text-brand">{{ row.name }}</span>
+                <span class="col-start-2 text-base text-ink-soft sm:col-start-auto sm:text-lg">{{ row.line }}</span>
+                <span class="col-start-2 justify-self-start rounded-full border-2 border-ink px-3.5 py-1.5 text-sm font-extrabold sm:col-start-auto {{ row.tint }}">{{ row.chip }}</span>
+                <span class="row-start-1 col-start-3 flex size-12 items-center justify-center rounded-full border-2 border-ink bg-white transition-colors duration-200 group-hover:bg-brand group-focus-visible:bg-brand sm:row-start-auto sm:col-start-auto" aria-hidden="true">
+                    <img src="{% static 'img/icons/chevron-right.svg' %}" alt="" class="size-5 group-hover:invert group-focus-visible:invert">
+                </span>
+            </a>
+        </li>
+        {% endfor %}
+    </ol>
+</section>
+
+{# ---------- 01 Garden ---------- #}
+<section id="spread-garden" aria-labelledby="garden-title" class="scroll-mt-6 pt-24 sm:pt-36">
+    {% include "home/spread_header.html" with number="01" module="Garden" title_id="garden-title" title="What grew" italic="this week." link_url=garden_url link_label="Open the garden" %}
+    {% if top_post %}
+    {# The same Post Card as the Garden page, so likes and comments work here too (garden.js) #}
+    <div class="mt-10 grid items-start gap-6 lg:grid-cols-[7fr_3fr]" data-rise>
+        {% include "garden/post_card.html" with post=top_post %}
+        <div class="grid gap-6 [&_img.h-\[300px\]]:h-[186px]">
+            {% for post in more_posts %}{% include "garden/post_card.html" with post=post %}{% endfor %}
+        </div>
+    </div>
+    {% else %}
+    {% include "home/empty.html" with title="No garden posts yet" line="The first photo someone posts shows up here." %}
+    {% endif %}
+</section>
+
+{# ---------- 02 Events ---------- #}
+<section id="spread-events" aria-labelledby="events-title" class="scroll-mt-6 pt-24 sm:pt-36">
+    {% url 'events:show_events' as events_url %}
+    {% include "home/spread_header.html" with number="02" module="Events" title_id="events-title" title="Come" italic="dig with us." link_url=events_url link_label=events_label %}
+    {% if events %}
+    {% with poster=events.0 %}
+    <div class="mt-10 grid items-start gap-6 lg:grid-cols-[5fr_7fr]">
+        <article data-plate class="relative flex flex-col gap-4 rounded-3xl border-2 border-ink bg-butter p-8 shadow-[4px_4px_0_0_var(--color-ink)] sm:p-11">
+            {% if poster.is_going %}<span class="self-start rounded-full border-2 border-ink bg-brand-tint px-3 py-1 text-xs font-black uppercase tracking-[0.08em] text-brand">✓ You're going</span>{% endif %}
+            <p class="font-display text-[clamp(5rem,12vw,9.5rem)] leading-[0.88]"><time datetime="{{ poster.start_time|date:'c' }}">{{ poster.start_time|date:"d" }}<br>{{ poster.start_time|date:"M"|upper }}</time></p>
+            <h3 class="font-display text-4xl leading-tight">{{ poster.name }}</h3>
+            <p class="flex items-center gap-2 font-bold"><img src="{% static 'img/icons/map-pin.svg' %}" alt="" class="size-[18px]">{{ poster.location }}</p>
+            <p class="flex items-center gap-2 font-bold"><img src="{% static 'img/icons/clock.svg' %}" alt="" class="size-[18px]">{{ poster.start_time|date:"D · H:i" }}</p>
+            <div class="flex items-center gap-3">
+                <div class="flex -space-x-2.5">{% for person in poster.faces %}{% avatar person "sm" %}{% endfor %}</div>
+                <p class="text-[15px] font-extrabold"><span data-going-count="{{ poster.id }}">{{ poster.going_count }}</span> going</p>
+            </div>
+            <div class="mt-2 flex flex-wrap items-center gap-3">
+                <a href="{% url 'events:show_event' poster.id %}" class="rounded-full border-2 border-ink bg-ink px-5 py-2.5 text-sm font-extrabold text-white transition duration-150 ease-out hover:bg-ink-hover active:scale-[0.97] motion-reduce:active:scale-100">See {{ poster.name }}</a>
+                {% include "event_rsvp_button.html" with event=poster going=poster.is_going %}
+            </div>
+        </article>
+        {# The same Event Card as the Events page (with its AJAX RSVP button) #}
+        {% include "event_cards.html" with event_list=events|slice:"1:" grid_class="grid gap-6 sm:grid-cols-2" %}
+    </div>
+    {% endwith %}
+    {% else %}
+    {% include "home/empty.html" with title="No events coming up" line="When someone hosts a planting day, it shows up here." %}
+    {% endif %}
+</section>
+
+{# ---------- 03 Encyclopedia: the sideways plant shelf ---------- #}
+<section id="spread-encyclopedia" aria-labelledby="encyclopedia-title" class="scroll-mt-6 pt-24 sm:pt-36">
+    {% url 'encyclopedia:index' as encyclopedia_url %}
+    {% include "home/spread_header.html" with number="03" module="Encyclopedia" title_id="encyclopedia-title" title=shelf_title italic="one shelf." link_url=encyclopedia_url link_label=plants_label %}
+    <div class="mt-8" data-shelf data-shelf-url="{% url 'home:show_landing' %}">
+        <div data-shelf-content>{% include "home/plant_shelf.html" %}</div>
+        <div class="flex items-center gap-4">
+            <div class="h-1.5 flex-1 overflow-hidden rounded-full border border-ink bg-white" aria-hidden="true"><div data-shelf-progress class="h-full w-0 rounded-full bg-brand"></div></div>
+            <button type="button" data-shelf-move="-1" aria-label="Previous plants" class="flex size-12 items-center justify-center rounded-full border-2 border-ink bg-white transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100"><img src="{% static 'img/icons/chevron-right.svg' %}" alt="" class="size-5 rotate-180"></button>
+            <button type="button" data-shelf-move="1" aria-label="Next plants" class="flex size-12 items-center justify-center rounded-full border-2 border-ink bg-white transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100"><img src="{% static 'img/icons/chevron-right.svg' %}" alt="" class="size-5"></button>
+        </div>
+        <p data-shelf-status class="sr-only" aria-live="polite"></p>
+    </div>
+</section>
+
+{# ---------- 04 Community: the newest question as a big quote ---------- #}
+<section id="spread-community" aria-labelledby="community-title" class="scroll-mt-6 pt-24 sm:pt-36">
+    {% url 'community:show_questions' as community_url %}
+    {% include "home/spread_header.html" with number="04" module="Community" title_id="community-title" title="Questions from" italic="the street." link_url=community_url link_label="Read all questions" %}
+    {% if questions %}
+    {% with quote=questions.0 %}
+    <div class="mt-10 grid gap-10 lg:grid-cols-[7fr_5fr]">
+        <figure data-rise>
+            <p class="font-display text-[140px] leading-[0.6] text-brand" aria-hidden="true">“</p>
+            <blockquote class="font-display text-[clamp(2rem,4vw,3rem)] italic leading-[1.15]">{{ quote.title }}</blockquote>
+            <figcaption class="mt-6 flex items-center gap-3 text-[15px] font-bold text-ink-soft">
+                {% avatar quote.author %}
+                <span>{{ quote.author.first_name|default:quote.author.username }} · {{ quote.answer_count }} answer{{ quote.answer_count|pluralize }} · asked {{ quote.age }}</span>
+            </figcaption>
+            <a href="{% url 'community:show_question_thread' quote.id %}" class="mt-6 inline-block rounded-full border-2 border-ink bg-brand-soft px-5 py-2.5 text-sm font-extrabold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100">Read the answers <span aria-hidden="true">›</span></a>
+        </figure>
+        {# The same Question Card as the Community page #}
+        <div class="grid content-start gap-4">
+            {% for question in questions|slice:"1:" %}{% include "question_card.html" %}{% endfor %}
+        </div>
+    </div>
+    {% endwith %}
+    {% else %}
+    {% include "home/empty.html" with title="No questions yet" line="Ask the first one and the street will answer." %}
+    {% endif %}
+</section>
+
+{# ---------- 05 Achievements ---------- #}
+<section id="spread-achievements" aria-labelledby="achievements-title" class="scroll-mt-6 pt-24 sm:pt-36">
+    {% url 'achievements:show_achievements' as achievements_url %}
+    {% include "home/spread_header.html" with number="05" module="Achievements" title_id="achievements-title" title="Little wins," italic="on the record." link_url=achievements_url link_label="See all badges" %}
+    {% if badges.latest %}<p class="mt-6 text-base font-bold text-ink-soft">{{ badges.latest.user.first_name|default:badges.latest.user.username }} earned {{ badges.latest.milestone.title }} · {{ badges.latest.age }}</p>{% endif %}
+    {% if badges.top %}
+    {# Figma "Achievement Card" (Unlocked look): the bar shows how many of all gardeners earned the badge #}
+    <ul class="mt-8 grid gap-6 lg:grid-cols-2">
+        {% for badge in badges.top %}
+        <li data-rise style="transition-delay: {% widthratio forloop.counter0 1 40 %}ms" class="flex items-center gap-5 rounded-2xl border-2 border-ink bg-brand-soft p-5">
+            <span class="flex size-[67px] shrink-0 items-center justify-center rounded-full border-2 border-ink bg-butter"><img src="{% static badge.icon %}" alt="" class="size-8"></span>
+            <div class="min-w-0 flex-1">
+                <h3 class="font-display text-2xl leading-tight">{{ badge.title }}</h3>
+                <p class="mt-1 text-sm text-ink-soft">{{ badge.description }}</p>
+                <p class="mt-2 flex justify-between gap-3 text-sm font-bold"><span>Earned by</span><span>{{ badge.earned }} of {{ badge.gardeners }} gardener{{ badge.gardeners|pluralize }}</span></p>
+                <div class="mt-1 h-[17px] overflow-hidden rounded-full border-2 border-ink bg-white" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ badge.percent }}" aria-label="Gardeners who earned {{ badge.title }}"><div class="h-full rounded-full bg-brand" style="width: {{ badge.percent }}%"></div></div>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    {% include "home/empty.html" with title="No badges yet" line="Set a goal and the first badge is yours." %}
+    {% endif %}
+</section>
+
+{# ---------- Back cover: join (guests) or your week (logged in) ---------- #}
+<section class="pt-24 sm:pt-36" aria-labelledby="back-title">
+    {% if user.is_authenticated %}
+    <div class="rounded-3xl border-2 border-ink bg-white p-8 shadow-[4px_4px_0_0_var(--color-ink)] sm:p-12">
+        <h2 id="back-title" class="font-display text-5xl sm:text-6xl">Your week</h2>
+        {% if mine.goals %}
+        <ul class="mt-8 grid gap-6">
+            {% for goal in mine.goals %}
+            <li class="grid items-center gap-2 sm:grid-cols-[20rem_1fr_auto] sm:gap-6">
+                <span class="text-lg font-extrabold">{{ goal.title }}</span>
+                <span class="h-3 overflow-hidden rounded-full border-2 border-ink bg-page" role="progressbar" aria-valuenow="{{ goal.percent }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ goal.title }}"><span class="block h-full bg-brand" style="width: {{ goal.percent }}%"></span></span>
+                <span class="font-bold text-ink-soft">{{ goal.done }} of {{ goal.target }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="mt-4 text-lg text-ink-soft">No goals yet. Set one and watch it grow here.</p>
+        {% endif %}
+        <a href="{% url 'achievements:show_achievements' %}" class="mt-8 inline-block rounded-full border-2 border-ink bg-ink px-5 py-2.5 text-sm font-extrabold text-white transition duration-150 ease-out hover:bg-ink-hover active:scale-[0.97] motion-reduce:active:scale-100">Open achievements</a>
+    </div>
+    {% else %}
+    <div class="flex flex-wrap items-center justify-between gap-10 rounded-3xl border-2 border-ink bg-brand p-8 text-white shadow-[4px_4px_0_0_var(--color-ink)] sm:p-16">
+        <div class="max-w-xl">
+            <h2 id="back-title" class="font-display text-5xl leading-none sm:text-7xl">Your plot is <em class="text-butter">waiting.</em></h2>
+            <p class="mt-5 text-lg text-white/90">Free, takes a minute, and you can still just look around first.</p>
+            <div class="mt-8 flex flex-wrap items-center gap-5">
+                <a href="{% url 'profile:register' %}" class="rounded-full border-2 border-ink bg-white px-5 py-2.5 text-sm font-extrabold text-ink transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-butter motion-reduce:active:scale-100">Create an account</a>
+                <a href="{% url 'profile:login' %}" class="font-extrabold underline-offset-4 hover:underline focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-butter">I already have one, log in</a>
+            </div>
+        </div>
+        {% if week.plant %}
+        <div class="hidden w-72 -rotate-3 text-ink md:block" aria-hidden="true" inert>{% include "plant_card.html" with plant=week.plant %}</div>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+
+<footer class="mt-24 flex flex-wrap items-center justify-between gap-4 border-t-2 border-ink pt-6 text-sm font-bold text-ink-soft">
+    <span class="font-display text-xl text-ink">Grow Your Garden</span>
+    <span>© 2026 Group 1 KKI · PBP Universitas Indonesia · Photos: Pexels and Wikimedia Commons</span>
+</footer>
+
+{# event_rsvp.js makes the RSVP button on the poster work. ?v= makes browsers load the newest copy. #}
+<script src="{% static 'js/event_rsvp.js' %}?v=2"></script>
+{# garden.js makes the like and comment buttons on the Garden cards work (it only sets up the parts it finds) #}
+<script src="{% static 'js/garden.js' %}"></script>
+<script src="{% static 'js/landing.js' %}?v=1"></script>
+{% endblock content %}
