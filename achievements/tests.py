@@ -555,3 +555,15 @@ class DailyCheckInTests(TestCase):
     def test_page_explains_how_the_streak_works(self):
         self.client.force_login(self.user)
         self.assertContains(self.client.get(self.url), "Opening this page once a day checks you in")
+
+
+class LiveMilestoneRefreshTests(TestCase):
+    """After logging progress (or any goal change) the badges, stats and milestones refresh without a reload.
+    achievements_goals.js reloads these marked parts of the page with ajax_forms.js."""
+
+    def test_page_marks_the_parts_that_refresh(self):
+        user = User.objects.create_user("lia", password="pw")
+        self.client.force_login(user)
+        response = self.client.get(reverse("achievements:show_achievements"))
+        for region in ("growth", "stats", "milestones"):
+            self.assertContains(response, f'data-ajax-region="{region}"')
