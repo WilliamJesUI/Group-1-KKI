@@ -118,7 +118,7 @@ class LandingLoggedInTest(LandingTestData):
 
     def test_your_week_counts(self):
         PlantCollection.objects.create(user=self.siti).plants.add(self.basil)
-        goal = Goal.objects.create(user=self.siti, title="Grow 5 chilies", plant="Chili", target=5)
+        goal = Goal.objects.create(user=self.siti, title="Grow 5 chilies", plant=self.basil, target=5)
         ProgressLog.objects.create(goal=goal, amount=2)
         response = self.client.get(self.url)
         mine = response.context["mine"]

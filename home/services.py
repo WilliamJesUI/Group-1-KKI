@@ -127,9 +127,12 @@ def newest_questions():
 
 def badges():
     """The 4 badges people claimed the most, and the newest claim ("Mira earned First Harvest")."""
-    top = list(Milestone.objects.annotate(earned=Count("claims")).order_by("-earned", "order")[:4])
+    # Counted from the ClaimedBadge side, so this keeps working if the Achievements models change their related names
+    earned = dict(ClaimedBadge.objects.values_list("milestone").annotate(total=Count("id")))
+    top = sorted(Milestone.objects.all(), key=lambda badge: (-earned.get(badge.pk, 0), badge.order))[:4]
     gardeners = User.objects.filter(is_active=True).count()
     for badge in top:
+        badge.earned = earned.get(badge.pk, 0)
         badge.gardeners = gardeners
         badge.percent = round(badge.earned * 100 / gardeners) if gardeners else 0
     latest = ClaimedBadge.objects.select_related("user", "milestone").order_by("-claimed_at").first()
