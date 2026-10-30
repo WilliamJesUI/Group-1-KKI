@@ -57,6 +57,16 @@ class EventListTest(TestCase):
         self.assertTemplateUsed(response, "header.html")
         self.assertContains(response, 'id="nav-toggle"', count=1)
 
+    def test_navbar_has_a_log_out_button(self):
+        # Logging out must be possible from every page, not only from Edit profile
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.get(reverse("events:show_events"))
+        self.assertContains(response, 'action="%s"' % reverse("profile:logout"))
+
+    def test_navbar_has_no_log_out_button_for_guests(self):
+        response = self.client.get(reverse("events:show_events"))
+        self.assertNotContains(response, 'action="%s"' % reverse("profile:logout"))
+
     def test_navbar_avatar_uses_first_name(self):
         User.objects.create_user(username="u27", first_name="Dewi", password="tomatoes123")
         self.client.login(username="u27", password="tomatoes123")

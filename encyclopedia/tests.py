@@ -270,10 +270,10 @@ class EncyclopediaDirectoryTests(EncyclopediaTestData):
 
 
 class CollectionAccessTests(EncyclopediaTestData):
-    def test_anonymous_collection_page_redirects_to_directory(self):
+    def test_anonymous_collection_page_redirects_to_login(self):
+        # Guests go to Log in, and come back to their collections afterwards
         response = self.client.get(self.collection_url)
-        self.assertRedirects(response, self.index_url)
-        self.assertTrue(list(get_messages(response.wsgi_request)))
+        self.assertRedirects(response, reverse("profile:login") + "?next=" + self.collection_url, fetch_redirect_response=False)
 
     def test_collection_page_shows_first_collection_by_default(self):
         self.client.force_login(self.user)
