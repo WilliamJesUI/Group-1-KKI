@@ -78,7 +78,6 @@ function pop(button) {
 }
 
 async function sendRsvp(button) {
-    const error = button.closest('[data-rsvp]').querySelector('[data-rsvp-error]');
     const wantsToGo = button.getAttribute('aria-pressed') !== 'true';
     const body = new FormData();
     body.append('going', wantsToGo ? 'true' : 'false');
@@ -86,34 +85,43 @@ async function sendRsvp(button) {
     // Disabling the button sends keyboard focus back to the page, so remember if it had focus
     const hadFocus = document.activeElement === button;
     button.disabled = true; // so a double click doesn't send twice
-    error.classList.add('hidden');
+    let response;
     try {
-        const response = await fetch(button.dataset.rsvpUrl, {
+        response = await fetch(button.dataset.rsvpUrl, {
             method: 'POST',
             headers: { 'X-CSRFToken': getCookie('csrftoken') },
             body: body,
         });
+    } catch (err) {
+        // fetch only fails like this when the request never got an answer (offline, server down)
+        showToast('Could not reach the server', 'Check your internet and try again.', 'error');
+        button.disabled = false;
+        if (hadFocus) {
+            button.focus();
+        }
+        return;
+    }
+    try {
         const result = await response.json().catch(() => ({}));
-        if (response.ok) {
-            // Every RSVP button for this event (e.g. on a card and in "Next up") shows the new state
-            document.querySelectorAll(`[data-rsvp-url][data-event-id="${button.dataset.eventId}"]`).forEach((other) => {
-                other.setAttribute('aria-pressed', result.going ? 'true' : 'false');
-            });
-            updateGoing(button.dataset.eventId, result);
-            pop(button);
-            // showToast(title, message) comes from static/js/toast.js
-            if (result.going) {
-                showToast("You're going", "It's in My events now.");
-            } else {
-                showToast('RSVP cancelled', "It's no longer in My events.");
-            }
+        if (!response.ok) {
+            showToast('Could not RSVP', result.message || `Something went wrong (status ${response.status}).`, 'error');
+            return;
+        }
+        // Every RSVP button for this event (e.g. on a card and in "Next up") shows the new state
+        document.querySelectorAll(`[data-rsvp-url][data-event-id="${button.dataset.eventId}"]`).forEach((other) => {
+            other.setAttribute('aria-pressed', result.going ? 'true' : 'false');
+        });
+        updateGoing(button.dataset.eventId, result);
+        pop(button);
+        // showToast(title, message, type) comes from static/js/toast.js
+        if (result.going) {
+            showToast("You're going", "It's in My events now.");
         } else {
-            error.textContent = result.message || `Something went wrong (status ${response.status}).`;
-            error.classList.remove('hidden');
+            showToast('RSVP cancelled', "It's no longer in My events.");
         }
     } catch (err) {
-        error.textContent = 'Could not reach the server. Please try again.';
-        error.classList.remove('hidden');
+        // The RSVP was saved, but drawing the new avatars broke (for example an old copy of this file)
+        showToast('Saved, but the page is out of date', 'Please refresh the page.', 'error');
     } finally {
         button.disabled = false;
         if (hadFocus) {
