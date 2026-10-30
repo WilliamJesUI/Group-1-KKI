@@ -49,6 +49,8 @@ async function sendForm(form, onSuccess) {
         const result = await response.json().catch(() => ({}));
         if (response.ok) {
             leavingPage = onSuccess(result);
+            // Badges, stats and milestones depend on goals, so reload just those parts (refreshRegions is in ajax_forms.js)
+            if (!leavingPage && typeof refreshRegions === 'function') refreshRegions(window.location.href);
         } else if (result.errors) {
             showErrors(form, result.errors);
         } else {
