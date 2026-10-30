@@ -110,8 +110,11 @@ More info and examples: docs/TEAM-GUIDE.md
         html.dark .text-brand { color: #6fd39a; }
         html.dark .bg-white { background-color: var(--color-surface); }
         html.dark [class*="bg-white/"] { background-color: rgb(24 35 28 / 0.8); }
-        html.dark .bg-ink { background-color: #e4ece6; color: #17241b; }
+        html.dark .bg-ink { background-color: #e4ece6; }
+        html.dark .bg-ink.text-white { color: #17241b; }
         html.dark .bg-ink:hover { background-color: #c9d5cd; }
+        /* The one-color icons are dark lines in the SVG files, so flip them light. Red and soft icons keep their colors. */
+        html.dark img[src*="/img/icons/"]:not([src*="danger"]):not([src*="soft"]) { filter: invert(0.9) hue-rotate(180deg); }
         html.dark .bg-\[\#b5fbf2\],
         html.dark .bg-\[\#b8fff8\] { background-color: #173a36; }
         html.dark .text-\[\#42634f\] { color: #9fc3ab; }
