@@ -44,6 +44,7 @@ Motion lives in static/js/landing.js. Without JavaScript, or with reduced motion
         Issue {{ issue }} &nbsp;·&nbsp; {% if user.is_authenticated %}Your copy, {{ user.first_name|default:user.username|truncatechars:14 }}{% else %}Week of {{ week_start|date:"j M Y" }} &nbsp;·&nbsp; Free for neighbors{% endif %}
     </p>
     <div class="flex items-center gap-3">
+        {% include "theme_toggle.html" %}
         {% if user.is_authenticated %}
         <a href="{% url 'profile:show_profile' %}" aria-label="Your profile">{% avatar user %}</a>
         <a href="{% url 'garden:show_garden' %}" class="rounded-full border-2 border-ink bg-brand px-5 py-2.5 text-sm font-extrabold text-white transition duration-150 ease-out hover:bg-brand-hover active:scale-[0.97] motion-reduce:active:scale-100">Go to your garden</a>
@@ -175,7 +176,7 @@ Motion lives in static/js/landing.js. Without JavaScript, or with reduced motion
             <p class="flex items-center gap-2 font-bold"><img src="{% static 'img/icons/map-pin.svg' %}" alt="" class="size-[18px]">{{ poster.location }}</p>
             <p class="flex items-center gap-2 font-bold"><img src="{% static 'img/icons/clock.svg' %}" alt="" class="size-[18px]">{{ poster.start_time|date:"D · H:i" }}</p>
             <div class="flex items-center gap-3">
-                <div class="flex -space-x-2.5">{% for person in poster.faces %}{% avatar person "sm" %}{% endfor %}</div>
+                <div class="flex -space-x-2.5">{% for person in poster.faces %}<a href="{% url 'profile:show_user_profile' person.username %}" aria-label="{{ person.get_full_name|default:person.username }}'s profile" title="{{ person.get_full_name|default:person.username }}" class="flex transition-transform duration-150 hover:scale-102">{% avatar person "sm" %}</a>{% endfor %}</div>
                 <p class="text-[15px] font-extrabold"><span data-going-count="{{ poster.id }}">{{ poster.going_count }}</span> going</p>
             </div>
             <div class="mt-2 flex flex-wrap items-center gap-3">
@@ -218,8 +219,9 @@ Motion lives in static/js/landing.js. Without JavaScript, or with reduced motion
             <p class="font-display text-[140px] leading-[0.6] text-brand" aria-hidden="true">“</p>
             <blockquote class="font-display text-[clamp(2rem,4vw,3rem)] italic leading-[1.15]">{{ quote.title }}</blockquote>
             <figcaption class="mt-6 flex items-center gap-3 text-[15px] font-bold text-ink-soft">
-                {% avatar quote.author %}
-                <span>{{ quote.author.first_name|default:quote.author.username }} · {{ quote.answer_count }} answer{{ quote.answer_count|pluralize }} · asked {{ quote.age }}</span>
+                {% url 'profile:show_user_profile' quote.author.username as quote_author_url %}
+                <a href="{{ quote_author_url }}" tabindex="-1" aria-hidden="true" class="shrink-0 transition-transform duration-150 hover:scale-102">{% avatar quote.author %}</a>
+                <span><a href="{{ quote_author_url }}" class="inline-block transition-transform duration-150 hover:scale-102">{{ quote.author.first_name|default:quote.author.username }}</a> · {{ quote.answer_count }} answer{{ quote.answer_count|pluralize }} · asked {{ quote.age }}</span>
             </figcaption>
             <a href="{% url 'community:show_question_thread' quote.id %}" class="mt-6 inline-block rounded-full border-2 border-ink bg-brand-soft px-5 py-2.5 text-sm font-extrabold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100">Read the answers <span aria-hidden="true">›</span></a>
         </figure>
@@ -238,7 +240,7 @@ Motion lives in static/js/landing.js. Without JavaScript, or with reduced motion
 <section id="spread-achievements" aria-labelledby="achievements-title" class="scroll-mt-6 pt-24 sm:pt-36">
     {% url 'achievements:show_achievements' as achievements_url %}
     {% include "home/spread_header.html" with number="05" module="Achievements" title_id="achievements-title" title="Little wins," italic="on the record." link_url=achievements_url link_label="See all badges" %}
-    {% if badges.latest %}<p class="mt-6 text-base font-bold text-ink-soft">{{ badges.latest.user.first_name|default:badges.latest.user.username }} earned {{ badges.latest.milestone.title }} · {{ badges.latest.age }}</p>{% endif %}
+    {% if badges.latest %}<p class="mt-6 text-base font-bold text-ink-soft"><a href="{% url 'profile:show_user_profile' badges.latest.user.username %}" class="inline-block transition-transform duration-150 hover:scale-102">{{ badges.latest.user.first_name|default:badges.latest.user.username }}</a> earned {{ badges.latest.milestone.title }} · {{ badges.latest.age }}</p>{% endif %}
     {% if badges.top %}
     {# Figma "Achievement Card" (Unlocked look): the bar shows how many of all gardeners earned the badge #}
     <ul class="mt-8 grid gap-6 lg:grid-cols-2">
@@ -302,7 +304,7 @@ Motion lives in static/js/landing.js. Without JavaScript, or with reduced motion
 </footer>
 
 {# event_rsvp.js makes the RSVP button on the poster work. ?v= makes browsers load the newest copy. #}
-<script src="{% static 'js/event_rsvp.js' %}?v=2"></script>
+<script src="{% static 'js/event_rsvp.js' %}?v=3"></script>
 {# garden.js makes the like and comment buttons on the Garden cards work (it only sets up the parts it finds) #}
 <script src="{% static 'js/garden.js' %}"></script>
 <script src="{% static 'js/landing.js' %}?v=1"></script>

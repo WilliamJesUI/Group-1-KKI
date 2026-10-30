@@ -1,0 +1,14 @@
+{# What a moderator (staff) sees on someone else's question: only Delete, no Edit.
+   Moderators can delete it even after it has answers. The answers go with it.
+   The button uses the same id as the author's box, so community_question_owner.js handles the click. #}
+<section id="question_moderator_card" class="rounded-2xl border-2 border-ink bg-brand-tint p-5">
+    <p class="text-xs font-extrabold uppercase tracking-wider text-brand">Moderator</p>
+    <p class="mt-2 text-xs text-ink-soft">Only moderators see this box. Deleting the question also deletes its answers.</p>
+    <div class="mt-3 flex flex-wrap gap-3">
+        <button type="button" id="delete-question-btn"
+            data-endpoint="{% url 'community:delete_question_ajax' question.id %}"
+            class="rounded-full border-2 border-ink bg-red-500 px-5 py-2.5 text-sm font-extrabold text-white hover:bg-red-600 disabled:opacity-40 transition duration-150 ease-out active:scale-[0.97]">
+            Delete question
+        </button>
+    </div>
+</section>

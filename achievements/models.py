@@ -13,7 +13,7 @@ class Milestone(models.Model):
         ("plants_added", "Plants added"),
         ("harvests_logged", "Harvests logged"),
         ("checkin_streak", "Day check-in streak"),
-        ("answers_given", "Questions answered"),
+        ("answers_given", "Answers written"),
         ("host", "Events hosted"),
         ("event_goer", "Events RSVPed"),
         ("plant_collector", "Plants saved"),
@@ -38,6 +38,8 @@ class Milestone(models.Model):
     tone = models.CharField(max_length=30, choices=TONE_CHOICES, default="bg-brand-soft")
     # Which pill on the page shows this milestone. Empty means it only shows under "All plants".
     plant = models.ForeignKey("plants.Plant", null=True, blank=True, on_delete=models.SET_NULL, related_name="milestones")
+    # Only count plants of this category, e.g. "herbs" for Herb Garden. Empty means every plant.
+    category = models.CharField(max_length=20, blank=True, choices=[("vegetables", "Vegetables"), ("herbs", "Herbs"), ("flowers", "Flowers")])
     order = models.PositiveSmallIntegerField(default=0)
 
     class Meta:

@@ -11,7 +11,7 @@ from achievements.forms import GoalForm, ProgressLogForm
 from garden.models import Post
 from plants.models import Plant
 from achievements.models import CheckIn, ClaimedBadge, Goal, Milestone, ProgressLog
-from achievements.services import can_claim, check_in_today, current_streak, get_metric, record_progress
+from achievements.services import build_milestones, can_claim, check_in_today, current_streak, get_metric, record_progress
 
 
 def make_plant(name="Cherry tomato", category="vegetables"):
@@ -90,8 +90,8 @@ class PageTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.url)
         self.assertContains(response, "Claim badge")
-        # One plant finishes First Sprout and also starts Herb Garden (1 of 3), so two are in progress
-        self.assertEqual(response.context["milestones_in_progress"], 2)
+        # A plain counter finishes First Sprout. Herb Garden only counts real herbs, so it stays at 0.
+        self.assertEqual(response.context["milestones_in_progress"], 1)
 
     def test_progress_percent_rounds_down(self):
         record_progress(self.user, "answers_given", 3)
@@ -478,3 +478,56 @@ class GoalViewTests(TestCase):
         self.assertContains(response, "Pending approval")
         self.assertNotContains(response, "Claim badge")
         self.assertEqual(response.context["unlocked"], 0)
+
+
+class GoodNeighborWordingTests(TestCase):
+    """Good Neighbor counts answers written (answering one question twice counts as 2), so the text must say answers."""
+
+    def test_good_neighbor_says_answers(self):
+        badge = Milestone.objects.get(slug="good-neighbor")
+        self.assertEqual(badge.description, "Write 10 answers")
+
+    def test_metric_label_says_answers(self):
+        self.assertEqual(dict(Milestone.METRIC_CHOICES)["answers_given"], "Answers written")
+
+
+class PlantMilestoneTests(TestCase):
+    """Milestones tied to a plant or a category only count that plant or category,
+    and posting a plant in the Garden counts as adding it to your garden."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="will", password="pass12345")
+        self.basil = make_plant("Basil", "herbs")
+        self.mint = make_plant("Mint", "herbs")
+        self.rose = make_plant("Rose", "flowers")
+        self.tomato = make_plant("Tomato", "vegetables")
+        self.first_sprout = Milestone.objects.get(slug="first-sprout")
+        self.herb_garden = Milestone.objects.get(slug="herb-garden")
+        self.tomato_time = Milestone.objects.get(slug="tomato-time")
+        self.tomato_time.plant = self.tomato
+        self.tomato_time.save()
+
+    def progress(self, milestone):
+        card = next(c for c in build_milestones(self.user) if c["milestone"].pk == milestone.pk)
+        return card["percent"]
+
+    def test_garden_post_with_a_plant_counts_as_adding_it(self):
+        Post.objects.create(author=self.user, caption="My basil", plant=self.basil)
+        self.assertEqual(self.progress(self.first_sprout), 100)
+
+    def test_herb_garden_only_counts_herbs(self):
+        for plant in (self.basil, self.mint, self.rose):
+            Post.objects.create(author=self.user, caption="look", plant=plant)
+        # 2 of 3 herbs: the rose doesn't count
+        self.assertEqual(self.progress(self.herb_garden), 66)
+        Post.objects.create(author=self.user, caption="parsley", plant=make_plant("Parsley", "herbs"))
+        self.assertEqual(self.progress(self.herb_garden), 100)
+        self.assertTrue(can_claim(self.user, self.herb_garden))
+
+    def test_tomato_time_only_counts_tomato_goals(self):
+        basil_goal = Goal.objects.create(user=self.user, title="Basil", plant=self.basil, target=5)
+        ProgressLog.objects.create(goal=basil_goal, amount=3)
+        self.assertEqual(self.progress(self.tomato_time), 0)
+        tomato_goal = Goal.objects.create(user=self.user, title="Tomatoes", plant=self.tomato, target=5)
+        ProgressLog.objects.create(goal=tomato_goal, amount=3)
+        self.assertEqual(self.progress(self.tomato_time), 100)

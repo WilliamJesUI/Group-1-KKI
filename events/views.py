@@ -10,17 +10,21 @@ from django.views.decorators.http import require_POST
 from accounts.templatetags.accounts_tags import avatar_bg_class, avatar_initials, get_profile
 from events.forms import EventForm
 from events.models import Event
+from growyourgarden.permissions import can_delete
 from plants.models import Plant
 
 
 def avatar_data(user):
     # Uses Sarah's avatar helpers (accounts_tags), so a person has the same letters, color and photo on every page.
     # A dict instead of HTML, because event_rsvp.js also redraws the avatars from the RSVP answer.
+    # name and profile_url let the event page link each avatar to that person's profile
     profile = get_profile(user)
     return {
         "initials": avatar_initials(user),
         "bg_class": avatar_bg_class(user),
         "picture": profile.profile_picture if profile else "",
+        "name": user.get_full_name() or user.username,
+        "profile_url": reverse("profile:show_user_profile", args=[user.username]),
     }
 
 
@@ -134,6 +138,8 @@ def show_event(request, event_id):
         # Split the text box into a list, skipping empty lines
         "bring_list": [line.strip() for line in event.what_to_bring.splitlines() if line.strip()],
         "is_host": request.user == event.host,
+        # The host and moderators see the Delete button, only the host sees Edit
+        "can_delete": can_delete(request.user, event.host),
         # Whether the logged-in user already RSVP'd, so the button starts as "Going"
         "is_going": request.user.is_authenticated and event.attendees.filter(pk=request.user.pk).exists(),
     }
@@ -245,8 +251,9 @@ def delete_event(request, event_id):
     if not request.user.is_authenticated:
         return JsonResponse({"message": "Please log in to delete this event."}, status=403)
     event = get_object_or_404(Event, pk=event_id)
-    # Hiding the Delete button isn't enough, anyone could send this request with fetch, so check the host here too
-    if event.host != request.user:
+    # Hiding the Delete button isn't enough, anyone could send this request with fetch, so check the host here too.
+    # Moderators (staff) can delete any event, for example spam or a cancelled meetup.
+    if not can_delete(request.user, event.host):
         return JsonResponse({"message": "Only the host can delete this event."}, status=403)
     event.delete()
     # event_delete.js goes to this url, and the Events page shows this message as a toast

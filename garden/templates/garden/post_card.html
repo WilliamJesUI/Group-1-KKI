@@ -12,11 +12,14 @@ data-* on the article are read by garden.js: the edit pop-up is filled from them
          data-photo="{{ post.photo_src }}"
          class="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-surface p-4 motion-safe:transition-all motion-safe:duration-300 motion-safe:starting:translate-y-2 motion-safe:starting:opacity-0">
     <div class="flex items-center gap-3">
-        {% avatar post.author %}
-        <div class="flex min-w-0 flex-1 flex-col">
-            <p class="truncate text-[13px] font-extrabold leading-[1.2]">{{ post.author.get_full_name|default:post.author.username }}</p>
-            <p class="truncate text-xs leading-[1.4] text-ink-soft">@{{ post.author.username }} · <time datetime="{{ post.created_at|date:'c' }}">{{ post.age_label }}</time></p>
-        </div>
+        {# The author's avatar and name link to their profile (same hover as the Community cards). mr-auto keeps the ••• menu on the right. #}
+        <a href="{% url 'profile:show_user_profile' post.author.username %}" class="mr-auto flex min-w-0 items-center gap-3 transition-transform duration-150 hover:scale-102">
+            {% avatar post.author %}
+            <div class="flex min-w-0 flex-col">
+                <p class="truncate text-[13px] font-extrabold leading-[1.2]">{{ post.author.get_full_name|default:post.author.username }}</p>
+                <p class="truncate text-xs leading-[1.4] text-ink-soft">@{{ post.author.username }} · <time datetime="{{ post.created_at|date:'c' }}">{{ post.age_label }}</time></p>
+            </div>
+        </a>
         {% if post.can_edit or post.can_delete %}
         {# The ••• menu (Figma "Post menu open"). Edit only for the author, Delete for the author and moderators. #}
         <div class="relative">

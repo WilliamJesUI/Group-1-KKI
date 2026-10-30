@@ -21,6 +21,11 @@ More info and examples: docs/TEAM-GUIDE.md
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Nunito+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
+    <!-- Dark mode: apply the saved choice before anything paints, so dark pages don't flash white. -->
+    <script>
+        try { if (localStorage.getItem("gyg-theme") === "dark") document.documentElement.classList.add("dark"); } catch (error) {}
+    </script>
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.11"></script>
     <style type="text/tailwindcss">
@@ -78,6 +83,48 @@ More info and examples: docs/TEAM-GUIDE.md
     </style>
 
     {# getCookie() for AJAX requests. Loaded here in <head> so it's ready before any script on the page. #}
+
+    <!-- Dark mode colors. The site uses the --color-* names above everywhere, so swapping them here
+         recolors every page. The few rules under it cover hard-coded colors in single templates. -->
+    <style>
+        html.dark {
+            color-scheme: dark;
+            --color-page: #0f1712;
+            --color-surface: #18231c;
+            --color-brand-soft: #1f4a2c;
+            --color-brand-soft-hover: #2a5c38;
+            --color-brand-tint: #1c2e22;
+            --color-brand: #2f8f57;
+            --color-brand-hover: #3aa566;
+            --color-ink: #e4ece6;
+            --color-ink-hover: #c9d5cd;
+            --color-ink-soft: #a7b5ac;
+            --color-muted: #75887c;
+            --color-line: #3a4a3f;
+            --color-pink: #4d2629;
+            --color-lilac: #2f3260;
+            --color-butter: #4a4220;
+            --color-danger-text: #ff8f97;
+            --color-gold: #d8ca62;
+        }
+        html.dark .text-brand { color: #6fd39a; }
+        html.dark .bg-white { background-color: var(--color-surface); }
+        html.dark [class*="bg-white/"] { background-color: rgb(24 35 28 / 0.8); }
+        html.dark .bg-ink { background-color: #e4ece6; color: #17241b; }
+        html.dark .bg-ink:hover { background-color: #c9d5cd; }
+        html.dark .bg-\[\#b5fbf2\],
+        html.dark .bg-\[\#b8fff8\] { background-color: #173a36; }
+        html.dark .text-\[\#42634f\] { color: #9fc3ab; }
+        html.dark .bookmark-button,
+        html.dark .collection-picker,
+        html.dark .care-chip,
+        html.dark .detail-picker { background: var(--color-surface); border-color: var(--color-ink); }
+        html.dark .bookmark-button:hover { background: var(--color-brand-tint); }
+        html.dark .care-icon { background: var(--color-brand-tint); color: #6fd39a; }
+        html.dark .plant-detail-image { border-color: var(--color-ink); }
+        html.dark .encyclopedia-collection-bar { box-shadow: 0 -8px 16px rgba(15, 23, 18, .8); }
+    </style>
+
     <script src="{% static 'js/csrf.js' %}"></script>
     {# showToast("Title", "Message") for pop-up notifications. Also in <head>, so your scripts can use it anywhere. #}
     <script src="{% static 'js/toast.js' %}"></script>
@@ -117,5 +164,6 @@ More info and examples: docs/TEAM-GUIDE.md
 
     {# Opens and closes the navbar menu on phones #}
     <script src="{% static 'js/navbar.js' %}"></script>
+    <script src="{% static 'js/theme.js' %}"></script>
 </body>
 </html>

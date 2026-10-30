@@ -12,16 +12,51 @@ def get_stored_metric(user, metric):
     return counter.value if counter else 0
 
 
-def plants_in_garden(user):
-    """Different plants this user saved in the Encyclopedia (any collection, or the old saved list)."""
+def plants_in_garden(user, plants=None):
+    """Different plants this user posted in the Garden or saved in the Encyclopedia (any collection, or the old saved list).
+    plants narrows it down, e.g. to herbs only."""
     from plants.models import Plant  # imported here so the apps don't import each other at start-up
 
-    return Plant.objects.filter(Q(collections__user=user) | Q(saved_by__user=user)).distinct().count()
+    plants = Plant.objects.all() if plants is None else plants
+    in_garden = Q(garden_posts__author=user) | Q(collections__user=user) | Q(saved_by__user=user)
+    return plants.filter(in_garden).distinct().count()
 
 
-def harvests_logged(user):
-    """Everything logged with "Log progress" on the user's goals counts as a harvest."""
-    return ProgressLog.objects.filter(goal__user=user).aggregate(total=Sum("amount"))["total"] or 0
+def harvests_logged(user, plants=None):
+    """Everything logged with "Log progress" on the user's goals counts as a harvest.
+    plants narrows it down to goals for those plants, e.g. tomatoes only."""
+    logs = ProgressLog.objects.filter(goal__user=user)
+    if plants is not None:
+        logs = logs.filter(goal__plant__in=plants)
+    return logs.aggregate(total=Sum("amount"))["total"] or 0
+
+
+# Metrics that can be narrowed to one plant or one category (Milestone.plant / Milestone.category)
+PLANT_RULES = {
+    "plants_added": plants_in_garden,
+    "plant_collector": plants_in_garden,
+    "plants_saved": plants_in_garden,
+    "harvests_logged": harvests_logged,
+}
+
+
+def milestone_plants(milestone):
+    """The plants a milestone is about, or None when it counts every plant."""
+    from plants.models import Plant
+
+    if milestone.plant_id:
+        return Plant.objects.filter(pk=milestone.plant_id)
+    if milestone.category:
+        return Plant.objects.filter(category=milestone.category)
+    return None
+
+
+def milestone_progress(user, milestone):
+    """How far a user is on one milestone. Plant milestones only count their plant or category."""
+    plants = milestone_plants(milestone)
+    if plants is not None and milestone.metric in PLANT_RULES and user.is_authenticated:
+        return PLANT_RULES[milestone.metric](user, plants)
+    return get_metric(user, milestone.metric)
 
 
 # How each milestone metric is counted from the other modules. The keys are Milestone.METRIC_CHOICES,
@@ -90,7 +125,7 @@ def build_milestones(user):
         claims_map = {claim["milestone_id"]: claim["status"] for claim in claims}
     cards = []
     for milestone in Milestone.objects.select_related("plant"):
-        progress = min(get_metric(user, milestone.metric), milestone.target)
+        progress = min(milestone_progress(user, milestone), milestone.target)
         claim_status = claims_map.get(milestone.id)
         
         is_approved = claim_status == "APPROVED"
@@ -118,5 +153,5 @@ def can_claim(user, milestone):
     
     if already_claimed:
         return False
-    progress = get_metric(user, milestone.metric)
+    progress = milestone_progress(user, milestone)
     return progress >= milestone.target

@@ -71,13 +71,13 @@
             {% endif %}
 
             <h2 class="font-display text-xl leading-[1.3]">Hosted by</h2>
-            <div class="flex items-center gap-3">
+            <a href="{% url 'profile:show_user_profile' event.host.username %}" class="flex w-fit items-center gap-3 transition-transform duration-150 hover:scale-102">
                 {% avatar event.host %}
                 <span class="flex flex-col gap-0.5">
                     <span class="text-[13px] font-extrabold leading-tight">{{ event.host.get_full_name|default:event.host.username }}</span>
                     <span class="text-xs text-ink-soft">Hosted {{ host_event_count }} event{{ host_event_count|pluralize }}</span>
                 </span>
-            </div>
+            </a>
         </div>
 
         <aside class="flex w-full flex-col gap-4 lg:w-[368px] lg:shrink-0">
@@ -85,12 +85,15 @@
                 {# data-going-count and data-attendee-avatars let event_rsvp.js update these after an RSVP #}
                 <p class="font-display text-2xl leading-[1.25]"><span data-going-count="{{ event.id }}">{{ going_count }}</span> going</p>
                 <div data-attendee-avatars="{{ event.id }}" class="flex{% if not attendee_avatars %} hidden{% endif %}">
+                    {# Each avatar links to that person's profile. event_rsvp.js draws the same links after an RSVP. #}
                     {% for person in attendee_avatars %}
+                    <a href="{{ person.profile_url }}" aria-label="{{ person.name }}'s profile" title="{{ person.name }}" class="-mr-2 flex transition-transform duration-150 hover:scale-102">
                     {% if person.picture %}
-                    <img src="{{ person.picture }}" alt="" class="-mr-2 size-10 rounded-full border-2 border-ink object-cover">
+                    <img src="{{ person.picture }}" alt="" class="size-10 rounded-full border-2 border-ink object-cover">
                     {% else %}
-                    <span class="-mr-2 flex size-10 items-center justify-center rounded-full border-2 border-ink text-xs font-bold {{ person.bg_class }}">{{ person.initials }}</span>
+                    <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink text-xs font-bold {{ person.bg_class }}">{{ person.initials }}</span>
                     {% endif %}
+                    </a>
                     {% endfor %}
                     {% if more_going > 0 %}
                     <span class="flex size-10 items-center justify-center rounded-full border-2 border-ink bg-lilac text-xs font-bold">+{{ more_going }}</span>
@@ -100,12 +103,20 @@
                 {% include "event_rsvp_button.html" with event=event going=is_going %}
             </div>
 
-            {% if is_host %}
+            {% if can_delete %}
             <div class="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-brand-tint p-6">
+                {% if is_host %}
                 <p class="text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-brand">You're the host</p>
                 <p class="text-xs text-ink-soft">Only you see this box.</p>
+                {% else %}
+                {# A moderator looking at someone else's event: they can delete it, but not edit it #}
+                <p class="text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-brand">Moderator</p>
+                <p class="text-xs text-ink-soft">Only moderators see this box.</p>
+                {% endif %}
                 <div class="flex flex-wrap gap-2.5">
+                    {% if is_host %}
                     <button type="button" popovertarget="host-event-modal" class="rounded-full border-2 border-ink bg-surface px-6 py-3 text-[15px] font-extrabold hover:bg-brand-tint transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Edit event</button>
+                    {% endif %}
                     <button type="button" popovertarget="delete-event-modal" class="rounded-full border-2 border-ink bg-danger px-6 py-3 text-[15px] font-extrabold text-white hover:bg-danger-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Delete event</button>
                 </div>
             </div>
@@ -117,9 +128,11 @@
 {% if is_host %}
 {% url 'events:edit_event_ajax' event.id as edit_url %}
 {% include "event_form_modal.html" with modal_title="Edit event" submit_label="Save changes" form_action=edit_url %}
+{% endif %}
+{% if can_delete %}
 {% include "event_delete_modal.html" %}
 {% endif %}
-{# ?v=2 makes browsers download the new file instead of using an old saved copy. Add 1 when event_rsvp.js changes. #}
-<script src="{% static 'js/event_rsvp.js' %}?v=2"></script>
+{# ?v=3 makes browsers download the new file instead of using an old saved copy. Add 1 when event_rsvp.js changes. #}
+<script src="{% static 'js/event_rsvp.js' %}?v=3"></script>
 <script src="{% static 'js/event_delete.js' %}"></script>
 {% endblock content %}

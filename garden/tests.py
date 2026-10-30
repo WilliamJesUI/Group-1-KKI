@@ -150,6 +150,14 @@ class ShowGardenTest(GardenTestCase):
         self.assertNotContains(response, 'data-filter="mine"')
         self.assertNotContains(response, 'id="week-modal"')
 
+    def test_author_links_to_profile(self):
+        Comment.objects.create(post=self.post, author=self.budi, text="Wow")
+        response = self.client.get(reverse("garden:show_garden"))
+        self.assertContains(response, f'href="{reverse("profile:show_user_profile", args=["siti"])}"')
+        # Comments are loaded on their own when the comment button is clicked
+        response = self.client.get(reverse("garden:show_comments", args=[self.post.id]))
+        self.assertContains(response, f'href="{reverse("profile:show_user_profile", args=["budi"])}"')
+
     def test_page_logged_in(self):
         self.login(self.budi)
         response = self.client.get(reverse("garden:show_garden"))
