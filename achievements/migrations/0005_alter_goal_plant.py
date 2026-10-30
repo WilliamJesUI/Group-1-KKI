@@ -4,7 +4,24 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def plant_names_to_ids(apps, schema_editor):
+    """Goals used to save the plant as text ("Tomato"). Before the column becomes a link to plants.Plant,
+    each name is swapped for that plant's id, so PostgreSQL can turn the text into a number.
+    Goals whose text matches no plant are removed (they could not point at a real plant)."""
+    Goal = apps.get_model("achievements", "Goal")
+    Plant = apps.get_model("plants", "Plant")
+    for goal in Goal.objects.all():
+        text = (goal.plant or "").strip()
+        plant = Plant.objects.filter(name__iexact=text).first() or Plant.objects.filter(slug=text).first()
+        if plant:
+            Goal.objects.filter(pk=goal.pk).update(plant=str(plant.pk))
+        else:
+            goal.delete()
+
+
 class Migration(migrations.Migration):
+    # Not one big transaction: PostgreSQL won't change a table in the same transaction that just deleted rows from it
+    atomic = False
 
     dependencies = [
         ('achievements', '0004_goal_progresslog'),
@@ -12,6 +29,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RunPython(plant_names_to_ids, migrations.RunPython.noop),
         migrations.AlterField(
             model_name='goal',
             name='plant',
