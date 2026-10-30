@@ -226,3 +226,27 @@ class EmptyAndBrokenTest(TestCase):
         top, more = services.garden_posts(budi)
         self.assertEqual(top, post)
         self.assertEqual(more, [])
+
+
+class DarkModeTest(TestCase):
+    """Every page has a light/dark switch, and the saved choice is applied before the page paints."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="dana", password="pass12345")
+
+    def test_landing_page_has_theme_toggle(self):
+        response = self.client.get(reverse("home:show_landing"))
+        self.assertContains(response, "data-theme-toggle")
+        self.assertContains(response, "js/theme.js")
+
+    def test_pages_with_navbar_have_theme_toggle(self):
+        self.client.login(username="dana", password="pass12345")
+        response = self.client.get(reverse("events:show_events"))
+        self.assertContains(response, "data-theme-toggle")
+
+    def test_saved_theme_is_read_before_paint(self):
+        response = self.client.get(reverse("home:show_landing"))
+        html = response.content.decode()
+        self.assertIn("gyg-theme", html)
+        # The early script must come before the stylesheet so dark pages don't flash white first.
+        self.assertLess(html.index("gyg-theme"), html.index("@tailwindcss/browser"))
