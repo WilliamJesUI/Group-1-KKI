@@ -755,6 +755,52 @@ class DeleteEventTest(TestCase):
         self.assertContains(response, "js/event_delete.js")
 
 
+class ModeratorEventTest(TestCase):
+    # A moderator is a user with "Staff status" ticked in /admin/. They can delete any event, but not edit it.
+    def setUp(self):
+        self.host = User.objects.create_user(username="rina", password="tomatoes123")
+        self.other = User.objects.create_user(username="ben", password="tomatoes123")
+        self.mod = User.objects.create_user(username="mod", password="tomatoes123", is_staff=True)
+        self.event = Event.objects.create(
+            name="Community Seed Swap", description="-", location="Menteng Urban Farm",
+            start_time=timezone.now() + timedelta(days=3), host=self.host,
+        )
+        self.url = reverse("events:delete_event", args=[self.event.id])
+        self.detail_url = reverse("events:show_event", args=[self.event.id])
+
+    def test_moderator_can_delete_someone_elses_event(self):
+        self.client.login(username="mod", password="tomatoes123")
+        response = self.client.post(self.url)
+        self.assertEqual(response.json(), {"url": reverse("events:show_events")})
+        self.assertFalse(Event.objects.filter(pk=self.event.pk).exists())
+
+    def test_normal_user_still_gets_403(self):
+        self.client.login(username="ben", password="tomatoes123")
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["message"], "Only the host can delete this event.")
+        self.assertTrue(Event.objects.filter(pk=self.event.pk).exists())
+
+    def test_moderator_cannot_edit_someone_elses_event(self):
+        self.client.login(username="mod", password="tomatoes123")
+        data = {
+            "name": "Changed by mod", "date": "2030-11-10", "start": "10:00", "end": "",
+            "location": "Taman Suropati", "description": "-",
+        }
+        response = self.client.post(reverse("events:edit_event_ajax", args=[self.event.id]), data)
+        self.assertEqual(response.status_code, 403)
+        self.event.refresh_from_db()
+        self.assertEqual(self.event.name, "Community Seed Swap")
+
+    def test_moderator_sees_delete_but_not_edit(self):
+        self.client.login(username="mod", password="tomatoes123")
+        response = self.client.get(self.detail_url)
+        self.assertContains(response, "Only moderators see this box.")
+        self.assertContains(response, 'id="delete-event-modal"')
+        self.assertNotContains(response, 'popovertarget="host-event-modal"')
+        self.assertNotContains(response, "You're the host")
+
+
 class EventStatusTest(TestCase):
     def setUp(self):
         self.host = User.objects.create_user(username="rina", password="tomatoes123")

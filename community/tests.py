@@ -405,7 +405,77 @@ class AnswerTest(CommunityTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Answer.objects.filter(pk=self.answer.pk).exists())
 
-        
+
+
+class ModeratorTest(CommunityTestCase):
+    # A moderator is a user with "Staff status" ticked in /admin/. They can delete anyone's
+    # questions and answers, but they can't edit other people's words.
+    def setUp(self):
+        super().setUp()
+        self.mod = User.objects.create_user(username="mod", password="pass12345", is_staff=True)
+        self.answer = Answer.objects.create(question=self.tomato_question, author=self.ala, body="Water less")
+        self.thread_url = reverse("community:show_question_thread", args=[self.tomato_question.id])
+
+    def test_moderator_can_delete_someone_elses_question(self):
+        self.login(self.mod)
+        response = self.client.post(reverse("community:delete_question_ajax", args=[self.basil_question.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Question.objects.filter(pk=self.basil_question.pk).exists())
+
+    def test_moderator_can_delete_an_answered_question(self):
+        # Authors get a 409 here, but a moderator can still remove the whole thread
+        self.login(self.mod)
+        response = self.client.post(reverse("community:delete_question_ajax", args=[self.tomato_question.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Question.objects.filter(pk=self.tomato_question.pk).exists())
+        self.assertFalse(Answer.objects.filter(pk=self.answer.pk).exists())
+
+    def test_moderator_can_delete_someone_elses_answer(self):
+        self.login(self.mod)
+        response = self.client.post(reverse("community:delete_answer_ajax", args=[self.answer.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Answer.objects.filter(pk=self.answer.pk).exists())
+
+    def test_normal_user_still_gets_403(self):
+        self.login(self.ala)
+        response = self.client.post(reverse("community:delete_question_ajax", args=[self.basil_question.id]))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["message"], "You can only delete your own questions.")
+        self.login(self.ben)
+        response = self.client.post(reverse("community:delete_answer_ajax", args=[self.answer.id]))
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.json()["message"], "You can only delete your own answers.")
+        self.assertTrue(Question.objects.filter(pk=self.basil_question.pk).exists())
+        self.assertTrue(Answer.objects.filter(pk=self.answer.pk).exists())
+
+    def test_moderator_cannot_edit_someone_elses_question_or_answer(self):
+        self.login(self.mod)
+        url = reverse("community:update_question_ajax", args=[self.basil_question.id])
+        response = self.client.post(url, {"title": "Changed by mod", "body": "-", "plant": self.basil.pk})
+        self.assertEqual(response.status_code, 403)
+        response = self.client.post(reverse("community:update_answer_ajax", args=[self.answer.id]), {"body": "Changed"})
+        self.assertEqual(response.status_code, 403)
+        self.basil_question.refresh_from_db()
+        self.answer.refresh_from_db()
+        self.assertEqual(self.basil_question.title, "Why is my basil yellow?")
+        self.assertEqual(self.answer.body, "Water less")
+
+    def test_moderator_sees_delete_but_not_edit(self):
+        self.login(self.mod)
+        response = self.client.get(self.thread_url)
+        self.assertContains(response, 'id="question_moderator_card"')
+        self.assertContains(response, 'id="delete-question-btn"')
+        self.assertContains(response, "data-delete-answer")
+        self.assertNotContains(response, 'popovertarget="edit-question-modal"')
+        self.assertNotContains(response, "data-edit-answer")
+
+    def test_normal_user_sees_no_delete_buttons(self):
+        self.login(self.ben)
+        response = self.client.get(self.thread_url)
+        self.assertNotContains(response, 'id="delete-question-btn"')
+        self.assertNotContains(response, "data-delete-answer")
+
+
 class PlantTagLinkTest(CommunityTestCase):
     """The plant tag on a question opens that plant's page in the Encyclopedia, like on Events."""
 

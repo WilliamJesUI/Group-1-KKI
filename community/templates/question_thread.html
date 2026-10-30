@@ -62,6 +62,8 @@
         {% include "related_questions_container.html" %}
         {% if user.is_authenticated and question.author_id == user.id %}
             {% include 'question_edit_delete_card.html' %}
+        {% elif user.is_staff %}
+            {% include 'question_moderator_card.html' %}
         {% endif %}
     </aside>
 </div>

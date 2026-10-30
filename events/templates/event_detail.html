@@ -100,12 +100,20 @@
                 {% include "event_rsvp_button.html" with event=event going=is_going %}
             </div>
 
-            {% if is_host %}
+            {% if can_delete %}
             <div class="flex flex-col gap-3 rounded-2xl border-2 border-ink bg-brand-tint p-6">
+                {% if is_host %}
                 <p class="text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-brand">You're the host</p>
                 <p class="text-xs text-ink-soft">Only you see this box.</p>
+                {% else %}
+                {# A moderator looking at someone else's event: they can delete it, but not edit it #}
+                <p class="text-[11px] font-black uppercase leading-tight tracking-[0.08em] text-brand">Moderator</p>
+                <p class="text-xs text-ink-soft">Only moderators see this box.</p>
+                {% endif %}
                 <div class="flex flex-wrap gap-2.5">
+                    {% if is_host %}
                     <button type="button" popovertarget="host-event-modal" class="rounded-full border-2 border-ink bg-surface px-6 py-3 text-[15px] font-extrabold hover:bg-brand-tint transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Edit event</button>
+                    {% endif %}
                     <button type="button" popovertarget="delete-event-modal" class="rounded-full border-2 border-ink bg-danger px-6 py-3 text-[15px] font-extrabold text-white hover:bg-danger-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Delete event</button>
                 </div>
             </div>
@@ -117,6 +125,8 @@
 {% if is_host %}
 {% url 'events:edit_event_ajax' event.id as edit_url %}
 {% include "event_form_modal.html" with modal_title="Edit event" submit_label="Save changes" form_action=edit_url %}
+{% endif %}
+{% if can_delete %}
 {% include "event_delete_modal.html" %}
 {% endif %}
 {# ?v=2 makes browsers download the new file instead of using an old saved copy. Add 1 when event_rsvp.js changes. #}
