@@ -442,3 +442,15 @@ class FavoritePlantTests(TestCase):
         self.plant.delete()
         profile = Profile.objects.get(user=self.user)
         self.assertIsNone(profile.favorite_plant)
+
+
+class EditProfileLookTests(TestCase):
+    def test_the_growing_style_dropdown_uses_the_same_chevron_and_height_as_the_plant_picker(self):
+        user = User.objects.create_user("ben", "ben@example.com", PASSWORD)
+        self.client.force_login(user)
+        response = self.client.get(reverse("profile:edit_profile"))
+        form = response.context["form"]
+        self.assertIn("img/icons/chevron-down.svg", form.fields["growing_style"].widget.attrs["class"])
+        for name in ("location", "growing_style", "favorite_plant", "display_name"):
+            self.assertIn("h-11", form.fields[name].widget.attrs["class"])
+            self.assertNotIn("h-12", form.fields[name].widget.attrs["class"])

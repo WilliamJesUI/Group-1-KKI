@@ -19,6 +19,17 @@ TEXTAREA_CLASS = (
     "w-full rounded-2xl border-2 border-ink bg-surface px-4 py-3 text-sm placeholder:text-muted "
     "focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none aria-invalid:border-danger"
 )
+
+# On the Edit profile page every box is 44px high (h-11), like the plant picker (static/js/plant_picker.js)
+# and the event form. The login and register pages keep their own 48px boxes (INPUT_CLASS).
+FIELD_CLASS = INPUT_CLASS.replace("h-12", "h-11")
+# A dropdown drawn like the plant picker: same height, and the same chevron (static/img/icons/chevron-down.svg)
+# instead of the browser's own arrow. While nothing is chosen, the text is gray like the picker's placeholder.
+SELECT_CLASS = (
+    FIELD_CLASS
+    + " appearance-none bg-[url('/static/img/icons/chevron-down.svg')] bg-no-repeat bg-[position:right_1rem_center]"
+    " bg-[length:16px] pr-10 [&:has(option[value='']:checked)]:text-muted [&>option]:text-ink"
+)
 CHECKBOX_CLASS = "size-5 shrink-0 rounded-md border-2 border-ink accent-brand focus:ring-1 focus:ring-brand focus:outline-none"
 
 IMAGE_LINK_ERROR = "Please paste a full image link, starting with https://"
@@ -162,7 +173,7 @@ def make_image_fields(label):
         ),
         "url": forms.URLField(
             required=False, max_length=500, label="Paste an image link",
-            widget=forms.URLInput(attrs={"placeholder": "https://images.pexels.com/photos/...", "class": INPUT_CLASS}),
+            widget=forms.URLInput(attrs={"placeholder": "https://images.pexels.com/photos/...", "class": FIELD_CLASS}),
             error_messages={"invalid": IMAGE_LINK_ERROR},
         ),
         "remove": forms.BooleanField(
@@ -176,7 +187,7 @@ class EditProfileForm(AriaInvalidMixin, forms.ModelForm):
     # The display name is saved on the User (as first_name, which the navbar already shows), not on the Profile.
     display_name = forms.CharField(
         required=False, max_length=50, label="Display name",
-        widget=forms.TextInput(attrs={"placeholder": "e.g. Pro Gardener", "class": INPUT_CLASS}),
+        widget=forms.TextInput(attrs={"placeholder": "e.g. Pro Gardener", "class": FIELD_CLASS}),
         help_text="Shown instead of your username. Leave it empty to use your username.",
     )
     # The text fields are normal model fields. The two images are handled by hand (see save()),
@@ -194,11 +205,11 @@ class EditProfileForm(AriaInvalidMixin, forms.ModelForm):
         labels = {"favorite_plant": "Favorite plant", "growing_style": "Growing style"}
         widgets = {
             "bio": forms.Textarea(attrs={"rows": 4, "placeholder": "Tell other gardeners about yourself", "class": TEXTAREA_CLASS}),
-            "location": forms.TextInput(attrs={"placeholder": "e.g. South Jakarta", "class": INPUT_CLASS}),
+            "location": forms.TextInput(attrs={"placeholder": "e.g. South Jakarta", "class": FIELD_CLASS}),
             # A dropdown of every plant in the shared plant list. static/js/plant_picker.js turns it into a search box
             # with photos (see edit_profile.html). Without JavaScript it stays a normal dropdown.
-            "favorite_plant": PlantSelect(attrs={"class": INPUT_CLASS}),
-            "growing_style": forms.Select(attrs={"class": INPUT_CLASS}),
+            "favorite_plant": PlantSelect(attrs={"class": FIELD_CLASS}),
+            "growing_style": forms.Select(attrs={"class": SELECT_CLASS}),
         }
 
     def __init__(self, *args, **kwargs):
