@@ -119,6 +119,7 @@
 {% include "event_form_modal.html" with modal_title="Edit event" submit_label="Save changes" form_action=edit_url %}
 {% include "event_delete_modal.html" %}
 {% endif %}
-<script src="{% static 'js/event_rsvp.js' %}"></script>
+{# ?v=2 makes browsers download the new file instead of using an old saved copy. Add 1 when event_rsvp.js changes. #}
+<script src="{% static 'js/event_rsvp.js' %}?v=2"></script>
 <script src="{% static 'js/event_delete.js' %}"></script>
 {% endblock content %}

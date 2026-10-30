@@ -64,8 +64,8 @@
         </div>
       </div>
       {# Figma: "Plant info from our plant database. Photo by ..." #}
-      <p class="mt-2 text-[10px] text-muted">Plant info from our plant database.{% if plant.image_credit %} Photo:
-        {% if plant.image_credit_url %}<a href="{{ plant.image_credit_url }}" target="_blank" rel="noopener noreferrer" class="underline">{{ plant.image_credit }}</a>{% else %}{{ plant.image_credit }}{% endif %}{% endif %}
+      <p class="mt-2 text-[10px] text-muted">Plant info from our plant database.{% if plant.photo_credit %} Photo:
+        {% if plant.photo_credit_url %}<a href="{{ plant.photo_credit_url }}" target="_blank" rel="noopener noreferrer" class="underline">{{ plant.photo_credit }}</a>{% else %}{{ plant.photo_credit }}{% endif %}{% endif %}
       </p>
       {# Figma buttons: green "Save to collection" + white "Share guide" #}
       <div class="mt-4 flex flex-wrap items-center gap-3">

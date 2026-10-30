@@ -1,4 +1,25 @@
+import json
+from functools import cache
+
+from django.conf import settings
 from django.db import models
+from django.templatetags.static import static
+
+# Our own copies of the plant photos: static/img/plants/<slug>-m.jpg (cards) and <slug>-s.jpg (thumbnails),
+# with who took each one in credits.json. Pages load these instead of PlantNet, which often doesn't answer.
+PLANT_PHOTO_DIR = settings.BASE_DIR / "static" / "img" / "plants"
+
+
+@cache  # looks in the folder once per server start, not once per photo
+def saved_plant_photos():
+    return {path.name for path in PLANT_PHOTO_DIR.glob("*.jpg")}
+
+
+@cache
+def saved_photo_credits():
+    """{"sweet-basil": {"credit": "Photo by ..., CC BY-SA 4.0 (Wikimedia Commons)", "url": "..."}, ...}"""
+    path = PLANT_PHOTO_DIR / "credits.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
 class Plant(models.Model):
@@ -60,15 +81,36 @@ class Plant(models.Model):
         """One plant's category in singular, like the filter pills and Figma: "Herb", not "Herbs"."""
         return {"vegetables": "Vegetable", "herbs": "Herb", "flowers": "Flower"}.get(self.category, "Plant")
 
+    def photo_url(self, size):
+        """The plant's photo in PlantNet size "m" (medium) or "s" (small).
+        Our own saved copy if there is one, otherwise the PlantNet link (PlantNet /o/ is the huge original)."""
+        if not self.image_url:
+            return ""
+        name = f"{self.slug}-{size}.jpg"
+        if name in saved_plant_photos():
+            return static(f"img/plants/{name}")
+        return self.image_url.replace("/image/o/", f"/image/{size}/")
+
+    @property
+    def photo_credit(self):
+        """Who took the photo the site shows: the saved copy's credit, or the original PlantNet one."""
+        saved = saved_photo_credits().get(self.slug)
+        return saved["credit"] if saved and self.card_image_url.startswith("/static/") else self.image_credit
+
+    @property
+    def photo_credit_url(self):
+        saved = saved_photo_credits().get(self.slug)
+        return saved["url"] if saved and self.card_image_url.startswith("/static/") else self.image_credit_url
+
     @property
     def card_image_url(self):
-        """Medium-size photo for cards. PlantNet /o/ is the full original, which is slow to load."""
-        return self.image_url.replace("/image/o/", "/image/m/")
-    
+        """Medium-size photo for cards."""
+        return self.photo_url("m")
+
     @property
     def thumb_image_url(self):
         """Small photo for little round thumbnails (like Community's Popular Plants), a few KB instead of a few MB."""
-        return self.image_url.replace("/image/o/", "/image/s/")
+        return self.photo_url("s")
 
     class Meta:
         ordering = ["name"]

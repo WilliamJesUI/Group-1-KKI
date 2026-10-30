@@ -1,0 +1,30 @@
+{% comment %}
+The pills and the sideways plant shelf on the landing page (spread 03). Sent on its own (?partial=1) when
+static/js/landing.js asks for another pill, so it can be swapped in without reloading the page.
+{% endcomment %}
+<div class="flex flex-wrap gap-2" role="group" aria-label="Show plants">
+    {% for value, label in shelf_pills %}
+    <a href="?shelf={{ value }}#spread-encyclopedia" data-shelf-pill="{{ value }}" {% if value == category %}aria-current="true"{% endif %}
+       class="rounded-full border-2 border-ink px-4 py-1.5 text-xs font-bold transition duration-150 ease-out hover:bg-brand-soft-hover active:scale-[0.97] motion-reduce:active:scale-100 {% if value == category %}bg-brand-soft{% else %}bg-white{% endif %}">{{ label }}</a>
+    {% endfor %}
+</div>
+
+<ul data-shelf-track class="-mx-4 mt-6 flex snap-x snap-proximity scroll-px-4 gap-6 overflow-x-auto px-4 pb-6 sm:-mx-6 sm:scroll-px-6 sm:px-6 [scrollbar-width:none]">
+    {% for plant in shelf %}
+    {# The same Plant Card as the Encyclopedia #}
+    <li class="w-[280px] shrink-0 snap-start sm:w-[340px]">{% include "plant_card.html" %}</li>
+    {% empty %}
+    <li class="w-full rounded-3xl border-2 border-dashed border-ink/30 bg-white p-8 text-center">
+        <p class="font-display text-xl">No plants here yet</p>
+        <p class="mt-1 text-sm text-ink-soft">Try another group above.</p>
+    </li>
+    {% endfor %}
+    {% if shelf %}
+    <li class="w-[260px] shrink-0 snap-start sm:w-[300px]">
+        <a href="{% url 'encyclopedia:index' %}{% if category != 'all' %}?category={{ category }}{% endif %}" class="flex h-full min-h-[300px] flex-col justify-between rounded-xl border-2 border-ink bg-brand p-6 text-white transition duration-150 ease-out hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--color-ink)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-butter motion-reduce:hover:translate-x-0 motion-reduce:hover:translate-y-0">
+            <span class="font-display text-3xl leading-tight">See every plant in the encyclopedia</span>
+            <span class="text-4xl" aria-hidden="true">→</span>
+        </a>
+    </li>
+    {% endif %}
+</ul>

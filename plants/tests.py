@@ -149,3 +149,53 @@ class WikipediaTests(TestCase):
         plant.refresh_from_db()
         self.assertEqual(plant.description, "Tomato is a fruit.")
         self.assertEqual(plant.name, "Tomato")
+
+
+class PlantPhotoTest(TestCase):
+    """card_image_url / thumb_image_url use our saved copy in static/img/plants/ when there is one."""
+
+    def setUp(self):
+        from plants.models import Plant
+        self.plant = Plant(name="Test basil", slug="test-basil", image_url="https://bs.plantnet.org/image/o/abc")
+
+    def test_saved_copy_wins(self):
+        with patch("plants.models.saved_plant_photos", return_value={"test-basil-m.jpg", "test-basil-s.jpg"}):
+            self.assertEqual(self.plant.card_image_url, "/static/img/plants/test-basil-m.jpg")
+            self.assertEqual(self.plant.thumb_image_url, "/static/img/plants/test-basil-s.jpg")
+
+    def test_falls_back_to_plantnet(self):
+        with patch("plants.models.saved_plant_photos", return_value=set()):
+            self.assertEqual(self.plant.card_image_url, "https://bs.plantnet.org/image/o/abc".replace("/o/", "/m/"))
+            self.assertEqual(self.plant.thumb_image_url, "https://bs.plantnet.org/image/s/abc")
+
+    def test_no_photo(self):
+        self.plant.image_url = ""
+        self.assertEqual(self.plant.card_image_url, "")
+
+    def test_credit_follows_the_photo(self):
+        self.plant.image_credit, self.plant.image_credit_url = "Photo by PlantNet user", "https://plantnet.org"
+        saved = {"test-basil": {"credit": "Photo by Ann, CC BY-SA 4.0 (Wikimedia Commons)", "url": "https://commons.wikimedia.org/x"}}
+        with patch("plants.models.saved_photo_credits", return_value=saved):
+            with patch("plants.models.saved_plant_photos", return_value={"test-basil-m.jpg"}):
+                self.assertEqual(self.plant.photo_credit, "Photo by Ann, CC BY-SA 4.0 (Wikimedia Commons)")
+                self.assertEqual(self.plant.photo_credit_url, "https://commons.wikimedia.org/x")
+            # No saved photo, so the PlantNet photo shows with its own credit
+            with patch("plants.models.saved_plant_photos", return_value=set()):
+                self.assertEqual(self.plant.photo_credit, "Photo by PlantNet user")
+                self.assertEqual(self.plant.photo_credit_url, "https://plantnet.org")
+
+    def test_reads_the_folder(self):
+        from plants.models import saved_photo_credits, saved_plant_photos
+        with tempfile.TemporaryDirectory() as folder:
+            Path(folder, "mint-s.jpg").write_bytes(b"x")
+            Path(folder, "notes.txt").write_text("not a photo")
+            saved_plant_photos.cache_clear()
+            saved_photo_credits.cache_clear()
+            with patch("plants.models.PLANT_PHOTO_DIR", Path(folder)):
+                self.assertEqual(saved_plant_photos(), {"mint-s.jpg"})
+                self.assertEqual(saved_photo_credits(), {})
+                saved_photo_credits.cache_clear()
+                Path(folder, "credits.json").write_text('{"mint": {"credit": "Photo by Ann", "url": ""}}')
+                self.assertEqual(saved_photo_credits()["mint"]["credit"], "Photo by Ann")
+            saved_plant_photos.cache_clear()
+            saved_photo_credits.cache_clear()

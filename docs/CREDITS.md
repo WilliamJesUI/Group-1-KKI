@@ -6,6 +6,7 @@ Photos, icons and the logo used in Grow Your Garden. All photos are from [Pexels
 
 | Where it's used | Photographer | Link |
 |---|---|---|
+| Landing page cover | see the Pexels page | https://www.pexels.com/photo/33352121/ |
 | Event: Community Seed Swap | RDNE Stock project | https://www.pexels.com/photo/7782153/ |
 | Event: Balcony Gardening 101 | TIVASEE | https://www.pexels.com/photo/10939348/ |
 | Event: Sunday Harvest Share | Kampus Production | https://www.pexels.com/photo/7658824/ |

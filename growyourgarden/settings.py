@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'achievements',
     'plants',
     'encyclopedia',
+    'home',
 ]
 
 MIDDLEWARE = [

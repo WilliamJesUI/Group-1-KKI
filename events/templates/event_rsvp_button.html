@@ -2,7 +2,7 @@
 {% comment %}
 RSVP button (Figma "RSVP Toggle"), or a label when RSVP isn't possible.
 Include with: event = the event, going = True if the logged-in user already RSVP'd.
-static/js/event_rsvp.js makes the button work.
+static/js/event_rsvp.js makes the button work. Errors show as a toast, so the button never moves.
 {% endcomment %}
 {% with status=event.status %}
 <div data-rsvp class="flex flex-col items-start gap-1">
@@ -26,6 +26,5 @@ static/js/event_rsvp.js makes the button work.
     {% else %}
     <a href="{% url 'profile:login' %}?next={{ request.path|urlencode }}" class="rounded-full border-2 border-ink bg-ink px-4 py-2 text-[13px] font-extrabold text-white hover:bg-ink-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Log in to RSVP</a>
     {% endif %}
-    <p data-rsvp-error class="hidden text-xs text-danger-text"></p>
 </div>
 {% endwith %}
