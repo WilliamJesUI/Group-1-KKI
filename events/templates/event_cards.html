@@ -3,10 +3,11 @@
 The grid of event cards, or a message when there are none.
 Used by event_list.html, and sent on its own when the filters ask for new cards.
 Needs: event_list (events, each with is_going, card_avatars and card_more_going set by mark_going in the view),
-selected_filter and query (for the empty message). The avatar classes (.card-avatar...) are in event_list.html.
+selected_filter and query (for the empty message).
+Optional grid_class changes the grid (the landing page shows 2 cards next to the big poster). The avatar classes (.card-avatar...) are in event_list.html.
 {% endcomment %}
 {% if event_list %}
-<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+<div class="{{ grid_class|default:'grid gap-6 sm:grid-cols-2 lg:grid-cols-3' }}">
     {% for event in event_list %}
     {% comment %}
     Page-load fade from the Figma Motion table: each card fades in over 400ms, 40ms after the one before.
