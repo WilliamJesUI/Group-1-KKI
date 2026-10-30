@@ -43,7 +43,7 @@ class LandingTestData(TestCase):
             slug="test-sprout", title="Test Sprout", description="Add a plant", metric="plants_added",
             target=1, icon="img/icons/ach-sprout.svg",
         )
-        ClaimedBadge.objects.create(user=self.budi, milestone=self.milestone)
+        ClaimedBadge.objects.create(user=self.budi, milestone=self.milestone, status="APPROVED")
 
 
 class LandingGuestTest(LandingTestData):
@@ -76,6 +76,11 @@ class LandingGuestTest(LandingTestData):
         self.assertContains(response, "1 of 2 gardeners")
         for slug in ["garden", "events", "encyclopedia", "community", "achievements"]:
             self.assertContains(response, f'id="spread-{slug}"')
+
+    def test_pending_claims_do_not_count(self):
+        ClaimedBadge.objects.create(user=self.siti, milestone=self.milestone)  # PENDING by default
+        response = self.client.get(self.url)
+        self.assertContains(response, "1 of 2 gardeners")
 
     def test_guest_actions_send_to_log_in(self):
         response = self.client.get(self.url)
