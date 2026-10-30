@@ -464,6 +464,10 @@ def plant_detail(request, slug):
     event_total = events.count()
     events = mark_going(list(events[:3]), request.user)
 
+    # "From the garden": the 3 newest Garden posts tagged with this plant
+    garden_posts = plant.garden_posts.defer("photo").select_related("author__profile")
+    garden_post_total = garden_posts.count()
+
     return render(
         request, "plant_detail.html", {
             "plant": plant,
@@ -471,6 +475,8 @@ def plant_detail(request, slug):
             "question_total": question_total,
             "plant_events": events,
             "event_total": event_total,
+            "garden_posts": garden_posts[:3],
+            "garden_post_total": garden_post_total,
             "is_saved": bool(saved_ids),
             "saved_collection_ids": saved_ids,
             "collections": collections,

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Edit profile - Grow Your Garden{% endblock title %}
 
@@ -62,6 +63,9 @@
         </div>
     </section>
 </div>
+
+{# Turns the Favorite plant dropdown into a search box with plant photos (same picker as the event form) #}
+<script src="{% static 'js/plant_picker.js' %}"></script>
 
 <script>
     // Dropzones (see _image_field.html): click to browse, or drag a photo onto the box.

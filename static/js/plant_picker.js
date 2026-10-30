@@ -71,6 +71,26 @@ function setUpPlantPicker(select) {
     const empty = find('[data-empty]');
     const status = find('[role="status"]');
 
+    // data-picker-inline (short pop-ups like Plant of the week, Figma 804:2634): the list is always shown
+    // under the field at a fixed height, so the pop-up never jumps in size. Typing still searches it.
+    const alwaysOpen = 'pickerInline' in select.dataset;
+    if (alwaysOpen) {
+        panel.classList.remove('absolute', 'inset-x-0', 'top-full', 'z-20', 'hidden', 'shadow-[4px_4px_0_0_var(--color-ink)]');
+        panel.classList.add('flex', 'h-72');
+        list.classList.replace('max-h-[min(340px,45dvh)]', 'min-h-0');
+        list.classList.add('flex-1');
+        box.querySelector('.group-data-open\\:rotate-180').hidden = true; // no dropdown, so no arrow
+        // Picking a plant while the search box isn't focused: move the tick
+        select.addEventListener('change', () => isOpen || render());
+        // Each time the pop-up opens, scroll the list so the chosen plant is in the middle
+        select.closest('[popover]')?.addEventListener('toggle', (event) => {
+            const chosen = list.querySelector('[aria-selected="true"]');
+            if (event.newState === 'open') {
+                list.scrollTop = chosen ? chosen.offsetTop - (list.clientHeight - chosen.offsetHeight) / 2 : 0;
+            }
+        });
+    }
+
     // The real <select> goes inside the field, hidden, so has-aria-invalid: still turns the border red on errors
     box.append(select);
     select.classList.add('sr-only');
@@ -91,9 +111,11 @@ function setUpPlantPicker(select) {
     pills.innerHTML = [['', ['All']], ...Object.entries(PLANT_GROUPS).filter(([key]) => plants.some((p) => p.group === key))]
         .map(([key, names]) => `<button type="button" tabindex="-1" data-pill="${key}" aria-pressed="${!key}" class="shrink-0 rounded-full border-2 border-ink bg-surface px-2 py-1 text-xs font-bold leading-[1.2] hover:bg-brand-tint aria-pressed:bg-brand-soft sm:px-3">${names[0]}</button>`).join('');
 
-    // A round photo with an ink ring, or the category icon on its soft color
+    // A round photo with an ink ring, or the category icon on its soft color.
+    // The always-open list loads its photos right away: some browsers never start "lazy" photos
+    // inside a list that was drawn while its pop-up was still closed.
     const thumb = (plant, big) => `<span data-group="${plant.group}" class="grid ${big ? 'size-10' : 'size-7'} shrink-0 place-items-center overflow-hidden rounded-full border-[1.5px] border-ink ${plant.image ? 'bg-brand-tint' : NO_PHOTO[plant.group][0]}">${plant.image
-        ? `<img src="${esc(plant.image)}" alt="" loading="lazy" class="size-full object-cover">` : svg(NO_PHOTO[plant.group][1], big ? 18 : 14)}</span>`;
+        ? `<img src="${esc(plant.image)}" alt="" loading="${alwaysOpen ? 'eager' : 'lazy'}" class="size-full object-cover">` : svg(NO_PHOTO[plant.group][1], big ? 18 : 14)}</span>`;
     // A photo that fails to load turns into the no-photo circle
     picker.addEventListener('error', (event) => {
         const circle = event.target.parentElement;
@@ -204,7 +226,9 @@ function setUpPlantPicker(select) {
         const chosen = list.querySelector('[aria-selected="true"]');
         list.scrollTop = chosen ? chosen.offsetTop - (list.clientHeight - chosen.offsetHeight) / 2 : 0;
         setActive(chosen);
-        panel.scrollIntoView({ block: 'nearest' }); // scrolls the modal if the list would hang off its bottom
+        if (!alwaysOpen) {
+            panel.scrollIntoView({ block: 'nearest' }); // scrolls the modal if the list would hang off its bottom
+        }
     }
 
     function close() {
@@ -219,6 +243,10 @@ function setUpPlantPicker(select) {
             choose(''); // an emptied box means "no plant", because the field is optional
         }
         syncField();
+        if (alwaysOpen) {
+            query = '';
+            render(); // the list stays on screen: clear the search and move the tick to the chosen plant
+        }
     }
 
     function pick(row) {

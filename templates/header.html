@@ -28,7 +28,7 @@ The .nav-tab and .nav-tab-active styles are in base.html, and static/js/navbar.j
             To link your tab, replace href="#" with your page, e.g. href="{% url 'community:show_questions' %}".
             {% endcomment %}
             <nav class="mt-4 flex flex-col gap-1 border-t border-line pt-4 lg:mt-0 lg:flex-row lg:rounded-full lg:border-2 lg:border-ink lg:bg-brand-soft lg:px-2 lg:py-1">
-                <a href="#" class="nav-tab {% if app == 'garden' %}nav-tab-active{% endif %}">Garden</a>
+                <a href="{% url 'garden:show_garden' %}" class="nav-tab {% if app == 'garden' %}nav-tab-active{% endif %}">Garden</a>
                 <a href="{% url 'events:show_events' %}" class="nav-tab {% if app == 'events' %}nav-tab-active{% endif %}">Events</a>
                 <a href="{% url 'encyclopedia:index' %}" class="nav-tab {% if app == 'encyclopedia' %}nav-tab-active{% endif %}">Encyclopedia</a>
                 <a href="{% url 'community:show_questions' %}" class="nav-tab {% if app == 'community' %}nav-tab-active{% endif %}">Community</a>

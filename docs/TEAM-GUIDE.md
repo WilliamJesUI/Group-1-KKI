@@ -283,3 +283,41 @@ A few things to know:
 - "Cancel" is focused when it opens, so pressing Enter never deletes by accident.
 - The title and message are shown as plain text, so it's safe to put a user's own text (like a plant or collection name) in them.
 - This only asks. Your view must still check the user is allowed to delete (owner or moderator).
+## 14. Who can delete what (moderators)
+
+A **moderator** is any account with "Staff status" ticked in `/admin/` (Users, pick the user, tick the box). The rule for the whole site:
+
+- Everyone can edit and delete **their own** posts, comments, answers and so on.
+- Moderators can **delete anything** to keep the site clean (spam, rude stuff).
+- Moderators **can't edit** other people's words. Delete is fine, rewriting what someone said isn't.
+- Admin-only jobs (like picking the Garden "Plant of the week") are moderators only.
+
+The checks live in one place, `growyourgarden/permissions.py`, so every module works the same way:
+
+```python
+from growyourgarden.permissions import ajax_login_required, ajax_moderator_required, can_delete, is_moderator
+
+@require_POST
+@ajax_login_required("Please log in to delete this.")      # JSON 403 with this message when logged out
+def delete_answer(request, answer_id):
+    answer = get_object_or_404(Answer, pk=answer_id)
+    if not can_delete(request.user, answer.author):         # the author, or a moderator
+        return JsonResponse({"message": "You can only delete your own answers."}, status=403)
+    answer.delete()
+    return JsonResponse({"deleted": True})
+
+@require_POST
+@ajax_moderator_required("Only moderators can do this.")    # JSON 403 for everyone else
+def pin_post(request, post_id):
+    ...
+```
+
+In templates, show the Delete button with the same rule. In the view, set it on each item (`item.can_delete = can_delete(request.user, item.author)`) and use `{% if item.can_delete %}` in the template. The `message` in the JSON 403 works with `showToast()` (section 12), so the page can just show it.
+
+## 15. The landing page shows your module
+
+The home page at `/` (the `home` app) shows a small preview of every module: the newest Garden posts, the next events, a shelf of plants, the newest questions and the most claimed badges. It reads your tables in `home/services.py`, and only reads, never writes.
+
+- Each part is wrapped in `safely()`. If your table breaks, only your part shows an empty state, the rest of the page still loads.
+- If you rename a model field that the landing page uses (for example `Post.image_url`, `Event.start_time`, `Question.title`, `Milestone.icon`), run `python manage.py test home` before you push. Those tests break first and tell you what to fix.
+- Your URL names are used there too (`garden:show_garden`, `events:show_event`, `encyclopedia:detail`, `community:show_question_thread`, `achievements:show_achievements`). Keep the names the same.

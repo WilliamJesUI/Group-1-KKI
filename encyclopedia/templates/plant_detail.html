@@ -64,8 +64,8 @@
         </div>
       </div>
       {# Figma: "Plant info from our plant database. Photo by ..." #}
-      <p class="mt-2 text-[10px] text-muted">Plant info from our plant database.{% if plant.image_credit %} Photo:
-        {% if plant.image_credit_url %}<a href="{{ plant.image_credit_url }}" target="_blank" rel="noopener noreferrer" class="underline">{{ plant.image_credit }}</a>{% else %}{{ plant.image_credit }}{% endif %}{% endif %}
+      <p class="mt-2 text-[10px] text-muted">Plant info from our plant database.{% if plant.photo_credit %} Photo:
+        {% if plant.photo_credit_url %}<a href="{{ plant.photo_credit_url }}" target="_blank" rel="noopener noreferrer" class="underline">{{ plant.photo_credit }}</a>{% else %}{{ plant.photo_credit }}{% endif %}{% endif %}
       </p>
       {# Figma buttons: green "Save to collection" + white "Share guide" #}
       <div class="mt-4 flex flex-wrap items-center gap-3">
@@ -143,6 +143,40 @@
       <p class="rounded-2xl border-2 border-dashed border-ink/30 bg-white/60 px-5 py-6 text-center text-sm text-ink-soft">No upcoming events with {{ plant.name|lower }} yet. <a href="{% url 'events:show_events' %}" class="font-extrabold text-brand hover:underline">Browse events</a></p>
       {% endif %}
     </div>
+  </section>
+  {# "From the garden" (Figma Garden improvements E): the 3 newest Garden posts tagged with this plant #}
+  {% load accounts_tags %}
+  <section class="mt-10">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 class="font-display text-[28px] leading-tight">From the garden</h2>
+        <p class="mt-1 text-xs text-ink-soft">{{ plant.name }} growing in our members' gardens</p>
+      </div>
+      {% if garden_post_total > 3 %}
+      <a href="{% url 'garden:show_garden' %}?plant={{ plant.slug }}" class="text-xs font-extrabold text-brand hover:underline">See all {{ garden_post_total }} posts ›</a>
+      {% endif %}
+    </div>
+    {% if garden_posts %}
+    <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {% for post in garden_posts %}
+      <a href="{% url 'garden:show_garden' %}?plant={{ plant.slug }}#post-{{ post.id }}" class="group flex flex-col gap-2 rounded-2xl border-2 border-ink bg-white p-3 transition-colors duration-150 ease-out hover:bg-brand-tint focus-visible:bg-brand-tint focus-visible:outline-none">
+        {% if post.photo_src %}
+        <img src="{{ post.photo_src }}" alt="Photo by {{ post.author.username }}" loading="lazy" class="h-[140px] w-full rounded-xl border-2 border-ink bg-brand-tint object-cover">
+        {% else %}
+        <span class="flex h-[140px] w-full items-center justify-center rounded-xl border-2 border-ink bg-brand-tint">
+          <img src="{% static 'img/icons/sprout.svg' %}" alt="" width="28" height="28">
+        </span>
+        {% endif %}
+        <span class="flex items-start gap-2">
+          {% avatar post.author "sm" %}
+          <span class="line-clamp-2 text-[13px] leading-[1.4]">{{ post.caption }}</span>
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="mt-4 rounded-2xl border-2 border-dashed border-ink/30 bg-white/60 px-5 py-6 text-center text-sm text-ink-soft">No garden posts about {{ plant.name|lower }} yet. <a href="{% url 'garden:show_garden' %}" class="font-extrabold text-brand hover:underline">Share yours on Garden</a></p>
+    {% endif %}
   </section>
   <section class="mt-7 border-t border-line pt-5">
     <h2 class="font-display text-2xl">Growing guide</h2>

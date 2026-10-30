@@ -1,0 +1,26 @@
+{# Plant of the week (Figma sidebar card). Moderators also get "Change" (Figma "admin view"). #}
+{# Sent alone by set_plant_of_the_week, so garden.js can swap it in after saving. #}
+<section id="plant-of-the-week" class="flex flex-col gap-3 rounded-[15px] border-2 border-ink bg-surface p-[18px]">
+    <div class="flex items-center justify-between gap-3">
+        <h2 class="font-display text-xl leading-[1.3]">Plant of the week</h2>
+        {% if week_form %}
+        <button type="button" popovertarget="week-modal" class="rounded-full border-2 border-ink bg-surface px-3 py-1 text-[13px] font-extrabold leading-[1.2] hover:bg-brand-tint">Change</button>
+        {% endif %}
+    </div>
+    {% if week_plant %}
+    <div class="relative pt-[13px]">
+        <img src="{{ week_plant.card_image_url }}" alt="{{ week_plant.name }}" loading="lazy" class="h-[170px] w-full rounded-[13px] border-2 border-ink bg-brand-tint object-cover">
+        <span class="absolute left-2.5 top-[23px] rounded-md bg-brand-soft px-2 py-[5px] text-[11px] font-black uppercase leading-[1.2] tracking-[0.08em]">This week</span>
+    </div>
+    <div class="flex flex-col gap-1.5 px-0.5">
+        {% if week_plant.difficulty %}<p class="text-[11px] font-black uppercase leading-[1.2] tracking-[0.08em] text-gold">{{ week_plant.get_difficulty_display }} {{ week_plant.category_label|lower }}</p>{% endif %}
+        <h3 class="pt-[3px] font-display text-xl leading-[1.3]">{{ week_plant.name }}</h3>
+        {% if week_plant.scientific_name %}<p class="text-[13px] italic leading-[1.4] text-ink-soft">{{ week_plant.scientific_name }}</p>{% endif %}
+        {# The admin's short line, or the first part of the plant's description #}
+        <p class="pb-2 text-sm leading-[1.5] text-ink-soft">{% if week_short_line %}{{ week_short_line }}{% else %}{{ week_plant.description|truncatewords:18 }}{% endif %}</p>
+        <a href="{% url 'encyclopedia:detail' week_plant.slug %}" class="flex min-h-[38px] items-center justify-center rounded-full border-2 border-ink bg-brand-tint px-4 py-2.5 text-[11px] font-black uppercase leading-[1.2] tracking-[0.08em] text-brand hover:bg-brand-soft">View growing guide</a>
+    </div>
+    {% else %}
+    <p class="text-sm text-ink-soft">No plants yet.</p>
+    {% endif %}
+</section>

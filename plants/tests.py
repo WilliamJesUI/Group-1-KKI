@@ -10,7 +10,7 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from plants import mapping
-from plants.management.commands import add_wikipedia_text
+from plants.management.commands import add_wikipedia_text, build_plant_list
 from plants.models import Plant
 from plants.services import wikipedia
 from plants.services.http import ApiError
@@ -149,3 +149,122 @@ class WikipediaTests(TestCase):
         plant.refresh_from_db()
         self.assertEqual(plant.description, "Tomato is a fruit.")
         self.assertEqual(plant.name, "Tomato")
+
+
+class PlantPhotoTest(TestCase):
+    """card_image_url / thumb_image_url use our saved copy in static/img/plants/ when there is one."""
+
+    def setUp(self):
+        from plants.models import Plant
+        self.plant = Plant(name="Test basil", slug="test-basil", image_url="https://bs.plantnet.org/image/o/abc")
+
+    def test_saved_copy_wins(self):
+        with patch("plants.models.saved_plant_photos", return_value={"test-basil-m.jpg", "test-basil-s.jpg"}):
+            self.assertEqual(self.plant.card_image_url, "/static/img/plants/test-basil-m.jpg")
+            self.assertEqual(self.plant.thumb_image_url, "/static/img/plants/test-basil-s.jpg")
+
+    def test_falls_back_to_plantnet(self):
+        with patch("plants.models.saved_plant_photos", return_value=set()):
+            self.assertEqual(self.plant.card_image_url, "https://bs.plantnet.org/image/o/abc".replace("/o/", "/m/"))
+            self.assertEqual(self.plant.thumb_image_url, "https://bs.plantnet.org/image/s/abc")
+
+    def test_no_photo(self):
+        self.plant.image_url = ""
+        self.assertEqual(self.plant.card_image_url, "")
+
+    def test_credit_follows_the_photo(self):
+        self.plant.image_credit, self.plant.image_credit_url = "Photo by PlantNet user", "https://plantnet.org"
+        saved = {"test-basil": {"credit": "Photo by Ann, CC BY-SA 4.0 (Wikimedia Commons)", "url": "https://commons.wikimedia.org/x"}}
+        with patch("plants.models.saved_photo_credits", return_value=saved):
+            with patch("plants.models.saved_plant_photos", return_value={"test-basil-m.jpg"}):
+                self.assertEqual(self.plant.photo_credit, "Photo by Ann, CC BY-SA 4.0 (Wikimedia Commons)")
+                self.assertEqual(self.plant.photo_credit_url, "https://commons.wikimedia.org/x")
+            # No saved photo, so the PlantNet photo shows with its own credit
+            with patch("plants.models.saved_plant_photos", return_value=set()):
+                self.assertEqual(self.plant.photo_credit, "Photo by PlantNet user")
+                self.assertEqual(self.plant.photo_credit_url, "https://plantnet.org")
+
+    def test_reads_the_folder(self):
+        from plants.models import saved_photo_credits, saved_plant_photos
+        with tempfile.TemporaryDirectory() as folder:
+            Path(folder, "mint-s.jpg").write_bytes(b"x")
+            Path(folder, "notes.txt").write_text("not a photo")
+            saved_plant_photos.cache_clear()
+            saved_photo_credits.cache_clear()
+            with patch("plants.models.PLANT_PHOTO_DIR", Path(folder)):
+                self.assertEqual(saved_plant_photos(), {"mint-s.jpg"})
+                self.assertEqual(saved_photo_credits(), {})
+                saved_photo_credits.cache_clear()
+                Path(folder, "credits.json").write_text('{"mint": {"credit": "Photo by Ann", "url": ""}}')
+                self.assertEqual(saved_photo_credits()["mint"]["credit"], "Photo by Ann")
+            saved_plant_photos.cache_clear()
+            saved_photo_credits.cache_clear()
+
+
+class MorePlantsTest(TestCase):
+    """build_plant_list only asks Trefle about new CSV rows, and migration 0005 only adds plants that aren't there yet."""
+
+    def build(self, folder, csv_rows, saved, *args):
+        Path(folder, "plant_list.csv").write_text(
+            "english_name,scientific_name,category\n" + "".join(f"{row}\n" for row in csv_rows), encoding="utf-8"
+        )
+        Path(folder, "plants.json").write_text(json.dumps(saved), encoding="utf-8")
+        found = [{"id": 7, "scientific_name": "Ranunculus asiaticus"}]
+        with patch.object(build_plant_list, "DATA_DIR", Path(folder)), \
+                patch.object(build_plant_list, "PAUSE_SECONDS", 0), \
+                patch("plants.services.trefle.search", return_value=found) as search, \
+                patch("plants.services.trefle.species", return_value={}), \
+                patch("plants.mapping.from_trefle", return_value={"name": "Ranunculus", "category": "flowers"}):
+            out = StringIO()
+            call_command("build_plant_list", *args, stdout=out)
+        return json.loads(Path(folder, "plants.json").read_text(encoding="utf-8")), search, out.getvalue()
+
+    def test_keeps_old_plants_and_adds_only_new_ones(self):
+        old = {"slug": "tomato", "name": "Tomato", "description": "Kept."}
+        with tempfile.TemporaryDirectory() as folder:
+            saved, search, _ = self.build(folder, ["Tomato,Solanum lycopersicum,vegetables",
+                                                  "Ranunculus,Ranunculus asiaticus,flowers"], [old])
+        search.assert_called_once_with("Ranunculus asiaticus")
+        self.assertEqual(saved[0], old)
+        self.assertEqual(saved[1]["slug"], "ranunculus")
+
+    def test_all_asks_about_every_plant_again(self):
+        with tempfile.TemporaryDirectory() as folder:
+            saved, search, out = self.build(folder, ["Tomato,Solanum lycopersicum,vegetables"],
+                                            [{"slug": "tomato", "name": "Tomato"}], "--all")
+        search.assert_called_once_with("Solanum lycopersicum")
+        self.assertEqual(saved, [])
+        self.assertIn("missing 1: Tomato", out)
+
+    def test_trefle_error_is_reported(self):
+        with tempfile.TemporaryDirectory() as folder, \
+                patch.object(build_plant_list.trefle, "search", side_effect=ApiError("down")):
+            Path(folder, "plant_list.csv").write_text("english_name,scientific_name,category\nPeony,Paeonia lactiflora,flowers\n")
+            out = StringIO()
+            with patch.object(build_plant_list, "DATA_DIR", Path(folder)):
+                call_command("build_plant_list", stdout=out)
+        self.assertIn("error on Peony: down", out.getvalue())
+
+    def test_migration_adds_only_missing_plants(self):
+        migration = import_module("plants.migrations.0005_load_more_plants")
+        tomato = Plant.objects.get(slug="tomato")
+        Plant.objects.filter(slug="sweet-basil").update(image_url="")
+        rows = [
+            {"slug": "tomato", "name": "Changed", "image_url": "https://example.com/new.jpg"},
+            {"slug": "sweet-basil", "image_url": "https://example.com/basil.jpg", "image_credit": "Photo by Ann"},
+            {"slug": "tomato-again", "name": "Same species", "trefle_id": tomato.trefle_id},
+            {"slug": "ranunculus", "name": "Ranunculus", "category": "flowers", "trefle_id": 999999, "not_a_field": 1},
+        ]
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "plants.json"
+            path.write_text(json.dumps(rows), encoding="utf-8")
+            with patch.object(migration, "DATA_FILE", path):
+                migration.load_new_plants(django_apps, None)
+                migration.load_new_plants(django_apps, None)  # running twice adds nothing twice
+        tomato.refresh_from_db()
+        self.assertEqual(tomato.name, "Tomato")
+        self.assertNotEqual(tomato.image_url, "https://example.com/new.jpg")  # it had a photo, so it keeps it
+        basil = Plant.objects.get(slug="sweet-basil")
+        self.assertEqual((basil.image_url, basil.image_credit), ("https://example.com/basil.jpg", "Photo by Ann"))
+        self.assertFalse(Plant.objects.filter(slug="tomato-again").exists())
+        self.assertEqual(Plant.objects.get(slug="ranunculus").category, "flowers")
