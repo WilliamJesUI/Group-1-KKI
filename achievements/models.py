@@ -13,7 +13,7 @@ class Milestone(models.Model):
         ("plants_added", "Plants added"),
         ("harvests_logged", "Harvests logged"),
         ("checkin_streak", "Day check-in streak"),
-        ("answers_given", "Questions answered"),
+        ("answers_given", "Answers written"),
         ("host", "Events hosted"),
         ("event_goer", "Events RSVPed"),
         ("plant_collector", "Plants saved"),
