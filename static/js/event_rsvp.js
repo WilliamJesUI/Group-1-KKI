@@ -20,6 +20,23 @@ function makeAvatar(person, sizeClasses) {
     return avatar;
 }
 
+// The same avatar as a link to the person's profile (the "who's going" row on the event page).
+// -mr-2 goes on the link so the circles still overlap like before.
+function makeAvatarLink(person) {
+    const avatar = makeAvatar(person, AVATAR_CLASS);
+    if (!person.profile_url) {
+        avatar.classList.add('-mr-2');
+        return avatar;
+    }
+    const link = document.createElement('a');
+    link.href = person.profile_url;
+    link.title = person.name;
+    link.setAttribute('aria-label', `${person.name}'s profile`);
+    link.className = '-mr-2 flex transition-transform duration-150 hover:scale-102';
+    link.append(avatar);
+    return link;
+}
+
 // The "+N" circle for everyone without an avatar
 function makeMore(count, sizeClasses) {
     const more = document.createElement('span');
@@ -56,7 +73,7 @@ function updateGoing(eventId, result) {
     document.querySelectorAll(`[data-attendee-avatars="${eventId}"]`).forEach((row) => {
         row.replaceChildren(); // remove the old avatars
         result.attendee_avatars.forEach((person) => {
-            row.append(makeAvatar(person, `-mr-2 ${AVATAR_CLASS}`));
+            row.append(makeAvatarLink(person));
         });
         if (result.more_going > 0) {
             row.append(makeMore(result.more_going, `${AVATAR_CLASS} bg-lilac`));

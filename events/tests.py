@@ -170,6 +170,11 @@ class EventDetailTest(TestCase):
         # 1 person going: no "+N", and never a negative number
         self.assertEqual(response.context["more_going"], 0)
 
+    def test_host_and_attendees_link_to_their_profiles(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, f'href="{reverse("profile:show_user_profile", args=["rina"])}"')
+        self.assertContains(response, f'href="{reverse("profile:show_user_profile", args=["ben"])}" aria-label="ben\'s profile"')
+
     def test_list_links_to_detail(self):
         response = self.client.get(reverse("events:show_events"))
         self.assertContains(response, f'href="{self.url}"')
@@ -858,7 +863,10 @@ class RsvpTest(TestCase):
         self.assertEqual(response.json()["going"], True)
         self.assertEqual(response.json()["going_count"], 1)
         self.assertEqual(response.json()["attendee_avatars"], [
-            {"initials": "B", "bg_class": self.guest.profile.avatar_bg_class, "picture": ""},
+            {
+                "initials": "B", "bg_class": self.guest.profile.avatar_bg_class, "picture": "",
+                "name": "ben", "profile_url": reverse("profile:show_user_profile", args=["ben"]),
+            },
         ])
         self.assertIn(self.guest, self.event.attendees.all())
 

@@ -61,6 +61,12 @@ class LandingGuestTest(LandingTestData):
         self.assertContains(response, "Your plot is")
         self.assertNotContains(response, "Welcome back")
 
+    def test_names_link_to_profiles(self):
+        # Post author, event host on the poster, the asker of the big quote and the badge line
+        response = self.client.get(self.url)
+        self.assertContains(response, f'href="{reverse("profile:show_user_profile", args=["budi"])}"')
+        self.assertContains(response, f'href="{reverse("profile:show_user_profile", args=["siti"])}"')
+
     def test_no_navbar(self):
         response = self.client.get(self.url)
         self.assertTemplateNotUsed(response, "header.html")
@@ -72,7 +78,7 @@ class LandingGuestTest(LandingTestData):
         self.assertContains(response, "Community Seed Swap")
         self.assertContains(response, "Why are my basil leaves black?")
         self.assertContains(response, "Test Sprout")
-        self.assertContains(response, "Budi earned Test Sprout")
+        self.assertContains(response, "Budi</a> earned Test Sprout")
         self.assertContains(response, "1 of 2 gardeners")
         for slug in ["garden", "events", "encyclopedia", "community", "achievements"]:
             self.assertContains(response, f'id="spread-{slug}"')

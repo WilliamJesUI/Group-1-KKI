@@ -1,9 +1,11 @@
 {% load static accounts_tags %}
 {# One comment (Figma "Post Card / comments open"). Also sent alone by add_comment, so garden.js can add it. #}
 <div id="comment-{{ comment.id }}" data-comment class="group flex items-start gap-2.5 motion-safe:transition-all motion-safe:duration-300 motion-safe:starting:opacity-0">
-    {% avatar comment.author "sm" %}
+    {# Avatar and name link to the commenter's profile. The avatar link is skipped by Tab, the name link right next to it goes to the same page. #}
+    {% url 'profile:show_user_profile' comment.author.username as author_url %}
+    <a href="{{ author_url }}" tabindex="-1" aria-hidden="true" class="shrink-0 transition-transform duration-150 hover:scale-102">{% avatar comment.author "sm" %}</a>
     <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-        <p class="text-xs leading-[1.4] text-ink-soft"><span class="text-[13px] font-extrabold text-ink">{{ comment.author.get_full_name|default:comment.author.username }}</span> · {{ comment.age_label }}</p>
+        <p class="text-xs leading-[1.4] text-ink-soft"><a href="{{ author_url }}" class="inline-block text-[13px] font-extrabold text-ink transition-transform duration-150 hover:scale-102">{{ comment.author.get_full_name|default:comment.author.username }}</a> · {{ comment.age_label }}</p>
         <p class="whitespace-pre-line text-sm leading-[1.5]">{{ comment.text }}</p>
     </div>
     {% if comment.can_delete %}

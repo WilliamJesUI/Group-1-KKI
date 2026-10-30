@@ -17,11 +17,14 @@ from plants.models import Plant
 def avatar_data(user):
     # Uses Sarah's avatar helpers (accounts_tags), so a person has the same letters, color and photo on every page.
     # A dict instead of HTML, because event_rsvp.js also redraws the avatars from the RSVP answer.
+    # name and profile_url let the event page link each avatar to that person's profile
     profile = get_profile(user)
     return {
         "initials": avatar_initials(user),
         "bg_class": avatar_bg_class(user),
         "picture": profile.profile_picture if profile else "",
+        "name": user.get_full_name() or user.username,
+        "profile_url": reverse("profile:show_user_profile", args=[user.username]),
     }
 
 
