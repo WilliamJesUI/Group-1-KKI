@@ -90,8 +90,9 @@ class PageTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.url)
         self.assertContains(response, "Claim badge")
-        # A plain counter finishes First Sprout. Herb Garden only counts real herbs, so it stays at 0.
-        self.assertEqual(response.context["milestones_in_progress"], 1)
+        # A plain counter finishes First Sprout, and opening the page starts 7 Day Streak (day 1 of 7).
+        # Herb Garden only counts real herbs, so it stays at 0.
+        self.assertEqual(response.context["milestones_in_progress"], 2)
 
     def test_progress_percent_rounds_down(self):
         record_progress(self.user, "answers_given", 3)
