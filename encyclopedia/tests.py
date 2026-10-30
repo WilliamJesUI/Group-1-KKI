@@ -611,3 +611,48 @@ class FigmaDetailsTests(EncyclopediaTestData):
         self.basil.save()
         response = self.client.get(reverse("encyclopedia:detail", args=[self.basil.slug]))
         self.assertNotContains(response, "Trefle species ID")
+
+
+class CollectionAjaxTests(EncyclopediaTestData):
+    """Collection actions answer fetch() calls with JSON (where to refresh from + the toast text), so the page doesn't reload."""
+
+    AJAX = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"}
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.user)
+
+    def test_create_collection_answers_ajax_with_json(self):
+        response = self.client.post(reverse("encyclopedia:create_collection"), {"name": "Window box"}, **self.AJAX)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        new = PlantCollection.objects.get(name="Window box")
+        self.assertEqual(data["url"], f"/encyclopedia/collection/?collection={new.pk}")
+        self.assertEqual(data["messages"], [{"text": 'Collection "Window box" created.', "level": "success"}])
+        # The toast was sent in the JSON, so it must not show again on the next page load
+        self.assertEqual(list(get_messages(self.client.get(self.collection_url).wsgi_request)), [])
+
+    def test_empty_name_comes_back_as_an_error_message(self):
+        response = self.client.post(reverse("encyclopedia:create_collection"), {"name": " "}, **self.AJAX)
+        self.assertEqual(response.json()["messages"][0]["level"], "error")
+
+    def test_save_plant_answers_ajax_with_json(self):
+        url = reverse("encyclopedia:toggle_saved", args=[self.basil.slug])
+        response = self.client.post(url, {"collection_id": self.collection.pk, "next": "/encyclopedia/"}, **self.AJAX)
+        self.assertEqual(response.json()["url"], "/encyclopedia/")
+        self.assertIn(self.basil, self.collection.plants.all())
+
+    def test_normal_form_post_still_redirects(self):
+        response = self.client.post(reverse("encyclopedia:create_collection"), {"name": "Porch"})
+        self.assertEqual(response.status_code, 302)
+
+    def test_pages_mark_forms_and_regions_for_ajax(self):
+        self.collection.plants.add(self.basil)
+        page = self.client.get(self.collection_url)
+        self.assertContains(page, "data-ajax-form", count=4)
+        self.assertContains(page, 'data-ajax-region="collections"')
+        self.assertContains(page, "js/ajax_forms.js")
+        detail = self.client.get(reverse("encyclopedia:detail", args=[self.basil.slug]))
+        self.assertContains(detail, 'data-ajax-region="save"')
+        directory = self.client.get(self.index_url)
+        self.assertContains(directory, 'data-ajax-region="results"')
