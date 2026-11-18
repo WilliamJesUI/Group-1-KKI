@@ -1,18 +1,49 @@
 {% load static accounts_tags %}
-{# One comment (Figma "Post Card / comments open"). Also sent alone by add_comment, so garden.js can add it. #}
-<div id="comment-{{ comment.id }}" data-comment class="group flex items-start gap-2.5 motion-safe:transition-all motion-safe:duration-300 motion-safe:starting:opacity-0">
-    {# Avatar and name link to the commenter's profile. The avatar link is skipped by Tab, the name link right next to it goes to the same page. #}
+
+<!-- Reusable component for a single comment -->
+<div id="comment-{{ comment.id }}" data-comment>
+
+    <!-- Link to the comment author's profile -->
     {% url 'profile:show_user_profile' comment.author.username as author_url %}
-    <a href="{{ author_url }}" tabindex="-1" aria-hidden="true" class="shrink-0 transition-transform duration-150 hover:scale-102">{% avatar comment.author "sm" %}</a>
-    <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-        <p class="text-xs leading-[1.4] text-ink-soft"><a href="{{ author_url }}" class="inline-block text-[13px] font-extrabold text-ink transition-transform duration-150 hover:scale-102">{{ comment.author.get_full_name|default:comment.author.username }}</a> · {{ comment.age_label }}</p>
-        <p class="whitespace-pre-line text-sm leading-[1.5]">{{ comment.text }}</p>
+
+    <a href="{{ author_url }}" tabindex="-1" aria-hidden="true">
+        {% avatar comment.author "sm" %}
+    </a>
+
+    <div>
+
+        <p>
+            <a href="{{ author_url }}">
+                {{ comment.author.get_full_name|default:comment.author.username }}
+            </a>
+
+            · {{ comment.age_label }}
+        </p>
+
+        <!-- Display the comment text -->
+        <p class="whitespace-pre-line text-sm">
+            {{ comment.text }}
+        </p>
+
     </div>
+
+
+    <!-- Only authorized users can delete comments -->
     {% if comment.can_delete %}
-    {# Your own comments, or every comment for moderators. Faint until you point at the comment. #}
-    <button type="button" data-delete-comment="{% url 'garden:delete_comment' comment.id %}" aria-label="Delete comment"
-            class="flex size-8 shrink-0 items-center justify-center rounded-full opacity-40 hover:bg-pink/40 hover:opacity-100 focus-visible:opacity-100 group-hover:opacity-100">
-        <img src="{% static 'img/icons/trash-danger.svg' %}" alt="" width="16" height="16">
-    </button>
+
+        <button
+            type="button"
+            data-delete-comment="{% url 'garden:delete_comment' comment.id %}"
+            aria-label="Delete comment">
+
+            <img
+                src="{% static 'img/icons/trash-danger.svg' %}"
+                alt=""
+                width="16"
+                height="16">
+
+        </button>
+
     {% endif %}
+
 </div>

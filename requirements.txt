@@ -4,3 +4,5 @@ psycopg2-binary
 python-dotenv
 whitenoise
 requests
+djangorestframework>=3.15,<4
+django-cors-headers>=4.0,<5

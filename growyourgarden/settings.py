@@ -58,9 +58,13 @@ INSTALLED_APPS = [
     'plants',
     'encyclopedia',
     'home',
+    'rest_framework',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -165,3 +169,9 @@ TREFLE_TOKEN = os.getenv('TREFLE_TOKEN', '')
 LOGIN_URL = 'profile:login'
 LOGIN_REDIRECT_URL = 'profile:show_profile'
 LOGOUT_REDIRECT_URL = 'profile:login'
+
+# Local Flutter Web development
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^http://localhost:\d+$",
+    r"^http://127\.0\.0\.1:\d+$",
+]
