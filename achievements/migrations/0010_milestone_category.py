@@ -25,6 +25,7 @@ class Migration(migrations.Migration):
                     ("vegetables", "Vegetables"),
                     ("herbs", "Herbs"),
                     ("flowers", "Flowers"),
+                    
                 ],
                 max_length=20,
             ),

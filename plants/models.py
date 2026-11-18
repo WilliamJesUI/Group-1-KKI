@@ -29,6 +29,7 @@ class Plant(models.Model):
         VEGETABLES = "vegetables", "Vegetables"
         HERBS = "herbs", "Herbs"
         FLOWERS = "flowers", "Flowers"
+        
 
     class Difficulty(models.TextChoices):
         EASY = "easy", "Easy"

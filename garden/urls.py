@@ -1,3 +1,4 @@
+from garden import api_views
 from django.urls import path
 from garden import views
 
@@ -14,4 +15,6 @@ urlpatterns = [
     path("posts/<uuid:post_id>/comments/add/", views.add_comment, name="add_comment"),
     path("comments/<int:comment_id>/delete/", views.delete_comment, name="delete_comment"),
     path("plant-of-the-week/", views.set_plant_of_the_week, name="set_plant_of_the_week"),
+    path("api/posts/", api_views.garden_posts_api, name="api_posts"),
+    path("api/overview/", api_views.garden_overview_api, name="api_overview"),
 ]

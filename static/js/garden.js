@@ -1,547 +1,1263 @@
-// Garden page (garden/templates/garden/garden.html). Everything here works without reloading the page:
-// share / edit / delete posts, likes, comments, the filter pills and the admin's Plant of the week.
-// Errors from the server come back as JSON { message } or { errors } and are shown as toasts or under the field.
+// Garden page frontend controller.
+// Handles posts, likes, comments, filters and Plant of the Week.
+// Most actions work without reloading the entire page.
 
 const feed = document.getElementById('post-feed');
-const postModal = document.getElementById('post-modal'); // only there when logged in
+const postModal = document.getElementById('post-modal');
 const postForm = document.getElementById('post-form');
 
-// POST with the csrf token. Gives back the response and its JSON (or {} if it wasn't JSON).
+
+// Sends a POST request with the CSRF token.
+// Returns both the HTTP response and the JSON result.
 async function send(url, body) {
     const response = await fetch(url, {
         method: 'POST',
-        headers: { 'X-CSRFToken': getCookie('csrftoken') }, // getCookie comes from static/js/csrf.js
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        },
         body: body,
     });
+
     const result = await response.json().catch(() => ({}));
+
     return { response, result };
 }
 
+
+// Displays server errors as toast notifications.
 function showServerError(response, result, title) {
+
     if (response.status === 403) {
         title = 'Not allowed';
+
     } else if (response.status === 404) {
         title = 'Not found';
     }
-    showToast(title, result.message || 'Please try again.', 'error');
+
+    showToast(
+        title,
+        result.message || 'Please try again.',
+        'error'
+    );
 }
 
+
+// Handles network connection errors.
 function networkError() {
-    showToast('Network error', 'Please check your connection and try again.', 'error');
+    showToast(
+        'Network error',
+        'Please check your connection and try again.',
+        'error'
+    );
 }
 
-// Turns a card's HTML from the server into an element
+
+// Converts server-rendered HTML into a DOM element.
 function makeElement(html) {
     const template = document.createElement('template');
-    template.innerHTML = html.trim(); // made by a Django template, so the text in it is already escaped
+
+    template.innerHTML = html.trim();
+
     return template.content.firstElementChild;
 }
 
-// ---------- Form errors under each field (same as the Events pop-up) ----------
 
+// ---------- Form validation errors ----------
+
+
+// Clears previous validation messages.
 function clearErrors(form) {
+
     form.querySelectorAll('[data-error-for]').forEach((message) => {
         message.textContent = '';
         message.classList.add('hidden');
     });
-    form.querySelectorAll('[aria-invalid]').forEach((input) => input.removeAttribute('aria-invalid'));
+
+    form.querySelectorAll('[aria-invalid]').forEach((input) => {
+        input.removeAttribute('aria-invalid');
+    });
 }
 
-// errors looks like { caption: [{ message: "Please write a caption." }] }
+
+// Displays validation errors returned by Django.
 function showErrors(form, errors) {
+
     for (const [field, fieldErrors] of Object.entries(errors)) {
-        const message = form.querySelector(`[data-error-for="${field}"]`) || form.querySelector('[data-error-for="__all__"]');
-        message.textContent = fieldErrors.map((error) => error.message).join(' ');
+
+        const message =
+            form.querySelector(`[data-error-for="${field}"]`)
+            || form.querySelector('[data-error-for="__all__"]');
+
+        message.textContent = fieldErrors
+            .map((error) => error.message)
+            .join(' ');
+
         message.classList.remove('hidden');
+
         const input = form.elements[field];
+
         if (input && input.setAttribute) {
             input.setAttribute('aria-invalid', 'true');
         }
     }
+
+    // Move focus to the first invalid field.
     const firstInvalid = form.querySelector('[aria-invalid="true"]');
+
     if (firstInvalid) {
         firstInvalid.focus();
     }
 }
 
-// ---------- Photo box in the post pop-up ----------
 
-const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_PHOTO_SIZE = 2 * 1024 * 1024; // 2 MB, same limit as the server
-let currentPhoto = ''; // when editing: the post's photo before any change
+// ---------- Photo upload ----------
 
+
+// Supported image formats.
+const ALLOWED_PHOTO_TYPES = [
+    'image/jpeg',
+    'image/png',
+    'image/webp'
+];
+
+// Maximum image size: 2 MB.
+const MAX_PHOTO_SIZE = 2 * 1024 * 1024;
+
+let currentPhoto = '';
+
+
+// Shows or hides the image preview.
 function showPhotoBox(src, name) {
+
     const drop = document.getElementById('photo-drop');
     const preview = document.getElementById('photo-preview');
     const img = document.getElementById('photo-preview-img');
+
+    // Release an old temporary image URL.
     if (img.src.startsWith('blob:')) {
-        URL.revokeObjectURL(img.src); // free the old temporary link
+        URL.revokeObjectURL(img.src);
     }
+
     drop.classList.toggle('hidden', Boolean(src));
     drop.classList.toggle('flex', !src);
+
     preview.classList.toggle('hidden', !src);
     preview.classList.toggle('flex', Boolean(src));
+
     img.src = src || '';
-    document.getElementById('photo-file-name').textContent = name || '';
+
+    document.getElementById('photo-file-name').textContent =
+        name || '';
 }
 
+
+// Displays photo validation errors.
 function setPhotoError(text) {
-    const message = postForm.querySelector('[data-error-for="photo_upload"]');
+
+    const message = postForm.querySelector(
+        '[data-error-for="photo_upload"]'
+    );
+
     message.textContent = text;
     message.classList.toggle('hidden', !text);
 }
 
+
+// Validates a selected photo before uploading.
 function pickPhoto(file) {
+
     setPhotoError('');
+
     const input = postForm.elements['photo_upload'];
+
     if (!file) {
         return;
     }
-    // Quick check so people don't wait for the server. The server checks again for real.
-    if (!ALLOWED_PHOTO_TYPES.includes(file.type) || file.size > MAX_PHOTO_SIZE) {
+
+    // Client-side validation improves user experience.
+    // The server performs its own validation as well.
+    if (
+        !ALLOWED_PHOTO_TYPES.includes(file.type)
+        || file.size > MAX_PHOTO_SIZE
+    ) {
+
         input.value = '';
-        setPhotoError(file.size > MAX_PHOTO_SIZE ? 'That photo is too big. Please pick one under 2 MB.' : 'Please pick a JPG, PNG or WebP photo.');
+
+        setPhotoError(
+            file.size > MAX_PHOTO_SIZE
+                ? 'That photo is too big. Please pick one under 2 MB.'
+                : 'Please pick a JPG, PNG or WebP photo.'
+        );
+
         return;
     }
+
     postForm.elements['remove_photo'].value = '';
-    showPhotoBox(URL.createObjectURL(file), file.name);
+
+    // Create a temporary preview URL.
+    showPhotoBox(
+        URL.createObjectURL(file),
+        file.name
+    );
 }
 
+
+// Adds all photo upload event listeners.
 function setUpPhotoBox() {
+
     const input = postForm.elements['photo_upload'];
     const drop = document.getElementById('photo-drop');
     const dropText = document.getElementById('photo-drop-text');
 
-    input.addEventListener('change', () => pickPhoto(input.files[0]));
-    document.getElementById('photo-remove').addEventListener('click', () => {
-        input.value = '';
-        // Tells the server to delete the photo the post already has
-        postForm.elements['remove_photo'].value = currentPhoto ? 'True' : '';
-        showPhotoBox('', '');
+    // Handle normal file selection.
+    input.addEventListener('change', () => {
+        pickPhoto(input.files[0]);
     });
+
+
+    // Remove the current photo.
+    document.getElementById('photo-remove').addEventListener(
+        'click',
+        () => {
+
+            input.value = '';
+
+            // Tell the backend to remove the existing photo.
+            postForm.elements['remove_photo'].value =
+                currentPhoto ? 'True' : '';
+
+            showPhotoBox('', '');
+        }
+    );
+
+
+    // Handle drag over.
     drop.addEventListener('dragover', (event) => {
-        event.preventDefault(); // otherwise the browser opens the photo in the tab
+
+        event.preventDefault();
+
         drop.dataset.drag = '';
+
         dropText.textContent = 'Drop to upload';
     });
+
+
+    // Handle drag leave.
     drop.addEventListener('dragleave', () => {
+
         delete drop.dataset.drag;
+
         dropText.textContent = 'Drop a photo or browse';
     });
+
+
+    // Handle dropped files.
     drop.addEventListener('drop', (event) => {
+
         event.preventDefault();
+
         delete drop.dataset.drag;
+
         dropText.textContent = 'Drop a photo or browse';
+
         const file = event.dataTransfer.files[0];
+
         if (!file) {
             return;
         }
-        // Put the dropped file into the real file input, so it's sent with the form
+
+        // Put the dropped file into the actual file input.
         const transfer = new DataTransfer();
+
         transfer.items.add(file);
+
         input.files = transfer.files;
+
         pickPhoto(file);
     });
 }
 
 // ---------- Share / edit a post ----------
 
-let editingCard = null; // the card being edited, or null when sharing a new post
 
+// Stores the card currently being edited.
+// null means that the user is creating a new post.
+let editingCard = null;
+
+
+// Updates the selected plant in the dropdown.
 function setPlant(plantId) {
+
     const select = postForm.elements['plant'];
+
     select.value = plantId || '';
-    select.dispatchEvent(new Event('change', { bubbles: true })); // plant_picker.js redraws itself on 'change'
+
+    // Notify the plant picker that the value has changed.
+    select.dispatchEvent(
+        new Event('change', { bubbles: true })
+    );
 }
 
-// focus: 'photo' or 'plant' from the composer's Photo / Tag plant buttons
+
+// Opens the post modal for creating or editing.
 function openPostForm(card, focus) {
+
     editingCard = card;
+
     postForm.reset();
+
     clearErrors(postForm);
+
     setPhotoError('');
+
     postForm.elements['remove_photo'].value = '';
+
     const title = document.getElementById('post-modal-title');
+
     const submit = document.getElementById('post-submit');
 
+
     if (card) {
-        // Figma C "Edit post": the same pop-up, filled in with the post
+
+        // Editing an existing post.
         title.textContent = 'Edit post';
+
         submit.textContent = 'Save changes';
+
         postForm.action = card.dataset.editUrl;
-        postForm.elements['caption'].value = card.dataset.caption;
+
+        postForm.elements['caption'].value =
+            card.dataset.caption;
+
         setPlant(card.dataset.plantId);
+
         currentPhoto = card.dataset.photo;
-        showPhotoBox(currentPhoto, currentPhoto ? 'Current photo' : '');
+
+        showPhotoBox(
+            currentPhoto,
+            currentPhoto ? 'Current photo' : ''
+        );
+
     } else {
+
+        // Creating a new post.
         title.textContent = 'Share your garden';
+
         submit.textContent = 'Post';
+
         postForm.action = postForm.dataset.createUrl;
+
         setPlant('');
+
         currentPhoto = '';
+
         showPhotoBox('', '');
     }
+
+
+    // Display the modal.
     postModal.showPopover();
+
+
+    // Focus the requested field.
     if (focus === 'photo') {
-        postForm.elements['photo_upload'].click(); // opens the file chooser right away
+
+        postForm.elements['photo_upload'].click();
+
     } else if (focus === 'plant') {
+
         postForm.elements['plant'].focus();
+
     } else {
+
         postForm.elements['caption'].focus();
     }
 }
 
+
+// Submits the post form using AJAX.
 async function savePost(event) {
+
     event.preventDefault();
+
     const submit = document.getElementById('post-submit');
+
     submit.disabled = true;
+
     clearErrors(postForm);
+
     try {
-        const { response, result } = await send(postForm.action, new FormData(postForm));
+
+        // FormData supports both text fields and uploaded files.
+        const { response, result } = await send(
+            postForm.action,
+            new FormData(postForm)
+        );
+
+
         if (response.ok) {
+
             const card = makeElement(result.html);
+
             if (editingCard) {
+
+                // Replace the old card after editing.
                 editingCard.replaceWith(card);
-                showToast('Post updated', 'Your changes are saved.');
+
+                showToast(
+                    'Post updated',
+                    'Your changes are saved.'
+                );
+
             } else {
+
+                // Remove the empty state if it exists.
                 feed.querySelector('[data-empty-feed]')?.remove();
-                feed.prepend(card); // newest first, like the feed
-                showToast('Post shared', 'Your garden is on the feed.'); // Figma "Toast post"
+
+                // Add the newest post at the beginning.
+                feed.prepend(card);
+
+                showToast(
+                    'Post shared',
+                    'Your garden is on the feed.'
+                );
             }
+
             postModal.hidePopover();
+
+
         } else if (result.errors) {
+
+            // Display Django form validation errors.
             showErrors(postForm, result.errors);
+
         } else {
-            showServerError(response, result, 'Could not save');
+
+            showServerError(
+                response,
+                result,
+                'Could not save'
+            );
         }
+
     } catch (error) {
+
         networkError();
+
     } finally {
+
+        // Re-enable the button.
         submit.disabled = false;
     }
 }
 
+
+// Deletes a post after user confirmation.
 async function deletePost(card) {
-    if (!await confirmDelete({ title: 'Delete this post?', message: "Its likes and comments go too. This can't be undone." })) {
+
+    const confirmed = await confirmDelete({
+        title: 'Delete this post?',
+        message: "Its likes and comments go too. This can't be undone."
+    });
+
+    if (!confirmed) {
         return;
     }
+
     try {
-        const { response, result } = await send(card.dataset.deleteUrl);
+
+        const { response, result } = await send(
+            card.dataset.deleteUrl
+        );
+
         if (!response.ok) {
-            showServerError(response, result, 'Could not delete');
+
+            showServerError(
+                response,
+                result,
+                'Could not delete'
+            );
+
             return;
         }
-        // Fade out, then remove (motion-safe: skipped when reduced motion is on)
-        card.classList.add('opacity-0', 'scale-[0.98]');
-        const wait = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 300;
+
+        // Add a fade-out animation before removing the card.
+        card.classList.add(
+            'opacity-0',
+            'scale-[0.98]'
+        );
+
+        const wait = window.matchMedia(
+            '(prefers-reduced-motion: reduce)'
+        ).matches ? 0 : 300;
+
         setTimeout(() => card.remove(), wait);
-        showToast('Post deleted', "It's off the Garden feed now.");
+
+        showToast(
+            'Post deleted',
+            "It's off the Garden feed now."
+        );
+
     } catch (error) {
+
         networkError();
     }
 }
 
-// ---------- ••• menu ----------
+// ---------- Post options menu ----------
 
+
+// Closes all open menus except the specified one.
 function closeMenus(except) {
-    document.querySelectorAll('[data-menu]:not([hidden])').forEach((menu) => {
-        if (menu !== except) {
-            menu.hidden = true;
-            menu.previousElementSibling.setAttribute('aria-expanded', 'false');
-        }
-    });
+
+    document.querySelectorAll('[data-menu]:not([hidden])')
+        .forEach((menu) => {
+
+            if (menu !== except) {
+
+                menu.hidden = true;
+
+                menu.previousElementSibling.setAttribute(
+                    'aria-expanded',
+                    'false'
+                );
+            }
+        });
 }
 
+
+// Opens or closes a post options menu.
 function toggleMenu(button) {
+
     const menu = button.nextElementSibling;
+
     closeMenus(menu);
+
     menu.hidden = !menu.hidden;
-    button.setAttribute('aria-expanded', String(!menu.hidden));
+
+    button.setAttribute(
+        'aria-expanded',
+        String(!menu.hidden)
+    );
+
     if (!menu.hidden) {
         menu.querySelector('button').focus();
     }
 }
 
+
 // ---------- Likes ----------
 
+
+// Adds or removes a like without reloading the page.
 async function toggleLike(button) {
+
     const card = button.closest('[data-post]');
+
     const count = button.querySelector('[data-like-count]');
-    const wasLiked = button.getAttribute('aria-pressed') === 'true';
-    // Optimistic: change the heart right away, and put it back if the server says no
-    button.setAttribute('aria-pressed', String(!wasLiked));
-    count.textContent = Number(count.textContent) + (wasLiked ? -1 : 1);
+
+    const wasLiked =
+        button.getAttribute('aria-pressed') === 'true';
+
+
+    // Optimistic UI: update the interface immediately.
+    button.setAttribute(
+        'aria-pressed',
+        String(!wasLiked)
+    );
+
+    count.textContent =
+        Number(count.textContent) + (wasLiked ? -1 : 1);
+
+
+    // Prepare the request data.
     const body = new FormData();
+
     body.append('liked', String(!wasLiked));
+
+
     try {
-        const { response, result } = await send(button.dataset.likeUrl, body);
+
+        const { response, result } = await send(
+            button.dataset.likeUrl,
+            body
+        );
+
         if (!response.ok) {
-            throw Object.assign(new Error('server'), { response, result });
+
+            throw Object.assign(
+                new Error('server'),
+                { response, result }
+            );
         }
-        // The server's numbers win, in case someone else liked it meanwhile
-        button.setAttribute('aria-pressed', String(result.liked));
+
+        // Use the final values returned by the server.
+        button.setAttribute(
+            'aria-pressed',
+            String(result.liked)
+        );
+
         count.textContent = result.like_count;
+
+
     } catch (error) {
-        button.setAttribute('aria-pressed', String(wasLiked));
-        count.textContent = Number(count.textContent) + (wasLiked ? 1 : -1);
+
+        // Roll back the optimistic update if the request fails.
+        button.setAttribute(
+            'aria-pressed',
+            String(wasLiked)
+        );
+
+        count.textContent =
+            Number(count.textContent) + (wasLiked ? 1 : -1);
+
+
         if (error.response) {
-            showServerError(error.response, error.result, 'Could not like');
+
+            showServerError(
+                error.response,
+                error.result,
+                'Could not like'
+            );
+
         } else if (card.isConnected) {
+
             networkError();
         }
     }
 }
 
+
 // ---------- Comments ----------
 
+
+// Loads comments from the backend.
 async function loadComments(section, url) {
+
     const list = section.querySelector('[data-comment-list]');
+
     list.setAttribute('aria-busy', 'true');
+
     try {
+
         const response = await fetch(url);
+
         if (!response.ok) {
             throw new Error(`status ${response.status}`);
         }
-        list.innerHTML = await response.text(); // made by a Django template, so already escaped
+
+        // The response contains HTML rendered by Django.
+        list.innerHTML = await response.text();
+
         section.dataset.loaded = 'yes';
+
     } catch (error) {
+
         networkError();
+
     } finally {
+
         list.removeAttribute('aria-busy');
     }
 }
 
+
+// Shows or hides the comments section.
 function toggleComments(button) {
-    const section = document.getElementById(button.getAttribute('aria-controls'));
+
+    const section = document.getElementById(
+        button.getAttribute('aria-controls')
+    );
+
     section.hidden = !section.hidden;
-    button.setAttribute('aria-expanded', String(!section.hidden));
+
+    button.setAttribute(
+        'aria-expanded',
+        String(!section.hidden)
+    );
+
+
     if (!section.hidden) {
+
+        // Load comments only the first time.
         if (!section.dataset.loaded) {
-            loadComments(section, button.dataset.commentsUrl);
+
+            loadComments(
+                section,
+                button.dataset.commentsUrl
+            );
         }
-        section.querySelector('input[name="text"]')?.focus();
+
+        section.querySelector(
+            'input[name="text"]'
+        )?.focus();
     }
 }
 
+
+// Updates the comment counter on the post card.
 function setCommentCount(card, count) {
-    card.querySelector('[data-comment-count]').textContent = count;
+
+    card.querySelector(
+        '[data-comment-count]'
+    ).textContent = count;
 }
 
+
+// Sends a new comment to the backend.
 async function addComment(form) {
+
     const card = form.closest('[data-post]');
+
     const input = form.elements['text'];
-    const submit = form.querySelector('button[type="submit"]');
+
+    const submit = form.querySelector(
+        'button[type="submit"]'
+    );
+
+
     input.removeAttribute('aria-invalid');
+
+
+    // Prevent empty comments.
     if (!input.value.trim()) {
+
         input.setAttribute('aria-invalid', 'true');
-        showToast('Empty comment', 'Please write a comment first.', 'error');
+
+        showToast(
+            'Empty comment',
+            'Please write a comment first.',
+            'error'
+        );
+
         input.focus();
+
         return;
     }
+
+
     submit.disabled = true;
+
+
     try {
-        const { response, result } = await send(form.action, new FormData(form));
+
+        const { response, result } = await send(
+            form.action,
+            new FormData(form)
+        );
+
+
         if (response.ok) {
-            const list = card.querySelector('[data-comment-list]');
+
+            const list = card.querySelector(
+                '[data-comment-list]'
+            );
+
+            // Remove the empty state.
             list.querySelector('[data-no-comments]')?.remove();
-            // Before "Show all", so the newest comment is at the bottom of the shown ones
-            const showAll = list.querySelector('[data-show-all-comments]');
-            list.insertBefore(makeElement(result.html), showAll);
-            setCommentCount(card, result.comment_count);
+
+
+            // Keep the Show All button at the end.
+            const showAll = list.querySelector(
+                '[data-show-all-comments]'
+            );
+
+            list.insertBefore(
+                makeElement(result.html),
+                showAll
+            );
+
+
+            // Update the comment counter.
+            setCommentCount(
+                card,
+                result.comment_count
+            );
+
             form.reset();
+
+
         } else if (result.errors) {
+
             input.setAttribute('aria-invalid', 'true');
-            showToast('Could not comment', result.errors.text?.[0]?.message || 'Please try again.', 'error');
+
+            showToast(
+                'Could not comment',
+                result.errors.text?.[0]?.message
+                    || 'Please try again.',
+                'error'
+            );
+
         } else {
-            showServerError(response, result, 'Could not comment');
+
+            showServerError(
+                response,
+                result,
+                'Could not comment'
+            );
         }
+
+
     } catch (error) {
+
         networkError();
+
     } finally {
+
         submit.disabled = false;
+
         input.focus();
     }
 }
 
+
+// Deletes an existing comment.
 async function deleteComment(button) {
-    if (!await confirmDelete({ title: 'Delete this comment?', message: "This can't be undone." })) {
+
+    const confirmed = await confirmDelete({
+        title: 'Delete this comment?',
+        message: "This can't be undone."
+    });
+
+    if (!confirmed) {
         return;
     }
+
+
     const card = button.closest('[data-post]');
+
+
     try {
-        const { response, result } = await send(button.dataset.deleteComment);
+
+        const { response, result } = await send(
+            button.dataset.deleteComment
+        );
+
         if (!response.ok) {
-            showServerError(response, result, 'Could not delete');
+
+            showServerError(
+                response,
+                result,
+                'Could not delete'
+            );
+
             return;
         }
+
+
+        // Remove the comment from the page.
         button.closest('[data-comment]').remove();
-        setCommentCount(card, result.comment_count);
+
+
+        // Update the counter.
+        setCommentCount(
+            card,
+            result.comment_count
+        );
+
         showToast('Comment deleted');
+
+
     } catch (error) {
+
         networkError();
     }
 }
 
-// ---------- Filter pills (same idea as Events, static/js/event_filters.js) ----------
+// ---------- Filter pills ----------
 
-let latestFeedRequest = 0; // so an old, slow response can't replace a newer one
 
+// Tracks the latest request to prevent outdated responses.
+let latestFeedRequest = 0;
+
+
+// Builds the URL for the selected filter.
 function feedUrl(filter) {
-    const params = new URLSearchParams({ filter: filter });
-    const plantFilter = document.getElementById('garden-plant-filter');
+
+    const params = new URLSearchParams({
+        filter: filter
+    });
+
+    const plantFilter = document.getElementById(
+        'garden-plant-filter'
+    );
+
+    // Keep the selected plant when changing categories.
     if (plantFilter) {
-        params.set('plant', plantFilter.dataset.plant); // keep the plant filter when switching pills
+
+        params.set(
+            'plant',
+            plantFilter.dataset.plant
+        );
     }
+
     return '?' + params.toString();
 }
 
+
+// Loads the selected feed without reloading the whole page.
 async function loadFeed(filter, history) {
+
     const url = feedUrl(filter);
+
     const requestId = ++latestFeedRequest;
-    document.querySelectorAll('#garden-filter-pills [data-filter]').forEach((pill) => {
+
+
+    // Update the active filter button.
+    document.querySelectorAll(
+        '#garden-filter-pills [data-filter]'
+    ).forEach((pill) => {
+
         if (pill.dataset.filter === filter) {
-            pill.setAttribute('aria-current', 'page');
+
+            pill.setAttribute(
+                'aria-current',
+                'page'
+            );
+
         } else {
+
             pill.removeAttribute('aria-current');
         }
     });
+
+
+    // Update browser history.
     if (history === 'push') {
-        window.history.pushState(null, '', url);
+
+        window.history.pushState(
+            null,
+            '',
+            url
+        );
     }
+
+
     feed.setAttribute('aria-busy', 'true');
+
+
     try {
-        // &partial=1 only goes to the server, so refresh and the back button load the full page
-        const response = await fetch(url + '&partial=1');
+
+        // Request only the feed HTML partial.
+        const response = await fetch(
+            url + '&partial=1'
+        );
+
         if (!response.ok) {
             throw new Error(`status ${response.status}`);
         }
+
         const html = await response.text();
+
+
+        // Only the newest request is allowed to update the feed.
         if (requestId === latestFeedRequest) {
+
             feed.innerHTML = html;
         }
+
+
     } catch (error) {
+
         if (requestId === latestFeedRequest) {
-            window.location.href = url; // fall back to a normal page load
+
+            // Fall back to a normal page load.
+            window.location.href = url;
         }
+
     } finally {
+
         if (requestId === latestFeedRequest) {
+
             feed.removeAttribute('aria-busy');
         }
     }
 }
 
+
+// Handle browser Back and Forward buttons.
 window.addEventListener('popstate', () => {
-    loadFeed(new URLSearchParams(window.location.search).get('filter') || 'all', 'none');
+
+    loadFeed(
+        new URLSearchParams(
+            window.location.search
+        ).get('filter') || 'all',
+
+        'none'
+    );
 });
 
-// ---------- Plant of the week (moderators only) ----------
 
+// ---------- Plant of the Week ----------
+
+
+// This form exists only for moderators.
 const weekForm = document.getElementById('week-form');
 
+
+// Saves the moderator's Plant of the Week selection.
 async function saveWeekPlant(event) {
+
     event.preventDefault();
-    const submit = weekForm.querySelector('button[type="submit"]');
+
+    const submit = weekForm.querySelector(
+        'button[type="submit"]'
+    );
+
     submit.disabled = true;
+
     clearErrors(weekForm);
+
+
     try {
-        const { response, result } = await send(weekForm.action, new FormData(weekForm));
+
+        const { response, result } = await send(
+            weekForm.action,
+            new FormData(weekForm)
+        );
+
+
         if (response.ok) {
-            document.getElementById('plant-of-the-week').replaceWith(makeElement(result.html));
-            document.getElementById('week-modal').hidePopover();
-            showToast('Plant of the week saved', 'Everyone sees it on the Garden page now.');
+
+            // Replace the old sidebar with the updated HTML.
+            document.getElementById(
+                'plant-of-the-week'
+            ).replaceWith(
+                makeElement(result.html)
+            );
+
+
+            document.getElementById(
+                'week-modal'
+            ).hidePopover();
+
+
+            showToast(
+                'Plant of the week saved',
+                'Everyone sees it on the Garden page now.'
+            );
+
+
         } else if (result.errors) {
-            showErrors(weekForm, result.errors);
+
+            showErrors(
+                weekForm,
+                result.errors
+            );
+
         } else {
-            showServerError(response, result, 'Could not save');
+
+            showServerError(
+                response,
+                result,
+                'Could not save'
+            );
         }
+
+
     } catch (error) {
+
         networkError();
+
     } finally {
+
         submit.disabled = false;
     }
 }
 
-// ---------- One click and one submit listener for the whole page ----------
-// Listening on the document means cards added later (new posts, filtered feeds) work too.
+// ---------- Global event listeners ----------
 
+
+// Event delegation:
+// One document listener handles buttons, including dynamically added posts.
 document.addEventListener('click', (event) => {
+
     const target = event.target;
+
+
+    // Open the create-post modal.
     const openForm = target.closest('[data-open-post-form]');
+
     if (openForm && postForm) {
-        openPostForm(null, openForm.dataset.openPostForm);
+
+        openPostForm(
+            null,
+            openForm.dataset.openPostForm
+        );
+
         return;
     }
+
+
+    // Open or close the post options menu.
     const menuButton = target.closest('[data-menu-button]');
+
     if (menuButton) {
+
         toggleMenu(menuButton);
+
         return;
     }
+
+
+    // Close menus when clicking outside.
     if (!target.closest('[data-menu]')) {
-        closeMenus(null); // a click anywhere else closes an open ••• menu
+
+        closeMenus(null);
     }
+
+
+    // Edit an existing post.
     const editButton = target.closest('[data-edit-post]');
+
     if (editButton) {
+
         closeMenus(null);
-        openPostForm(editButton.closest('[data-post]'));
+
+        openPostForm(
+            editButton.closest('[data-post]')
+        );
+
         return;
     }
+
+
+    // Delete a post.
     const deleteButton = target.closest('[data-delete-post]');
+
     if (deleteButton) {
+
         closeMenus(null);
-        deletePost(deleteButton.closest('[data-post]'));
+
+        deletePost(
+            deleteButton.closest('[data-post]')
+        );
+
         return;
     }
+
+
+    // Like or unlike a post.
     const likeButton = target.closest('[data-like-url]');
+
     if (likeButton) {
+
         toggleLike(likeButton);
+
         return;
     }
+
+
+    // Expand or collapse comments.
     const commentsButton = target.closest('[data-comments-url]');
+
     if (commentsButton) {
+
         toggleComments(commentsButton);
+
         return;
     }
+
+
+    // Load all comments.
     const showAll = target.closest('[data-show-all-comments]');
+
     if (showAll) {
-        loadComments(showAll.closest('[data-comments]'), showAll.dataset.showAllComments);
+
+        loadComments(
+            showAll.closest('[data-comments]'),
+            showAll.dataset.showAllComments
+        );
+
         return;
     }
-    const deleteCommentButton = target.closest('[data-delete-comment]');
+
+
+    // Delete a comment.
+    const deleteCommentButton = target.closest(
+        '[data-delete-comment]'
+    );
+
     if (deleteCommentButton) {
+
         deleteComment(deleteCommentButton);
+
         return;
     }
+
+
+    // Handle category filter clicks.
     const pill = target.closest('a[data-filter]');
-    // Let Ctrl/Cmd/Shift-click open the link in a new tab like normal
-    if (pill && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+
+
+    // Preserve normal browser behaviour for Ctrl/Cmd/Shift clicks.
+    if (
+        pill
+        && !event.ctrlKey
+        && !event.metaKey
+        && !event.shiftKey
+    ) {
+
         event.preventDefault();
-        loadFeed(pill.dataset.filter, 'push');
+
+        loadFeed(
+            pill.dataset.filter,
+            'push'
+        );
     }
+
 });
 
-// Esc closes an open ••• menu and puts the focus back on its button
+
+// Close an open menu when the user presses Escape.
 document.addEventListener('keydown', (event) => {
+
     if (event.key !== 'Escape') {
         return;
     }
-    const open = document.querySelector('[data-menu]:not([hidden])');
+
+    const open = document.querySelector(
+        '[data-menu]:not([hidden])'
+    );
+
     if (open) {
+
         closeMenus(null);
+
         open.previousElementSibling.focus();
     }
 });
 
+
+// Handle comment form submissions.
 document.addEventListener('submit', (event) => {
+
     if (event.target.matches('[data-comment-form]')) {
+
         event.preventDefault();
+
         addComment(event.target);
     }
 });
 
+
+// Initialize the post form only if it exists.
 if (postForm) {
-    postForm.addEventListener('submit', savePost);
+
+    postForm.addEventListener(
+        'submit',
+        savePost
+    );
+
     setUpPhotoBox();
 }
+
+
+// Initialize the moderator form only if it exists.
 if (weekForm) {
-    weekForm.addEventListener('submit', saveWeekPlant);
+
+    weekForm.addEventListener(
+        'submit',
+        saveWeekPlant
+    );
 }
