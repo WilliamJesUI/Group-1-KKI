@@ -101,7 +101,7 @@ def get_profile_stats(user):
     # Appreciations = every like on any of this user's posts
     appreciations = Post.likes.through.objects.filter(post__author=user).count()
     # Only badges the user has pressed "Claim badge" for count, same as on the Achievements page
-    achievements = ClaimedBadge.objects.filter(user=user).count()
+    achievements = ClaimedBadge.objects.filter(user=user, status="APPROVED").count()
     plants_growing = 0
     if demo_data_on():
         garden_posts, appreciations, achievements, plants_growing = DEMO_STATS
@@ -121,7 +121,7 @@ def get_recent_badges(user):
         return DEMO_BADGES
     from achievements.models import ClaimedBadge
 
-    claims = ClaimedBadge.objects.filter(user=user).select_related("milestone").order_by("-claimed_at", "-id")[:3]
+    claims = ClaimedBadge.objects.filter(user=user, status="APPROVED").select_related("milestone").order_by("-claimed_at", "-id")[:3]
     return [
         {"name": claim.milestone.title, "tone": claim.milestone.tone, "icon": claim.milestone.icon}
         for claim in claims

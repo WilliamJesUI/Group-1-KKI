@@ -12,7 +12,8 @@ document.addEventListener('click', async (event) => {
 
         if (!response.ok) {
             const title = response.status === 403 ? 'Log in to vote' : 'Could not vote';
-            showToast(title, data.message || 'Please try again.', 'error');
+            const fallback = response.status === 403 ? 'Please log in first.' : 'Please try again.';
+            showToast(title, data.message || fallback, 'error');
             return;
         }
 

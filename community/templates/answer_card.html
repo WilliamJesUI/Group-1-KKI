@@ -65,6 +65,9 @@
 
         {% if user.is_authenticated and answer.author_id == user.id %}
         <button type="button" data-edit-answer class="text-sm font-bold hover:text-brand">Edit</button>
+        {% endif %}
+        {# Delete for the author and moderators (staff), Edit only for the author #}
+        {% if user.is_authenticated and answer.author_id == user.id or user.is_staff %}
         <button type="button" data-delete-answer
                 data-endpoint="{% url 'community:delete_answer_ajax' answer.id %}"
                 class="text-sm font-bold text-red-600 hover:text-red-700 disabled:opacity-40">Delete</button>

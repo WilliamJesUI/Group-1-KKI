@@ -5,10 +5,18 @@ from django.contrib.messages import get_messages
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.text import slugify
 
 from achievements.forms import GoalForm, ProgressLogForm
+from garden.models import Post
+from plants.models import Plant
 from achievements.models import CheckIn, ClaimedBadge, Goal, Milestone, ProgressLog
-from achievements.services import can_claim, check_in_today, current_streak, get_metric, record_progress
+from achievements.services import build_milestones, can_claim, check_in_today, current_streak, get_metric, record_progress
+
+
+def make_plant(name="Cherry tomato", category="vegetables"):
+    # The same fields the events tests use. The slug must be unique, so it comes from the name.
+    return Plant.objects.get_or_create(name=name, defaults={"slug": slugify(name), "category": category})[0]
 
 
 class ServicesTests(TestCase):
@@ -22,6 +30,12 @@ class ServicesTests(TestCase):
 
     def test_metric_is_zero_without_progress(self):
         self.assertEqual(get_metric(self.user, "answers_given"), 0)
+
+    def test_posts_shared_counts_the_users_garden_posts(self):
+        Post.objects.create(author=self.user, caption="First garden update")
+        Post.objects.create(author=self.user, caption="Another garden update")
+
+        self.assertEqual(get_metric(self.user, "posts_shared"), 2)
 
     def test_streak_counts_days_in_a_row(self):
         today = timezone.localdate()
@@ -68,7 +82,7 @@ class PageTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["unlocked"], 0)
-        self.assertContains(response, "Log in to start a goal")
+        self.assertContains(response, "Log in to track")
         self.assertNotContains(response, "Claim badge")
 
     def test_page_shows_a_claim_button_for_a_finished_milestone(self):
@@ -76,7 +90,8 @@ class PageTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(self.url)
         self.assertContains(response, "Claim badge")
-        # One plant finishes First Sprout and also starts Herb Garden (1 of 3), so two are in progress
+        # A plain counter finishes First Sprout, and opening the page starts 7 Day Streak (day 1 of 7).
+        # Herb Garden only counts real herbs, so it stays at 0.
         self.assertEqual(response.context["milestones_in_progress"], 2)
 
     def test_progress_percent_rounds_down(self):
@@ -91,14 +106,36 @@ class PageTests(TestCase):
         slugs = [card["milestone"].slug for card in response.context["cards"]]
         self.assertEqual(slugs, ["tomato-time"])
 
+    def test_new_plant_filter_uses_the_milestone_relationship(self):
+        plant = make_plant("Dragon fruit", "fruits")
+        Milestone.objects.create(
+            slug="dragon-fruit-grower",
+            title="Grower Badge",
+            description="A badge for a new plant",
+            metric="plants_added",
+            target=4,
+            icon="img/icons/ach-sprout-lg.svg",
+            plant=plant,
+        )
+
+        response = self.client.get(self.url + f"?plant={plant.slug}")
+
+        self.assertEqual(response.context["selected_plant"], plant.slug)
+        self.assertEqual(
+            [card["milestone"].slug for card in response.context["cards"]],
+            ["dragon-fruit-grower"],
+        )
+        self.assertIn((plant.slug, plant.name), response.context["plant_filters"])
+
     def test_unknown_plant_filter_falls_back_to_all(self):
         response = self.client.get(self.url + "?plant=banana")
         self.assertEqual(len(response.context["cards"]), Milestone.objects.count())
 
     def test_filter_with_no_milestones_shows_empty_message(self):
-        Milestone.objects.filter(plant_type="herbs").delete()
-        response = self.client.get(self.url + "?plant=herbs")
-        self.assertContains(response, "No milestones for this plant yet")
+        plant = make_plant("No badge plant", "flowers")
+        response = self.client.get(self.url + f"?plant={plant.slug}")
+        self.assertEqual(response.context["selected_plant"], "")
+        self.assertEqual(len(response.context["cards"]), Milestone.objects.count())
 
     def test_percent_is_zero_with_no_milestones_at_all(self):
         Milestone.objects.all().delete()
@@ -120,7 +157,7 @@ class ClaimTests(TestCase):
         response = self.client.post(self.url)
         self.assertRedirects(response, reverse("achievements:show_achievements"))
         self.assertTrue(ClaimedBadge.objects.filter(user=self.user, milestone__slug="first-sprout").exists())
-        self.assertIn("Badge claimed", self.messages(response)[0])
+        self.assertIn("Claim submitted!", self.messages(response)[0])
 
     def test_claim_is_refused_without_progress(self):
         self.client.force_login(self.user)
@@ -147,6 +184,26 @@ class ClaimTests(TestCase):
     def test_claim_only_accepts_post(self):
         self.client.force_login(self.user)
         self.assertEqual(self.client.get(self.url).status_code, 405)
+
+    def ajax(self):
+        return self.client.post(self.url, headers={"x-requested-with": "XMLHttpRequest"})
+
+    def test_ajax_claim_answers_with_json(self):
+        record_progress(self.user, "plants_added")
+        self.client.force_login(self.user)
+        response = self.ajax()
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["state"], "PENDING")
+        self.assertTrue(response.json()["message"].startswith("Claim submitted!"))
+        again = self.ajax()
+        self.assertEqual((again.status_code, again.json()["state"]), (200, "PENDING"))
+
+    def test_ajax_claim_errors(self):
+        self.assertEqual(self.ajax().status_code, 403)
+        self.client.force_login(self.user)
+        response = self.ajax()
+        self.assertEqual((response.status_code, response.json()["state"]), (400, ""))
+        self.assertIn("Not ready yet", response.json()["message"])
 
 
 class CheckInViewTests(TestCase):
@@ -180,7 +237,7 @@ class CheckInViewTests(TestCase):
 class GoalModelTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user("rina", password="pw")
-        self.goal = Goal.objects.create(user=self.user, title="Harvest 5 tomatoes", plant="Cherry tomato", target=5)
+        self.goal = Goal.objects.create(user=self.user, title="Harvest 5 tomatoes", plant=make_plant(), target=5)
 
     def test_new_goal_has_no_progress(self):
         self.assertEqual((self.goal.done, self.goal.percent, self.goal.is_complete), (0, 0, False))
@@ -201,7 +258,7 @@ class GoalModelTests(TestCase):
     def test_percent_rounds_down(self):
         ProgressLog.objects.create(goal=self.goal, amount=1)
         self.assertEqual(self.goal.percent, 20)
-        other = Goal.objects.create(user=self.user, title="Water basil", plant="Basil", target=3)
+        other = Goal.objects.create(user=self.user, title="Water basil", plant=make_plant("Basil", "herbs"), target=3)
         ProgressLog.objects.create(goal=other, amount=2)
         self.assertEqual(other.percent, 66)
 
@@ -228,15 +285,28 @@ class GoalModelTests(TestCase):
 class GoalFormTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user("rina", password="pw")
-        self.data = {"title": "Harvest 5 tomatoes", "plant": "Cherry tomato", "target": 5}
+        self.plant = make_plant()
+        self.data = {"title": "Harvest 5 tomatoes", "plant": self.plant.pk, "target": 5}
+        # For Goal.objects.create(): it needs the Plant itself, the form data above only has its id
+        self.goal_fields = {"title": "Harvest 5 tomatoes", "plant": self.plant, "target": 5}
 
     def test_valid_goal_form(self):
         self.assertTrue(GoalForm(self.data).is_valid())
 
     def test_plant_must_come_from_the_list(self):
-        form = GoalForm({**self.data, "plant": "Banana"})
+        form = GoalForm({**self.data, "plant": 99999})
         self.assertFalse(form.is_valid())
         self.assertIn("plant", form.errors)
+
+    def test_plant_field_uses_the_plant_picker(self):
+        html = str(GoalForm()["plant"])
+        self.assertIn("data-plant-picker", html)
+        self.assertIn("Choose a plant...", html)
+
+    def test_edit_form_starts_with_the_goals_plant(self):
+        goal = Goal.objects.create(user=self.user, **self.goal_fields)
+        html = str(GoalForm(instance=goal)["plant"])
+        self.assertRegex(html, f'<option value="{self.plant.id}"[^>]* selected')
 
     def test_empty_form_asks_for_the_required_fields(self):
         errors = GoalForm({}).errors
@@ -253,12 +323,12 @@ class GoalFormTests(TestCase):
         self.assertTrue(GoalForm({**self.data, "finish_by": timezone.localdate()}).is_valid())
 
     def test_an_old_finish_date_is_fine_when_it_did_not_change(self):
-        goal = Goal.objects.create(user=self.user, finish_by=timezone.localdate() - timedelta(days=5), **self.data)
+        goal = Goal.objects.create(user=self.user, finish_by=timezone.localdate() - timedelta(days=5), **self.goal_fields)
         data = {**self.data, "title": "New name", "finish_by": goal.finish_by}
         self.assertTrue(GoalForm(data, instance=goal).is_valid())
 
     def test_target_cannot_drop_below_what_is_logged(self):
-        goal = Goal.objects.create(user=self.user, **self.data)
+        goal = Goal.objects.create(user=self.user, **self.goal_fields)
         ProgressLog.objects.create(goal=goal, amount=3)
         form = GoalForm({**self.data, "target": 2}, instance=goal)
         self.assertFalse(form.is_valid())
@@ -279,8 +349,11 @@ class GoalViewTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user("rina", password="pw")
         self.other = User.objects.create_user("sari", password="pw")
-        self.data = {"title": "Harvest 5 tomatoes", "plant": "Cherry tomato", "target": 5}
-        self.goal = Goal.objects.create(user=self.user, **self.data)
+        self.plant = make_plant()
+        self.data = {"title": "Harvest 5 tomatoes", "plant": self.plant.pk, "target": 5}
+        # For Goal.objects.create(): it needs the Plant itself, the form data above only has its id
+        self.goal_fields = {"title": "Harvest 5 tomatoes", "plant": self.plant, "target": 5}
+        self.goal = Goal.objects.create(user=self.user, **self.goal_fields)
         self.page = reverse("achievements:show_achievements")
 
     def json_messages(self, response):
@@ -291,8 +364,9 @@ class GoalViewTests(TestCase):
         response = self.client.post(reverse("achievements:create_goal"), {**self.data, "title": "Water basil"})
         self.assertEqual(response.status_code, 201)
         self.assertTrue(Goal.objects.filter(user=self.user, title="Water basil").exists())
-        self.assertIn("Goal started", self.json_messages(response)[0])
-        self.assertIn("Log progress on it whenever you can.", self.json_messages(response)[0])
+        self.assertEqual(response.json()["message"], "Goal started\nLog progress on it whenever you can.")
+        # The page adds the new card from this, so it shows without a refresh
+        self.assertEqual(response.json()["goal"]["title"], "Water basil")
 
     def test_create_with_errors_returns_them_as_json(self):
         self.client.force_login(self.user)
@@ -377,7 +451,7 @@ class GoalViewTests(TestCase):
         self.assertEqual(self.client.get(reverse("achievements:delete_goal", args=[self.goal.id])).status_code, 405)
 
     def test_page_lists_only_my_goals_with_their_progress(self):
-        Goal.objects.create(user=self.other, title="Sari's secret goal", plant="Mint", target=2)
+        Goal.objects.create(user=self.other, title="Sari's secret goal", plant=make_plant("Mint", "herbs"), target=2)
         ProgressLog.objects.create(goal=self.goal, amount=3)
         self.client.force_login(self.user)
         response = self.client.get(self.page)
@@ -385,7 +459,118 @@ class GoalViewTests(TestCase):
         self.assertNotContains(response, "Sari&#x27;s secret goal")
         self.assertEqual(response.context["goals"][0].done, 3)
 
+    def test_page_has_the_plant_picker(self):
+        response = self.client.get(self.page)
+        self.assertContains(response, "js/plant_picker.js")
+        self.assertContains(response, "data-plant-picker")
+        self.assertContains(response, f'<option value="{self.plant.id}"')
+
     def test_page_asks_visitors_to_log_in(self):
         response = self.client.get(self.page)
-        self.assertContains(response, "Log in to start a goal.")
+        self.assertContains(response, "Log in to start a goal")
         self.assertNotContains(response, "data-goal-new")
+
+    def test_pending_claim_shows_the_pending_label_not_the_button(self):
+        record_progress(self.user, "plants_added")
+        milestone = Milestone.objects.get(slug="first-sprout")
+        ClaimedBadge.objects.create(user=self.user, milestone=milestone, status="PENDING")
+        self.client.force_login(self.user)
+        response = self.client.get(self.page)
+        self.assertContains(response, "Pending approval")
+        self.assertNotContains(response, "Claim badge")
+        self.assertEqual(response.context["unlocked"], 0)
+
+
+class GoodNeighborWordingTests(TestCase):
+    """Good Neighbor counts answers written (answering one question twice counts as 2), so the text must say answers."""
+
+    def test_good_neighbor_says_answers(self):
+        badge = Milestone.objects.get(slug="good-neighbor")
+        self.assertEqual(badge.description, "Write 10 answers")
+
+    def test_metric_label_says_answers(self):
+        self.assertEqual(dict(Milestone.METRIC_CHOICES)["answers_given"], "Answers written")
+
+
+class PlantMilestoneTests(TestCase):
+    """Milestones tied to a plant or a category only count that plant or category,
+    and posting a plant in the Garden counts as adding it to your garden."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="will", password="pass12345")
+        self.basil = make_plant("Basil", "herbs")
+        self.mint = make_plant("Mint", "herbs")
+        self.rose = make_plant("Rose", "flowers")
+        self.tomato = make_plant("Tomato", "vegetables")
+        self.first_sprout = Milestone.objects.get(slug="first-sprout")
+        self.herb_garden = Milestone.objects.get(slug="herb-garden")
+        self.tomato_time = Milestone.objects.get(slug="tomato-time")
+        self.tomato_time.plant = self.tomato
+        self.tomato_time.save()
+
+    def progress(self, milestone):
+        card = next(c for c in build_milestones(self.user) if c["milestone"].pk == milestone.pk)
+        return card["percent"]
+
+    def test_garden_post_with_a_plant_counts_as_adding_it(self):
+        Post.objects.create(author=self.user, caption="My basil", plant=self.basil)
+        self.assertEqual(self.progress(self.first_sprout), 100)
+
+    def test_herb_garden_only_counts_herbs(self):
+        for plant in (self.basil, self.mint, self.rose):
+            Post.objects.create(author=self.user, caption="look", plant=plant)
+        # 2 of 3 herbs: the rose doesn't count
+        self.assertEqual(self.progress(self.herb_garden), 66)
+        Post.objects.create(author=self.user, caption="parsley", plant=make_plant("Parsley", "herbs"))
+        self.assertEqual(self.progress(self.herb_garden), 100)
+        self.assertTrue(can_claim(self.user, self.herb_garden))
+
+    def test_tomato_time_only_counts_tomato_goals(self):
+        basil_goal = Goal.objects.create(user=self.user, title="Basil", plant=self.basil, target=5)
+        ProgressLog.objects.create(goal=basil_goal, amount=3)
+        self.assertEqual(self.progress(self.tomato_time), 0)
+        tomato_goal = Goal.objects.create(user=self.user, title="Tomatoes", plant=self.tomato, target=5)
+        ProgressLog.objects.create(goal=tomato_goal, amount=3)
+        self.assertEqual(self.progress(self.tomato_time), 100)
+
+
+class DailyCheckInTests(TestCase):
+    """The day streak needs check-ins, so opening the Achievements page checks you in for today."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("streaky", password="pw")
+        self.url = reverse("achievements:show_achievements")
+
+    def test_visiting_the_page_checks_you_in_once_a_day(self):
+        self.client.force_login(self.user)
+        self.client.get(self.url)
+        self.client.get(self.url)
+        self.assertEqual(CheckIn.objects.filter(user=self.user, date=timezone.localdate()).count(), 1)
+        self.assertEqual(current_streak(self.user), 1)
+
+    def test_visitors_are_not_checked_in(self):
+        self.client.get(self.url)
+        self.assertEqual(CheckIn.objects.count(), 0)
+
+    def test_page_explains_how_the_streak_works(self):
+        self.client.force_login(self.user)
+        self.assertContains(self.client.get(self.url), "Opening this page once a day checks you in")
+
+
+class LiveMilestoneRefreshTests(TestCase):
+    """After logging progress (or any goal change) the badges, stats and milestones refresh without a reload.
+    achievements_goals.js reloads these marked parts of the page with ajax_forms.js."""
+
+    def test_page_marks_the_parts_that_refresh(self):
+        user = User.objects.create_user("lia", password="pw")
+        self.client.force_login(user)
+        response = self.client.get(reverse("achievements:show_achievements"))
+        for region in ("growth", "stats", "milestones"):
+            self.assertContains(response, f'data-ajax-region="{region}"')
+
+    def test_goal_cards_refresh_after_an_edit(self):
+        # Editing a goal changes its "x of y done" text and reason, so the goal list reloads too
+        user = User.objects.create_user("lia", password="pw")
+        self.client.force_login(user)
+        response = self.client.get(reverse("achievements:show_achievements"))
+        self.assertContains(response, 'data-ajax-region="goals"')

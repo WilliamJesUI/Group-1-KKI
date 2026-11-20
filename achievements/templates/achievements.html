@@ -8,7 +8,7 @@
 <p class="mt-1.5 text-ink-soft">Your badges, streaks and progress</p>
 
 {# Hero: headline on the left, badge progress card on the right #}
-<section class="mt-8 flex flex-col gap-8 rounded-3xl border-2 border-ink bg-butter p-6 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
+<section data-ajax-region="growth" class="mt-8 flex flex-col gap-8 rounded-3xl border-2 border-ink bg-butter p-6 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
     <div class="max-w-[420px]">
         <span class="inline-block rounded-lg border-[1.5px] border-ink bg-surface px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-brand">Your growth</span>
         <h2 class="mt-3 font-display text-5xl leading-[1.05] sm:text-[56px]">Every little leaf<br>is a win.</h2>
@@ -34,7 +34,7 @@
 </section>
 
 {# Stats: icon, number and label on one line. gap-px on a dark background draws the dividers. #}
-<section class="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border-2 border-ink bg-ink lg:grid-cols-4">
+<section data-ajax-region="stats" class="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border-2 border-ink bg-ink lg:grid-cols-4">
     {% for stat in stats %}
     <div class="flex items-center gap-3 bg-surface p-[18px]">
         <img src="{% static stat.icon %}" alt="" width="20" height="20" class="shrink-0">
@@ -45,17 +45,26 @@
 </section>
 
 {# Milestones #}
-<section class="mt-8 pb-8">
+<section data-ajax-region="milestones" class="mt-8 pb-8">
     <div class="flex flex-wrap items-end justify-between gap-3">
         <div>
             <h2 class="font-display text-xl leading-tight">Milestones</h2>
             <p class="text-[13px] text-ink-soft">{{ milestones_in_progress }} of {{ total }} milestones in progress</p>
+            <p class="mt-1 max-w-[560px] text-xs text-ink-soft">Plants count when you post them in the Garden or save them in the Encyclopedia. Harvests count when you press "Log progress" on one of your goals below. Opening this page once a day checks you in for the streak.</p>
         </div>
         <nav aria-label="Filter milestones by plant" class="flex gap-2">
+            <a href="{% url 'achievements:show_achievements' %}"
+            {% if not selected_plant %}aria-current="page"{% endif %}
+            class="rounded-full border-2 border-ink px-4 py-1.5 text-[13px] font-extrabold">
+                All
+            </a>
+
             {% for value, label in plant_filters %}
-            <a href="{% if value %}?plant={{ value }}{% else %}{% url 'achievements:show_achievements' %}{% endif %}"
-               {% if value == selected_plant %}aria-current="page"{% endif %}
-               class="rounded-full border-2 border-ink px-4 py-1.5 text-[13px] font-extrabold {% if value == selected_plant %}bg-brand-soft{% else %}bg-surface hover:bg-brand-tint{% endif %}">{{ label }}</a>
+            <a href="?plant={{ value }}"
+            {% if value == selected_plant %}aria-current="page"{% endif %}
+            class="rounded-full border-2 border-ink px-4 py-1.5 text-[13px] font-extrabold {% if value == selected_plant %}bg-brand-soft{% else %}bg-surface hover:bg-brand-tint{% endif %}">
+                {{ label }}
+            </a>
             {% endfor %}
         </nav>
     </div>
@@ -78,8 +87,10 @@
             <span class="flex shrink-0 items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-brand">
                 <img src="{% static 'img/icons/check.svg' %}" alt="" width="16" height="16">Claimed
             </span>
+            {% elif card.pending %}
+            <span class="shrink-0 rounded-full bg-butter px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em]">Pending approval</span>
             {% elif card.ready %}
-            <form method="post" action="{% url 'achievements:claim_badge' card.milestone.slug %}" class="shrink-0">
+            <form method="post" action="{% url 'achievements:claim_badge' card.milestone.slug %}" class="shrink-0" data-claim-form>
                 {% csrf_token %}
                 <button type="submit" class="rounded-full border-2 border-ink bg-brand-tint px-4 py-2 text-[11px] font-black uppercase tracking-[0.08em] hover:bg-brand-soft">Claim badge</button>
             </form>
@@ -88,11 +99,13 @@
             {% endif %}
         </article>
         {% empty %}
-        <p class="rounded-2xl border-2 border-dashed border-line p-8 text-center text-ink-soft lg:col-span-2">No milestones for this plant yet.</p>
+            <p class="text-sm text-ink-soft lg:col-span-2">No milestones for this plant yet</p>
         {% endfor %}
     </div>
 </section>
 {% include "goals_section.html" %}
 {% include "goal_modals.html" %}
+<script src="{% static 'js/plant_picker.js' %}"></script>
 <script src="{% static 'js/achievements_goals.js' %}"></script>
+<script src="{% static 'js/achievements_claim.js' %}"></script>
 {% endblock content %}

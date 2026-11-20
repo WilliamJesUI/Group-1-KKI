@@ -43,7 +43,7 @@ class LandingTestData(TestCase):
             slug="test-sprout", title="Test Sprout", description="Add a plant", metric="plants_added",
             target=1, icon="img/icons/ach-sprout.svg",
         )
-        ClaimedBadge.objects.create(user=self.budi, milestone=self.milestone)
+        ClaimedBadge.objects.create(user=self.budi, milestone=self.milestone, status="APPROVED")
 
 
 class LandingGuestTest(LandingTestData):
@@ -61,6 +61,12 @@ class LandingGuestTest(LandingTestData):
         self.assertContains(response, "Your plot is")
         self.assertNotContains(response, "Welcome back")
 
+    def test_names_link_to_profiles(self):
+        # Post author, event host on the poster, the asker of the big quote and the badge line
+        response = self.client.get(self.url)
+        self.assertContains(response, f'href="{reverse("profile:show_user_profile", args=["budi"])}"')
+        self.assertContains(response, f'href="{reverse("profile:show_user_profile", args=["siti"])}"')
+
     def test_no_navbar(self):
         response = self.client.get(self.url)
         self.assertTemplateNotUsed(response, "header.html")
@@ -72,10 +78,15 @@ class LandingGuestTest(LandingTestData):
         self.assertContains(response, "Community Seed Swap")
         self.assertContains(response, "Why are my basil leaves black?")
         self.assertContains(response, "Test Sprout")
-        self.assertContains(response, "Budi earned Test Sprout")
+        self.assertContains(response, "Budi</a> earned Test Sprout")
         self.assertContains(response, "1 of 2 gardeners")
         for slug in ["garden", "events", "encyclopedia", "community", "achievements"]:
             self.assertContains(response, f'id="spread-{slug}"')
+
+    def test_pending_claims_do_not_count(self):
+        ClaimedBadge.objects.create(user=self.siti, milestone=self.milestone)  # PENDING by default
+        response = self.client.get(self.url)
+        self.assertContains(response, "1 of 2 gardeners")
 
     def test_guest_actions_send_to_log_in(self):
         response = self.client.get(self.url)
@@ -118,7 +129,7 @@ class LandingLoggedInTest(LandingTestData):
 
     def test_your_week_counts(self):
         PlantCollection.objects.create(user=self.siti).plants.add(self.basil)
-        goal = Goal.objects.create(user=self.siti, title="Grow 5 chilies", plant="Chili", target=5)
+        goal = Goal.objects.create(user=self.siti, title="Grow 5 chilies", plant=self.basil, target=5)
         ProgressLog.objects.create(goal=goal, amount=2)
         response = self.client.get(self.url)
         mine = response.context["mine"]
@@ -215,3 +226,27 @@ class EmptyAndBrokenTest(TestCase):
         top, more = services.garden_posts(budi)
         self.assertEqual(top, post)
         self.assertEqual(more, [])
+
+
+class DarkModeTest(TestCase):
+    """Every page has a light/dark switch, and the saved choice is applied before the page paints."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="dana", password="pass12345")
+
+    def test_landing_page_has_theme_toggle(self):
+        response = self.client.get(reverse("home:show_landing"))
+        self.assertContains(response, "data-theme-toggle")
+        self.assertContains(response, "js/theme.js")
+
+    def test_pages_with_navbar_have_theme_toggle(self):
+        self.client.login(username="dana", password="pass12345")
+        response = self.client.get(reverse("events:show_events"))
+        self.assertContains(response, "data-theme-toggle")
+
+    def test_saved_theme_is_read_before_paint(self):
+        response = self.client.get(reverse("home:show_landing"))
+        html = response.content.decode()
+        self.assertIn("gyg-theme", html)
+        # The early script must come before the stylesheet so dark pages don't flash white first.
+        self.assertLess(html.index("gyg-theme"), html.index("@tailwindcss/browser"))

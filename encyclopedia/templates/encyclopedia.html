@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Encyclopedia | Grow Your Garden{% endblock %}
+{% block title %}Encyclopedia - Grow Your Garden{% endblock %}
 {% block content %}
 <style>
   .encyclopedia-screen { display:flex; flex-direction:column; }
@@ -40,7 +40,7 @@
     </form>
   </div>
   {# Pills + cards. encyclopedia_search.js swaps this box when you type or click a pill. aria-busy fades it while loading. #}
-  <div id="plant-results" class="transition-opacity aria-busy:opacity-50">
+  <div id="plant-results" data-ajax-region="results" class="transition-opacity aria-busy:opacity-50">
     {% include "plant_results.html" %}
   </div>
   {% if user.is_authenticated %}

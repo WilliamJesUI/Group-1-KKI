@@ -1,1 +1,1 @@
-# Forms are currently not needed because most functions are already handled in views
+# Collections use small fetch() forms instead of Django forms, see views.py (create_collection and friends).

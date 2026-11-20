@@ -6,27 +6,51 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
-
+from plants.models import Plant
 from achievements.forms import GoalForm, ProgressLogForm
 from achievements.models import ClaimedBadge, Goal, Milestone
 from achievements.services import build_milestones, can_claim, check_in_today, get_metric
 
-PLANT_FILTERS = [(value, label) for value, label in Milestone.PLANT_CHOICES]
 
 
-# ensure_csrf_cookie: the goal pop-ups use fetch, which needs the csrftoken cookie
 @ensure_csrf_cookie
 def show_achievements(request):
     user = request.user
-    plant = request.GET.get("plant", "")
-    if plant not in dict(PLANT_FILTERS):
-        plant = ""
+    selected_plant_slug = request.GET.get("plant", "")
+    # Opening this page once a day is the check-in that keeps the day streak going
+    if user.is_authenticated:
+        check_in_today(user)
 
     cards = build_milestones(user)
+
     total = len(cards)
     unlocked = sum(1 for card in cards if card["claimed"])
-    in_progress = sum(1 for card in cards if not card["claimed"] and card["percent"] > 0)
-    shown = [card for card in cards if not plant or card["milestone"].plant_type == plant]
+    in_progress = sum(
+        1 for card in cards
+        if not card["claimed"] and card["percent"] > 0
+    )
+
+    plant_objects = (
+        Plant.objects
+        .filter(milestones__isnull=False)
+        .distinct()
+        .order_by("name")
+    )
+
+    plant_filters = [
+        (plant.slug, plant.name)
+        for plant in plant_objects
+    ]
+
+    available_plant_slugs = {slug for slug, _ in plant_filters}
+    if selected_plant_slug not in available_plant_slugs:
+        selected_plant_slug = ""
+
+    shown = [
+        card for card in cards
+        if not selected_plant_slug or card["milestone"].plant_id and
+        card["milestone"].plant.slug == selected_plant_slug
+    ]
 
     context = {
         "unlocked": unlocked,
@@ -41,31 +65,45 @@ def show_achievements(request):
             {"icon": "img/icons/ach-users.svg", "value": get_metric(user, "posts_shared"), "label": "Posts shared"},
         ],
         "cards": shown,
-        "plant_filters": PLANT_FILTERS,
-        "selected_plant": plant,
-        # total_done adds up the logs of every goal in one query, Goal.done uses it
-        "goals": list(
-            Goal.objects.filter(user=user).annotate(total_done=Coalesce(Sum("logs__amount"), 0))
-        ) if user.is_authenticated else [],
-        # Empty forms for the "Start a goal", "Edit goal" and "Log progress" pop-ups
+        "plant_filters": plant_filters,
+        "selected_plant": selected_plant_slug,
+        "goals": (
+            list(
+                Goal.objects.filter(user=user).annotate(
+                    total_done=Coalesce(Sum("logs__amount"), 0)
+                )
+            )
+            if user.is_authenticated else []
+        ),
         "goal_form": GoalForm(),
         "log_form": ProgressLogForm(),
     }
+
     return render(request, "achievements.html", context)
-
-
 @require_POST
 def claim_badge(request, slug):
     milestone = get_object_or_404(Milestone, slug=slug)
     if not request.user.is_authenticated:
-        messages.error(request, "Log in first\nYou need an account to claim badges.")
-    elif not can_claim(request.user, milestone):
-        messages.error(request, "Not ready yet\nFinish the milestone first, or you already claimed this badge.")
+        level, text, status = messages.ERROR, "Log in first\nYou need an account to claim badges.", 403
     else:
-        ClaimedBadge.objects.get_or_create(user=request.user, milestone=milestone)
-        messages.success(request, f"Badge claimed\nYou unlocked {milestone.title}.")
+        existing = ClaimedBadge.objects.filter(user=request.user, milestone=milestone).first()
+        if existing and existing.status == "PENDING":
+            level, text, status = messages.INFO, f"Pending\nYour claim for {milestone.title} is waiting for admin approval.", 200
+        elif existing and existing.status == "REJECTED":
+            level, text, status = messages.ERROR, f"Claim rejected\nYour claim for {milestone.title} was not approved.", 400
+        elif existing:
+            level, text, status = messages.INFO, f"Already unlocked\nYou already have {milestone.title}.", 200
+        elif not can_claim(request.user, milestone):
+            level, text, status = messages.ERROR, "Not ready yet\nFinish the milestone first.", 400
+        else:
+            ClaimedBadge.objects.create(user=request.user, milestone=milestone)
+            level, text, status = messages.SUCCESS, f"Claim submitted!\nWaiting for admin approval to unlock {milestone.title}.", 201
+    # achievements_claim.js sends the form with fetch, so it gets JSON and updates the card without a reload
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        state = existing.status if request.user.is_authenticated and existing else ("PENDING" if status == 201 else "")
+        return JsonResponse({"message": text, "state": state}, status=status)
+    messages.add_message(request, level, text)
     return redirect("achievements:show_achievements")
-
 
 @require_POST
 def check_in(request):
@@ -99,9 +137,12 @@ def create_goal_ajax(request):
         goal = form.save(commit=False)
         goal.user = request.user
         goal.save()
+        # The page adds the card itself (achievements_goals.js), so it needs the goal back, not a reload.
         # The text before \n is the toast's title, the rest is the smaller message under it
-        messages.success(request, "Goal started\nLog progress on it whenever you can.")
-        return JsonResponse({"id": goal.id}, status=201)
+        return JsonResponse(
+            {"id": goal.id, "goal": serialize_goal(goal), "message": "Goal started\nLog progress on it whenever you can."},
+            status=201,
+        )
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 
@@ -112,9 +153,12 @@ def edit_goal_ajax(request, goal_id):
         return error
     form = GoalForm(request.POST, instance=goal)
     if form.is_valid():
-        form.save()
-        messages.success(request, "Goal updated\nYour changes are saved.")
-        return JsonResponse({"id": goal.id})
+        goal = form.save()
+        return JsonResponse({
+            'status': 'success',
+            'message': "Goal updated\nYour changes are saved.",
+            'goal': serialize_goal(goal)
+        })
     return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
 
 
@@ -144,13 +188,31 @@ def log_progress_ajax(request, goal_id):
         "message": toast[1],
     })
 
-
+def serialize_goal(goal):
+    return {
+        'id': goal.id,
+        'title': goal.title,
+        'plant_id': goal.plant_id,
+        'plant_name': str(goal.plant),
+        'target': goal.target,
+        'done': goal.done,
+        'percent': goal.percent,
+        'is_complete': goal.is_complete,
+        'finish_by': goal.finish_by.strftime('%Y-%m-%d') if goal.finish_by else '',
+        'finish_by_formatted': goal.finish_by.strftime('%a, %d %b %Y') if goal.finish_by else '',
+        'reason': goal.reason or ''
+    }
 @require_POST
 def delete_goal(request, goal_id):
-    goal = get_object_or_404(Goal, pk=goal_id)
-    # Only the owner may delete. Visitors who aren't logged in never equal the owner, so they're stopped here too.
-    if request.user != goal.user:
-        raise PermissionDenied
+    goal, err_response = get_own_goal(request, goal_id)
+    if err_response:
+        return err_response
     goal.delete()
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.content_type == 'application/json':
+        return JsonResponse({
+            'status': 'success',
+            'message': "Goal deleted\nIt's off your list now.",
+            'goal_id': goal_id
+        })
     messages.success(request, "Goal deleted\nIt's off your list now.")
     return redirect("achievements:show_achievements")

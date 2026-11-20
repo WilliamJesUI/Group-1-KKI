@@ -16,10 +16,7 @@ Same open/close animation as the events pop-ups (see events/templates/event_form
         </div>
         <div class="flex flex-col gap-2">
             <label for="{{ goal_form.plant.id_for_label }}" class="text-xs font-extrabold">{{ goal_form.plant.label }}</label>
-            <div class="relative">
-                {{ goal_form.plant }}
-                <img src="{% static 'img/icons/chevron-right.svg' %}" alt="" width="16" height="16" class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 rotate-90">
-            </div>
+            {{ goal_form.plant }}
             <p data-error-for="plant" class="hidden text-xs text-danger-text"></p>
         </div>
         <div class="flex flex-col gap-2">

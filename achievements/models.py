@@ -13,7 +13,7 @@ class Milestone(models.Model):
         ("plants_added", "Plants added"),
         ("harvests_logged", "Harvests logged"),
         ("checkin_streak", "Day check-in streak"),
-        ("answers_given", "Questions answered"),
+        ("answers_given", "Answers written"),
         ("host", "Events hosted"),
         ("event_goer", "Events RSVPed"),
         ("plant_collector", "Plants saved"),
@@ -26,7 +26,6 @@ class Milestone(models.Model):
         ("bg-[#b8fff8]", "Aqua"),
         ("bg-butter", "Butter"),
     ]
-    PLANT_CHOICES = [("", "All plants"), ("tomato", "Tomato"), ("herbs", "Herbs")]
 
     slug = models.SlugField(unique=True)
     title = models.CharField(max_length=60)
@@ -38,7 +37,9 @@ class Milestone(models.Model):
     icon = models.CharField(max_length=120)
     tone = models.CharField(max_length=30, choices=TONE_CHOICES, default="bg-brand-soft")
     # Which pill on the page shows this milestone. Empty means it only shows under "All plants".
-    plant_type = models.CharField(max_length=20, blank=True, choices=PLANT_CHOICES)
+    plant = models.ForeignKey("plants.Plant", null=True, blank=True, on_delete=models.SET_NULL, related_name="milestones")
+    # Only count plants of this category, e.g. "herbs" for Herb Garden. Empty means every plant.
+    category = models.CharField(max_length=20, blank=True, choices=[("vegetables", "Vegetables"), ("herbs", "Herbs"), ("flowers", "Flowers")])
     order = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
@@ -62,17 +63,21 @@ class UserMetric(models.Model):
 
 
 class ClaimedBadge(models.Model):
-    # A row exists once the user has pressed "Claim badge" for a finished milestone
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="claimed_badges")
-    milestone = models.ForeignKey(Milestone, on_delete=models.CASCADE, related_name="claims")
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending Approval'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    milestone = models.ForeignKey(Milestone, on_delete=models.CASCADE)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
     claimed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["user", "milestone"], name="one_claim_per_milestone")]
-
+        unique_together = ("user", "milestone")
     def __str__(self):
         return f"{self.user.username} claimed {self.milestone.title}"
-
 
 class CheckIn(models.Model):
     # One row per user per day. The streak is the number of days in a row ending today (or yesterday).
@@ -89,8 +94,8 @@ class Goal(models.Model):
     # "Start a goal" form: one goal is about one plant, e.g. "Harvest 5 tomatoes"
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="goals")
     title = models.CharField(max_length=100)
-    # Plain text for now. When the Encyclopedia module is merged this becomes a ForeignKey to its Plant model.
-    plant = models.CharField(max_length=60)
+    # The shared plant list, so goals can be filtered by plant and link to the Encyclopedia.
+    plant = models.ForeignKey("plants.Plant", on_delete=models.PROTECT, related_name="goals")
     # "How many times?" The goal is finished when the logged amounts add up to this number.
     target = models.PositiveIntegerField(validators=[MinValueValidator(1), MaxValueValidator(1000)])
     finish_by = models.DateField(blank=True, null=True)

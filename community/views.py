@@ -6,6 +6,7 @@ from django.views.decorators.http import require_POST
 from django.db.models import Count, Q, Exists, OuterRef, Count, Case, When, Value, IntegerField
 from django.contrib import messages 
 from plants.models import Plant
+from growyourgarden.permissions import can_delete, is_moderator
 
 
 # Create your views here.
@@ -216,10 +217,12 @@ def delete_question_ajax(request, question_id):
     except Question.DoesNotExist:
         return JsonResponse({"message": "Question not found."}, status=404)
 
-    if question.author_id != request.user.id:
+    # The author and moderators (staff) can delete. Moderators can't edit someone else's question though.
+    if not can_delete(request.user, question.author):
         return JsonResponse({"message": "You can only delete your own questions."}, status=403)
 
-    if question.answers.count() > 0:
+    # Authors can't delete once someone answered, but a moderator can still remove the whole thread (spam etc.)
+    if question.answers.count() > 0 and not is_moderator(request.user):
         return JsonResponse(
             {"message": "This question already has answers, so it can't be deleted."},
             status=409,
@@ -300,7 +303,8 @@ def delete_answer_ajax(request, answer_id):
     except Answer.DoesNotExist:
         return JsonResponse({"message": "Answer not found."}, status=404)
 
-    if answer.author_id != request.user.id:
+    # The author and moderators (staff) can delete
+    if not can_delete(request.user, answer.author):
         return JsonResponse({"message": "You can only delete your own answers."}, status=403)
 
     answer.delete()

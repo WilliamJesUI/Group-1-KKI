@@ -20,6 +20,7 @@ More info: docs/TEAM-GUIDE.md
 """
 from functools import wraps
 
+from django.contrib import messages
 from django.http import JsonResponse
 
 
@@ -61,3 +62,24 @@ def ajax_moderator_required(message="Only moderators can do this."):
         return wrapper
 
     return decorator
+
+
+def ajax_redirects(view):
+    """Lets an old-style form view (one that ends with redirect() + a Django message) also work with fetch().
+
+    A normal form post still gets the redirect. A fetch() call (X-Requested-With: XMLHttpRequest) gets JSON instead:
+    {"url": where the redirect was going, "messages": [{"text": ..., "level": "success" or "error"}]}.
+    static/js/ajax_forms.js then reloads only part of the page from that url and shows the messages as toasts.
+    The messages are read here, so they don't show up again on the next page load.
+    """
+
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        response = view(request, *args, **kwargs)
+        is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
+        if is_ajax and response.status_code in (301, 302):
+            notes = [{"text": str(note), "level": note.level_tag} for note in messages.get_messages(request)]
+            return JsonResponse({"url": response["Location"], "messages": notes})
+        return response
+
+    return wrapper

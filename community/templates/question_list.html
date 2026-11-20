@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% block title %}Community - Grow Your Garden{% endblock title %}
 
 {% block meta %}
 <style type="text/tailwindcss">
@@ -39,7 +40,7 @@
                         {% if user.is_authenticated %}
                         <button type="button" popovertarget="ask-question-modal" class="mt-4 rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Ask a question</button>
                         {% else %}
-                        <a href="#" class="mt-4 inline-block rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Log in to ask a question</a>
+                        <a href="{% url 'profile:login' %}" class="mt-4 inline-block rounded-full border-2 border-ink bg-brand px-6 py-3 text-[15px] font-extrabold text-white hover:bg-brand-hover transition duration-150 ease-out active:scale-[0.97] active:duration-100 motion-reduce:active:scale-100">Log in to ask a question</a>
                         {% endif %}
                     </div>
                 </div>

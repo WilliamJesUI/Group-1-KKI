@@ -1,5 +1,6 @@
 const answerForm = document.getElementById('answer-form');
-const ANSWER_QUESTION_ENDPOINT = answerForm.dataset.endpoint;
+// Guests don't get the answer form, so there is nothing to set up for them.
+const ANSWER_QUESTION_ENDPOINT = answerForm ? answerForm.dataset.endpoint : null;
 
 async function createAnswer(event) {
     event.preventDefault();

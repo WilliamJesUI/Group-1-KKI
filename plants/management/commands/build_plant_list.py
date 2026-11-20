@@ -2,6 +2,8 @@
 
 Run it on a laptop (it needs TREFLE_TOKEN in .env), never on the live site:
     python manage.py build_plant_list
+Plants already in plants.json are kept as they are, so adding a row to the CSV only asks Trefle about that row.
+To ask Trefle about every plant again: python manage.py build_plant_list --all
 """
 import csv
 import json
@@ -42,13 +44,22 @@ def add_photo(fields, search_item):
 
 
 class Command(BaseCommand):
-    help = "Ask Trefle about every plant in plant_list.csv and save plants/data/plants.json"
+    help = "Ask Trefle about the new plants in plant_list.csv and save plants/data/plants.json"
+
+    def add_arguments(self, parser):
+        parser.add_argument("--all", action="store_true", help="ask about every plant again, not only the new ones")
 
     def handle(self, *args, **options):
         rows = list(csv.DictReader(open(DATA_DIR / "plant_list.csv", encoding="utf-8")))
-        plants, missing = [], []
+        path = DATA_DIR / "plants.json"
+        # The plants we already have keep their Trefle info, Wikipedia text and photo
+        plants = [] if options["all"] or not path.exists() else json.loads(path.read_text(encoding="utf-8"))
+        done = {plant["slug"] for plant in plants}
+        missing = []
         for row in rows:
             name, scientific = row["english_name"], row["scientific_name"]
+            if slugify(name) in done:
+                continue
             try:
                 item = best_match(scientific, trefle.search(scientific))
                 if not item:
@@ -66,7 +77,7 @@ class Command(BaseCommand):
             self.stdout.write(f"ok: {name}")
             time.sleep(PAUSE_SECONDS)
 
-        with open(DATA_DIR / "plants.json", "w", encoding="utf-8") as file:
+        with open(path, "w", encoding="utf-8") as file:
             file.write(json.dumps(plants, indent=2, ensure_ascii=False) + "\n")
         with_photo = sum(1 for p in plants if p.get("image_url"))
         self.stdout.write(f"\nsaved {len(plants)} plants, {with_photo} with a licensed photo")

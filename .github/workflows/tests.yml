@@ -1,0 +1,25 @@
+# Runs every test on each push and pull request, so a PR that breaks something shows a red X before anyone merges it.
+# It uses SQLite (PRODUCTION is not set), the same as on our laptops. Selenium tests skip here (no Chrome).
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt coverage
+      - name: Check for missing migrations
+        run: python manage.py makemigrations --check --dry-run
+      - name: Run the tests with coverage
+        run: |
+          coverage run --branch --source=. --omit="*/migrations/*,*/tests.py,*/test_*.py,manage.py,growyourgarden/*" manage.py test --parallel 1
+          coverage report --fail-under=80

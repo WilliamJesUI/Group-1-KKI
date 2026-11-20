@@ -314,6 +314,24 @@ def pin_post(request, post_id):
 
 In templates, show the Delete button with the same rule. In the view, set it on each item (`item.can_delete = can_delete(request.user, item.author)`) and use `{% if item.can_delete %}` in the template. The `message` in the JSON 403 works with `showToast()` (section 12), so the page can just show it.
 
+### What a moderator can do in each module
+
+| Module | Moderator can | Moderator can't |
+| --- | --- | --- |
+| Garden | Delete any post or comment, pick the "Plant of the week" | Edit someone else's post |
+| Events | Delete any event (the event page shows a "Moderator" box with only Delete) | Edit someone else's event |
+| Community | Delete any question (even one that already has answers, the answers go with it) and any answer | Edit someone else's question or answer |
+| Encyclopedia | Nothing extra. Saved plants and collections are private to each user | |
+| Achievements | Approve badge claims in `/admin/` (a plain staff user also needs the badge permissions ticked under **User permissions**, a superuser has them all) | See or change other people's goals (they're private) |
+
+### How to make someone a moderator
+
+1. Log in to `/admin/` with a superuser account.
+2. Go to **Users**, pick the user.
+3. Tick **Staff status**, then click **Save**.
+
+No superuser yet? Make one with `python manage.py createsuperuser`. A superuser is staff too, so they're a moderator straight away. Moderating on the site pages only needs Staff status, you don't need to tick any permissions for that.
+
 ## 15. The landing page shows your module
 
 The home page at `/` (the `home` app) shows a small preview of every module: the newest Garden posts, the next events, a shelf of plants, the newest questions and the most claimed badges. It reads your tables in `home/services.py`, and only reads, never writes.
