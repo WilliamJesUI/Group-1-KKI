@@ -158,7 +158,7 @@ def show_question_thread(request, question_id):
     }
 
     if request.GET.get("partial") == "1":
-        return render(request, "answer_cards.html", context)
+        return render(request, "answer_page_components/answer_card_list.html", context)
     return render(request, "question_thread.html", context)
 
 @require_POST
