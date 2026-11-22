@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 from . import views
 
 app_name = "community"
@@ -15,4 +15,6 @@ urlpatterns = [
     path("answers/delete-ajax/<int:answer_id>/", views.delete_answer_ajax, name = "delete_answer_ajax"),
     path("answers/vote-ajax/<int:answer_id>/", views.vote_answer_ajax, name="vote_answer_ajax"),
     path("popular-plants/", views.popular_plants_ajax, name="popular_plants_ajax"),
+    path("api/v1/", include("community.api_urls")),
+    path("api-auth/", include("rest_framework.urls")),
 ]
