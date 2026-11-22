@@ -25,7 +25,7 @@
 <a href="{% url 'community:show_questions' %}">Back to community</a>
 <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
     <section class="mt-5 mb-6 flex flex-col gap-8 self-start">
-        {% include "question_thread_card.html" %}
+        {% include "answer_page_components/thread_question_card.html" %}
         <div class="lg:col-start-1">
         <div class="flex items-center justify-between gap-4">
             {% with n=answer_list|length %}
@@ -51,24 +51,24 @@
         </div>
 
         <div id="answer-cards">
-            {% include 'answer_cards.html' %}
+            {% include 'answer_page_components/answer_card_list.html' %}
         </div>
-        {% include 'answer_form.html' %}
+        {% include 'answer_page_components/answer_form.html' %}
         </div>
     </section>
 
 
     <aside class="mt-5 mb-6 space-y-6 lg:sticky lg:top-6">
-        {% include "related_questions_container.html" %}
+        {% include "answer_page_components/related_questions_container.html" %}
         {% if user.is_authenticated and question.author_id == user.id %}
-            {% include 'question_edit_delete_card.html' %}
+            {% include 'answer_page_components/question_edit_delete_card.html' %}
         {% elif user.is_staff %}
-            {% include 'question_moderator_card.html' %}
+            {% include 'answer_page_components/question_moderator_card.html' %}
         {% endif %}
     </aside>
 </div>
 
-{% include 'question_edit_form_modal.html' %}
+{% include 'answer_page_components/question_edit_form_modal.html' %}
 
 
 <script src="{% static 'js/community_question_thread.js' %}"></script>

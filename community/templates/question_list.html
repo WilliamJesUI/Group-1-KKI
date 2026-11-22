@@ -65,7 +65,7 @@
                 </div>
             </form>
             <div id="question-cards" class="min-h-[392px] pt-[18px] transition-opacity aria-busy:opacity-50 ">
-                {% include "question_cards.html" %}
+                {% include "question_page_components/question_card_list.html" %}
             </div>
         </div> 
     </div>
@@ -86,11 +86,11 @@
         </section>
         
         <div id="popular-plants-wrapper" data-endpoint="{% url 'community:popular_plants_ajax' %}">
-            {% include "popular_plants_container.html" %}
+            {% include "question_page_components/popular_plants_container.html" %}
         </div>
 
     </aside>
-    {% include "question_form_modal.html" %}
+    {% include "question_page_components/question_form_modal.html" %}
 </div>
 
 <script src="{% static 'js/csrf.js' %}"></script>

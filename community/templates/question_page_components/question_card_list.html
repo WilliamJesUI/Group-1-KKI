@@ -5,7 +5,7 @@
   <div class="h-full transition-opacity duration-400 ease-out delay-(--stagger) starting:opacity-0 motion-reduce:delay-0"
        style="--stagger: {% if forloop.counter0 < 9 %}{% widthratio forloop.counter0 1 40 %}{% else %}360{% endif %}ms">
 
-    {% include "question_card.html" %}
+    {% include "question_page_components/question_card.html" %}
   </div>
   {% endfor %}
 </div>
