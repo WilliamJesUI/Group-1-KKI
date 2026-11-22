@@ -62,6 +62,10 @@ def question_list(request):
         
         questions = questions.order_by(*order)
 
+        plant_filter = request.query_params.get("plant")
+        if plant_filter:
+            questions = questions.filter(plant__slug=plant_filter)
+
         serializer = QuestionSerializer(questions, many=True, context={"request": request})
         return Response(serializer.data)
 
