@@ -5,9 +5,19 @@ from .models import Question, Answer
 from plants.models import Plant
 
 class QuestionSerializer(serializers.ModelSerializer):
+    plant_name = serializers.CharField(source="plant.name", read_only=True, allow_null=True)
+    plant_slug = serializers.CharField(source="plant.slug", read_only=True, allow_null=True)
+    author_name = serializers.CharField(source="author.username", read_only=True)
+    answer_count = serializers.IntegerField(read_only=True)
+    vote_count = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Question
-        fields = ["id", "author", "title", "body", "created_at", "updated_at", "voters", "plant"]
+        fields = [
+                "id", "author", "author_name", "title", "body", 
+                "created_at", "updated_at", "voters", "plant",
+                "plant_name", "plant_slug", "answer_count", "vote_count"
+                ]
         read_only_fields = ["id", "created_at", "updated_at", "voters", "author"]
 
     def validate_title(self, value):
