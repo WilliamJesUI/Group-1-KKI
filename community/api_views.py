@@ -69,3 +69,44 @@ def question_list(request):
     serializer.is_valid(raise_exception=True)
     serializer.save(author=request.user)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET", "HEAD", "POST"])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthorOrReadOnly])
+def answer_list(request, question_id):
+    question = get_object_or_404(Question, id=question_id)
+    if request.method in ("GET", "HEAD"):
+        pill = request.GET.get("filter", "most_helpful")
+
+        pill = "most_helpful" if pill not in ANSWER_SORTS else pill
+        pill = "most_helpful" if pill == "mine" and not request.user.is_authenticated else pill
+
+        answers = (
+            question.answers
+            .select_related("author")
+            .prefetch_related("voters")
+            .annotate(vote_count=Count("voters"))
+        )
+        
+        order = list(ANSWER_SORTS[pill])
+
+        if pill == "mine":
+            answers = answers.annotate(
+                mine_rank=Case(
+                    When(author=request.user, then=Value(0)),
+                    default=Value(1),
+                    output_field=IntegerField(),
+                )
+            )
+            order.insert(0, "mine_rank")   # my answers first, then the rest
+
+        answers = answers.order_by(*order)
+
+        serializer = AnswerSerializer(answers, many=True, context={"request": request})
+        return Response(serializer.data)
+    
+    serializer = AnswerSerializer(data=request.data, context={"request":request})
+    serializer.is_valid(raise_exception=True)
+    serializer.save(author=request.user, question=question)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
