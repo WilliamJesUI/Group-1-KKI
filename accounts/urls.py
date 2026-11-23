@@ -1,5 +1,12 @@
 from django.urls import path
 
+from accounts.api_views import (
+    LoginAPIView,
+    LogoutAPIView,
+    MyProfileAPIView,
+    PublicProfileAPIView,
+    RegisterAPIView,
+)
 from accounts.views import DeleteAccountView, EditProfileView, LoginView, LogoutView, ProfileImageView, ProfileView, RegisterView
 
 # app_name is "profile" (not "accounts") on purpose: the navbar in templates/header.html lights up the Profile tab
@@ -18,4 +25,11 @@ urlpatterns = [
     # Uploaded photos (see ProfileImageView)
     path('profile/<str:username>/picture/', ProfileImageView.as_view(kind='avatar'), name='picture'),
     path('profile/<str:username>/banner/', ProfileImageView.as_view(kind='banner'), name='banner'),
+
+    # JSON API (Django REST Framework), see accounts/api_views.py
+    path('api/register/', RegisterAPIView.as_view(), name='api_register'),
+    path('api/login/', LoginAPIView.as_view(), name='api_login'),
+    path('api/logout/', LogoutAPIView.as_view(), name='api_logout'),
+    path('api/profile/', MyProfileAPIView.as_view(), name='api_my_profile'),
+    path('api/profile/<str:username>/', PublicProfileAPIView.as_view(), name='api_profile'),
 ]
