@@ -16,9 +16,9 @@ class QuestionSerializer(serializers.ModelSerializer):
     plant_name = serializers.CharField(source="plant.name", read_only=True, allow_null=True)
     plant_slug = serializers.CharField(source="plant.slug", read_only=True, allow_null=True)
 
-    # Counts and voting (answer_count and vote_count come from .annotate() in the view)
-    answer_count = serializers.IntegerField(read_only=True)
-    vote_count = serializers.IntegerField(read_only=True)
+    # Counts and voting
+    answer_count = serializers.SerializerMethodField()
+    vote_count = serializers.SerializerMethodField()
     is_voted = serializers.SerializerMethodField()
 
     # Permissions (only control which buttons show; the real checks are in the permission class)
@@ -52,11 +52,17 @@ class QuestionSerializer(serializers.ModelSerializer):
 
     def get_can_edit(self, obj):
         user = self._user()
-        return bool(user) and obj.author_id == user.id
+        return bool(user) and obj.author_id == user.id and not obj.answers.exists()
 
     def get_can_delete(self, obj):
         user = self._user()
         return bool(user) and can_delete(user, obj.author)
+
+    def get_answer_count(self, obj):
+        return obj.answers.count()
+    
+    def get_vote_count(self, obj):
+        return obj.voters.count()
 
     # --- Input validation ---
     def validate_title(self, value):
@@ -75,8 +81,8 @@ class AnswerSerializer(serializers.ModelSerializer):
     author_initials = serializers.CharField(source="author.profile.initials", read_only=True)
     author_picture = serializers.CharField(source="author.profile.profile_picture", read_only=True, allow_null=True)
 
-    # Counts and voting (vote_count comes from .annotate() in the view)
-    vote_count = serializers.IntegerField(read_only=True)
+    # Counts and voting
+    vote_count = serializers.SerializerMethodField()
     is_voted = serializers.SerializerMethodField()
 
     # Permissions (only control which buttons show; the real checks are in the permission class)
@@ -105,6 +111,9 @@ class AnswerSerializer(serializers.ModelSerializer):
     def get_is_voted(self, obj):
         user = self._user()
         return bool(user) and user in obj.voters.all()   # uses the prefetch
+
+    def get_vote_count(self, obj):
+        return obj.voters.count()
 
     def get_can_edit(self, obj):
         user = self._user()
