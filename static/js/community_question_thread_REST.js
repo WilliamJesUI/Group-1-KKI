@@ -33,7 +33,7 @@ document.addEventListener('click', async (event) => {
     const pills = document.querySelectorAll('#answer-filter-pills [data-filter]');
     if (!cards || pills.length === 0) return;
 
-    // Django supplies the URL: data-api-url="{% url 'community:answer-list' question.id %}"
+    // Set by the template: data-api-url="{% url 'community:answer-list' question.id %}"
     const API_URL = cards.dataset.apiUrl;
     const DEFAULT_FILTER = 'most_helpful';   // must match the view's default
     let latestAnswerRequest = 0;
@@ -82,6 +82,10 @@ document.addEventListener('click', async (event) => {
         if (ownerBox) ownerBox.hidden = n > 0;
     }
 
+    function currentFilter() {
+        return new URLSearchParams(window.location.search).get('filter') || DEFAULT_FILTER;
+    }
+
     // ---------- rendering ----------
 
     function buildAnswerCard(a, isTop) {
@@ -128,7 +132,7 @@ document.addEventListener('click', async (event) => {
         if (a.can_edit) {
             const form = el('form', 'mt-2');
             form.dataset.editForm = '';
-            form.dataset.endpoint = a.update_url;
+            form.dataset.endpoint = a.url;
             form.hidden = true;
             const textarea = el('textarea', 'w-full resize-none rounded-3xl border-2 border-ink bg-white px-4 py-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-green-800');
             textarea.name = 'body';
@@ -167,7 +171,7 @@ document.addEventListener('click', async (event) => {
             const del = el('button', 'text-sm font-bold text-red-600 hover:text-red-700 disabled:opacity-40', 'Delete');
             del.type = 'button';
             del.dataset.deleteAnswer = '';
-            del.dataset.endpoint = a.delete_url;
+            del.dataset.endpoint = a.url;
             actions.append(del);
         }
 
@@ -188,8 +192,7 @@ document.addEventListener('click', async (event) => {
         }
         const list = el('div');
         answers.forEach((a, i) => {
-            // Match whatever rule your old view used for is_top.
-            // This assumes: first card, Most Helpful filter, at least 1 vote.
+            // Adjust if your old view used a different rule for "Top answer"
             const isTop = filter === 'most_helpful' && i === 0 && a.vote_count > 0;
             list.append(buildAnswerCard(a, isTop));
         });
@@ -225,7 +228,6 @@ document.addEventListener('click', async (event) => {
             }
         } catch (error) {
             console.error('Error loading answers:', error);
-            // Show a message instead of redirecting, which would loop on first load
             if (requestId === latestAnswerRequest) {
                 cards.replaceChildren(el('p', 'text-sm text-ink-soft', 'Could not load answers. Please try again.'));
             }
@@ -235,6 +237,103 @@ document.addEventListener('click', async (event) => {
             }
         }
     }
+
+    // ---------- edit / delete (REST) ----------
+
+    function apiRequest(url, method, body) {
+        const headers = {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Accept': 'application/json',
+        };
+        if (body) headers['Content-Type'] = 'application/json';
+        return fetch(url, {
+            method,
+            headers,
+            body: body ? JSON.stringify(body) : undefined,
+        });
+    }
+
+    // Show the edit form
+    document.addEventListener('click', (event) => {
+        const editBtn = event.target.closest('[data-edit-answer]');
+        if (!editBtn) return;
+        const card = editBtn.closest('[data-answer-card]');
+        card.querySelector('[data-answer-body]').hidden = true;
+        const form = card.querySelector('[data-edit-form]');
+        form.hidden = false;
+        form.querySelector('textarea').focus();
+    });
+
+    // Cancel editing
+    document.addEventListener('click', (event) => {
+        const cancelBtn = event.target.closest('[data-cancel-edit]');
+        if (!cancelBtn) return;
+        const card = cancelBtn.closest('[data-answer-card]');
+        const form = card.querySelector('[data-edit-form]');
+        const body = card.querySelector('[data-answer-body]');
+        form.querySelector('textarea').value = body.textContent;   // discard changes
+        form.hidden = true;
+        body.hidden = false;
+    });
+
+    // Save: PATCH
+    document.addEventListener('submit', async (event) => {
+        const form = event.target.closest('[data-edit-form]');
+        if (!form) return;
+        event.preventDefault();
+
+        const saveBtn = form.querySelector('button[type="submit"]');
+        saveBtn.disabled = true;
+        try {
+            const response = await apiRequest(
+                form.dataset.endpoint,
+                'PATCH',
+                { body: form.querySelector('textarea').value }
+            );
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                const message = (data.body && data.body[0]) || data.detail || 'Please try again.';
+                showToast('Could not save', message, 'error');
+                return;
+            }
+
+            const card = form.closest('[data-answer-card]');
+            const body = card.querySelector('[data-answer-body]');
+            body.textContent = data.body;                       // server's cleaned version
+            form.querySelector('textarea').value = data.body;
+            form.hidden = true;
+            body.hidden = false;
+        } catch (error) {
+            console.error('Error updating answer:', error);
+            showToast('Network error', 'Please try again.', 'error');
+        } finally {
+            saveBtn.disabled = false;
+        }
+    });
+
+    // Delete: DELETE
+    document.addEventListener('click', async (event) => {
+        const delBtn = event.target.closest('[data-delete-answer]');
+        if (!delBtn || delBtn.disabled) return;
+    
+        delBtn.disabled = true;
+        try {
+            const response = await apiRequest(delBtn.dataset.endpoint, 'DELETE');
+            if (response.status !== 204) {
+                const data = await response.json().catch(() => ({}));
+                showToast('Could not delete', data.detail || 'Please try again.', 'error');
+                return;
+            }
+            // Re-fetch so the counts and "Top answer" stay correct
+            await window.reloadAnswerCards();
+        } catch (error) {
+            console.error('Error deleting answer:', error);
+            showToast('Network error', 'Please try again.', 'error');
+        } finally {
+            delBtn.disabled = false;   // harmless if the card is already gone
+        }
+    });
 
     // ---------- events ----------
 
@@ -246,15 +345,11 @@ document.addEventListener('click', async (event) => {
     });
 
     window.addEventListener('popstate', () => {
-        const filter = new URLSearchParams(window.location.search).get('filter') || DEFAULT_FILTER;
-        loadAnswerCards(filter, 'none');
+        loadAnswerCards(currentFilter(), 'none');
     });
 
     // Other scripts can call this to refresh the list (e.g. after posting an answer)
-    window.reloadAnswerCards = () => {
-        const filter = new URLSearchParams(window.location.search).get('filter') || DEFAULT_FILTER;
-        return loadAnswerCards(filter, 'none');
-    };
+    window.reloadAnswerCards = () => loadAnswerCards(currentFilter(), 'none');
 
     // First load: the template renders an empty #answer-cards, the API fills it
     window.reloadAnswerCards();

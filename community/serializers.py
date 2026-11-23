@@ -78,7 +78,6 @@ class QuestionSerializer(serializers.ModelSerializer):
 
         
 class AnswerSerializer(serializers.ModelSerializer):
-
     # Author
     author_name = serializers.SerializerMethodField()
     author_url = serializers.SerializerMethodField()
@@ -89,33 +88,37 @@ class AnswerSerializer(serializers.ModelSerializer):
     # Display helpers
     time_ago = serializers.SerializerMethodField()
 
-    # Counts
+    # Counts and voting (vote_count comes from .annotate() in the view)
     vote_count = serializers.IntegerField(read_only=True)
-
     is_voted = serializers.SerializerMethodField()
+
+    # Permissions (only control which buttons show; the real checks are in the permission class)
     can_edit = serializers.SerializerMethodField()
     can_delete = serializers.SerializerMethodField()
+
+    # URLs
+    url = serializers.SerializerMethodField()
     vote_url = serializers.SerializerMethodField()
-    update_url = serializers.SerializerMethodField()
-    delete_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Answer
         fields = [
-            "id", "question", 
-            "author", "author_name", "author_url", "body", 
-            "created_at", "updated_at", "time_ago", 
-            "vote_count", "voters"
-            ]
-        
-        read_only_fields = [
-            "id", "question", 
-            "author", "author_name", "author_url", 
-            "created_at", "updated_at", 
-            "vote_count", "voters"
-            ]
+            "id", "question", "body",
+            "author", "author_name", "author_url",
+            "author_initials", "author_avatar_class", "author_picture",
+            "created_at", "updated_at", "time_ago",
+            "vote_count", "is_voted",
+            "can_edit", "can_delete",
+            "url", "vote_url",
+        ]
+        # Only model fields need listing here; declared fields above are already read-only
+        read_only_fields = ["id", "question", "author", "created_at", "updated_at"]
 
     # --- Output helpers ---
+    def _user(self):
+        request = self.context.get("request")
+        return request.user if request and request.user.is_authenticated else None
+
     def get_author_name(self, obj):
         return obj.author.get_full_name() or obj.author.username
 
@@ -124,17 +127,6 @@ class AnswerSerializer(serializers.ModelSerializer):
 
     def get_time_ago(self, obj):
         return f"{timesince(obj.created_at)} ago"
-
-    # --- Input validation ---
-    def validate_body(self, value):
-        value = strip_tags(value).strip()
-        if not value:
-            raise serializers.ValidationError("Answer cannot be empty.")
-        return value
-
-    def _user(self):
-        request = self.context.get("request")
-        return request.user if request and request.user.is_authenticated else None
 
     def get_is_voted(self, obj):
         user = self._user()
@@ -148,13 +140,15 @@ class AnswerSerializer(serializers.ModelSerializer):
         user = self._user()
         return bool(user) and (obj.author_id == user.id or user.is_staff)
 
+    def get_url(self, obj):
+        return reverse("community:api:answer-detail", args=[obj.id])
+
     def get_vote_url(self, obj):
         return reverse("community:vote_answer_ajax", args=[obj.id])
 
-    def get_update_url(self, obj):
-        return reverse("community:update_answer_ajax", args=[obj.id])
-
-    def get_delete_url(self, obj):
-        return reverse("community:delete_answer_ajax", args=[obj.id])
-    
-
+    # --- Input validation ---
+    def validate_body(self, value):
+        value = strip_tags(value).strip()
+        if not value:
+            raise serializers.ValidationError("Answer cannot be empty.")
+        return value

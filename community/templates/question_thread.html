@@ -50,7 +50,7 @@
             </form>
         </div>
 
-        <div id="answer-cards">
+        <div id="answer-cards" data-api-url="{% url 'community:api:answer-list' question.id %}">
             {% include 'answer_page_components/answer_card_list.html' %}
         </div>
         {% include 'answer_page_components/answer_form.html' %}

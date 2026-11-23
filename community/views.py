@@ -85,7 +85,7 @@ def show_questions(request):
     }
 
     if request.GET.get("partial") == "1":
-        return render(request, "question_cards.html", context)
+        return render(request, "question_page_components/question_card_list.html", context)
     return render(request, "question_list.html", context)
 
 def popular_plants_ajax(request):
@@ -101,7 +101,7 @@ def popular_plants_ajax(request):
         # Keeps the chosen plant highlighted after the box refreshes
         "selected_plant": request.GET.get("plant", "").strip(),
     }
-    return render(request, "popular_plants_container.html", context)
+    return render(request, "question_page_components/popular_plants_container.html", context)
 
 
 def show_question_thread(request, question_id):

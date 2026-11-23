@@ -114,3 +114,29 @@ def answer_list(request, question_id):
     serializer.is_valid(raise_exception=True)
     serializer.save(author=request.user, question=question)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+@api_view(["GET", "HEAD", "PATCH", "DELETE"])
+@permission_classes([IsAuthorOrReadOnly])
+def answer_detail(request, answer_id):
+    queryset = (
+        Answer.objects
+        .select_related("author__profile")
+        .prefetch_related("voters")
+        .annotate(vote_count=Count("voters", distinct=True))
+    )
+    answer = get_object_or_404(queryset, pk=answer_id)
+    request.check_object_permissions(request, answer)
+
+    if request.method in ("GET", "HEAD"):
+        return Response(AnswerSerializer(answer, context={"request": request}).data)
+
+    if request.method == "DELETE":
+        answer.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    serializer = AnswerSerializer(
+        answer, data=request.data, partial=True, context={"request": request}
+    )
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(serializer.data)
