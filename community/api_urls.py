@@ -7,4 +7,6 @@ urlpatterns = [
     path("questions/<int:question_id>/", api_views.question_detail, name="question-detail"),
     path("questions/<int:question_id>/answers", api_views.answers_for_question, name="answers-for-question"),
     path("answers/<int:answer_id>/", api_views.answer_detail, name="answer-detail"),
+    path("questions/<int:question_id>/vote/", api_views.question_vote, name="question-vote"),
+    path("answers/<int:answer_id>/vote/", api_views.answer_vote, name="answer-vote"),
 ]

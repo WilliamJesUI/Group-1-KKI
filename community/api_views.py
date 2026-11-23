@@ -2,6 +2,8 @@ from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 
@@ -31,7 +33,11 @@ def question_detail(request, question_id):
     question = get_object_or_404(
         Question.objects.prefetch_related("voters"), id=question_id
     )
-    request.check_object_permissions(request, question)
+
+    permission = IsAuthorOrReadOnly()
+    if not permission.has_object_permission(request, None, question):
+        raise PermissionDenied(permission.message)
+
 
     if request.method in ("GET", "HEAD"):
         serializer = QuestionSerializer(question, context={"request":request})
@@ -158,7 +164,10 @@ def answer_detail(request, answer_id):
     answer = get_object_or_404(
         Answer.objects.prefetch_related("voters"), id=answer_id
     )
-    request.check_object_permissions(request, answer)
+
+    permission = IsAuthorOrReadOnly()
+    if not permission.has_object_permission(request, None, answer):
+        raise PermissionDenied(permission.message)
 
     if request.method in ("GET", "HEAD"):
         serializer = AnswerSerializer(answer, context={"request":request})
@@ -175,3 +184,29 @@ def answer_detail(request, answer_id):
     serializer.is_valid(raise_exception=True)
     serializer.save()
     return Response(serializer.data)
+
+
+
+# Toggling logic
+def toggle_vote(obj, user):
+    if obj.voters.filter(id=user.id).exists():
+        obj.voters.remove(user)
+        voted = False
+    else:
+        obj.voters.add(user)
+        voted = True
+    return {"voted": voted, "vote_count": obj.voters.count()}
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def question_vote(request, question_id):
+    question = get_object_or_404(Question, id=question_id)
+    return Response(toggle_vote(question, request.user))
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def answer_vote(request, answer_id):
+    answer = get_object_or_404(Answer, id=answer_id)
+    return Response(toggle_vote(answer, request.user))
