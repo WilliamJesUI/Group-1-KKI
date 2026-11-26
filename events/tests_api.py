@@ -173,3 +173,11 @@ class EventRSVPAPITests(EventAPITestCase):
     def test_get_is_not_allowed(self):
         self.client.force_authenticate(self.other)
         self.assertEqual(self.client.get(self.rsvp_url).status_code, 405)
+
+
+class EventPlantChoicesAPITests(APITestCase):
+    def test_anyone_gets_plant_slugs_and_names(self):
+        Plant.objects.create(name="Basil Test", slug="basil-test")
+        response = self.client.get(reverse("events:api_event_plants"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn({"slug": "basil-test", "name": "Basil Test"}, response.data)
