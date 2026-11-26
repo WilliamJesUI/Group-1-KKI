@@ -71,3 +71,27 @@ def event_detail(request, event_id):
     serializer.is_valid(raise_exception=True)
     serializer.save()
     return Response(serializer.data)
+
+
+# POST /events/api/<id>/rsvp/ with {"going": true} or {"going": false}
+@api_view(["POST"])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def event_rsvp(request, event_id):
+    event = get_object_or_404(events_queryset(), pk=event_id)
+    # Same rules as the RSVP button on the website
+    if event.host == request.user:
+        return Response({"detail": "You're the host, so you're already going."}, status=status.HTTP_400_BAD_REQUEST)
+    if event.status() == "happening":
+        return Response({"detail": "RSVPs are closed, this event has already started."}, status=status.HTTP_400_BAD_REQUEST)
+    if event.status() == "ended":
+        return Response({"detail": "RSVPs are closed, this event has ended."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # The app sends what the user wants instead of "flip it", so a double tap can't undo an RSVP
+    if request.data.get("going") is True:
+        event.attendees.add(request.user)
+    else:
+        event.attendees.remove(request.user)
+    # Load the event again so going_count and is_going show the new attendees
+    event = get_object_or_404(events_queryset(), pk=event_id)
+    return Response(EventSerializer(event, context={"request": request}).data)
