@@ -45,3 +45,29 @@ def event_list(request):
     # The host is always the logged-in user, the app can't pick someone else
     serializer.save(host=request.user)
     return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+
+# GET /events/api/<id>/  anyone. PUT/PATCH only the host. DELETE the host or a moderator.
+@api_view(["GET", "HEAD", "PUT", "PATCH", "DELETE"])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAuthenticatedOrReadOnly])
+def event_detail(request, event_id):
+    event = get_object_or_404(events_queryset(), pk=event_id)
+    if request.method in ("GET", "HEAD"):
+        return Response(EventSerializer(event, context={"request": request}).data)
+
+    if request.method == "DELETE":
+        if not can_delete(request.user, event.host):
+            return Response({"detail": "Only the host can delete this event."}, status=status.HTTP_403_FORBIDDEN)
+        event.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    if event.host != request.user:
+        return Response({"detail": "Only the host can edit this event."}, status=status.HTTP_403_FORBIDDEN)
+    serializer = EventSerializer(
+        event, data=request.data, partial=request.method == "PATCH", context={"request": request},
+    )
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(serializer.data)
