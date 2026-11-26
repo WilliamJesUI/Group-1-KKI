@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.authentication import SessionAuthentication
+from rest_framework.authentication import SessionAuthentication, TokenAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
@@ -12,6 +12,12 @@ from events.serializers import EventSerializer
 from events.views import EVENT_FILTERS, filter_events
 from growyourgarden.permissions import can_delete
 from plants.models import Plant
+
+# Token first, so the app's Authorization: Token header is checked and a wrong or old token gets a clear 401.
+# Session stays for the browser and the Browsable API.
+EVENT_AUTH = [TokenAuthentication, SessionAuthentication]
+
+
 
 def events_queryset():
     # Same queries as the website: skip the photo bytes, and load attendees in one go
@@ -23,7 +29,7 @@ def events_queryset():
 # GET  /events/api/  anyone can read. Filters like the website: ?filter=upcoming|month|mine&q=seed&plant=tomato
 # POST /events/api/  logged-in users host a new event
 @api_view(["GET", "HEAD", "POST"])
-@authentication_classes([SessionAuthentication])
+@authentication_classes(EVENT_AUTH)
 @permission_classes([IsAuthenticatedOrReadOnly])
 def event_list(request):
     if request.method in ("GET", "HEAD"):
@@ -50,7 +56,7 @@ def event_list(request):
 
 # GET /events/api/<id>/  anyone. PUT/PATCH only the host. DELETE the host or a moderator.
 @api_view(["GET", "HEAD", "PUT", "PATCH", "DELETE"])
-@authentication_classes([SessionAuthentication])
+@authentication_classes(EVENT_AUTH)
 @permission_classes([IsAuthenticatedOrReadOnly])
 def event_detail(request, event_id):
     event = get_object_or_404(events_queryset(), pk=event_id)
@@ -75,7 +81,7 @@ def event_detail(request, event_id):
 
 # POST /events/api/<id>/rsvp/ with {"going": true} or {"going": false}
 @api_view(["POST"])
-@authentication_classes([SessionAuthentication])
+@authentication_classes(EVENT_AUTH)
 @permission_classes([IsAuthenticated])
 def event_rsvp(request, event_id):
     event = get_object_or_404(events_queryset(), pk=event_id)

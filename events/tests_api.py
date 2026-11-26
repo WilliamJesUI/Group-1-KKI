@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APITestCase
+from rest_framework.authtoken.models import Token
 
 from events.models import Event
 from plants.models import Plant
@@ -57,9 +58,10 @@ class EventListAPITests(EventAPITestCase):
         names = [event["name"] for event in self.client.get(self.list_url).data]
         self.assertEqual(names, ["Tomato Day"])
 
+    # 401 (not logged in), because TokenAuthentication comes first
     def test_guest_cannot_create(self):
         response = self.client.post(self.list_url, event_data(), format="json")
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 401)
         self.assertEqual(Event.objects.count(), 1)
 
     def test_logged_in_user_creates_event_as_host(self):
@@ -145,7 +147,7 @@ class EventDetailAPITests(EventAPITestCase):
 
 class EventRSVPAPITests(EventAPITestCase):
     def test_guest_cannot_rsvp(self):
-        self.assertEqual(self.client.post(self.rsvp_url, {"going": True}, format="json").status_code, 403)
+        self.assertEqual(self.client.post(self.rsvp_url, {"going": True}, format="json").status_code, 401)
 
     def test_rsvp_and_cancel(self):
         self.client.force_authenticate(self.other)
@@ -181,3 +183,25 @@ class EventPlantChoicesAPITests(APITestCase):
         response = self.client.get(reverse("events:api_event_plants"))
         self.assertEqual(response.status_code, 200)
         self.assertIn({"slug": "basil-test", "name": "Basil Test"}, response.data)
+
+class EventTokenAPITests(EventAPITestCase):
+    def test_login_gives_a_token(self):
+        response = self.client.post(reverse("api_token"), {"username": "ala", "password": "pw-12345"}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["token"], Token.objects.get(user=self.other).key)
+
+    def test_wrong_password_gives_no_token(self):
+        response = self.client.post(reverse("api_token"), {"username": "ala", "password": "nope"}, format="json")
+        self.assertEqual(response.status_code, 400)
+
+    def test_app_can_rsvp_with_a_token(self):
+        token = Token.objects.create(user=self.other)
+        self.client.credentials(HTTP_AUTHORIZATION="Token " + token.key)
+        response = self.client.post(self.rsvp_url, {"going": True}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data["is_going"])
+
+    def test_old_token_gets_401(self):
+        self.client.credentials(HTTP_AUTHORIZATION="Token not-a-real-token")
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, 401)
