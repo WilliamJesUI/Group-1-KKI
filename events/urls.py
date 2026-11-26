@@ -13,6 +13,7 @@ urlpatterns = [
     path('<uuid:event_id>/rsvp/', rsvp_event_ajax, name='rsvp_event_ajax'),
     path('host/', create_event_ajax, name='create_event_ajax'),
     path('api/', api_views.event_list, name='api_event_list'),
+    path('api/plants/', api_views.event_plant_choices, name='api_event_plants'),
     path('api/<uuid:event_id>/', api_views.event_detail, name='api_event_detail'),
     path('api/<uuid:event_id>/rsvp/', api_views.event_rsvp, name='api_event_rsvp'),
 ]

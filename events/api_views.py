@@ -11,7 +11,7 @@ from events.models import Event
 from events.serializers import EventSerializer
 from events.views import EVENT_FILTERS, filter_events
 from growyourgarden.permissions import can_delete
-
+from plants.models import Plant
 
 def events_queryset():
     # Same queries as the website: skip the photo bytes, and load attendees in one go
@@ -95,3 +95,11 @@ def event_rsvp(request, event_id):
     # Load the event again so going_count and is_going show the new attendees
     event = get_object_or_404(events_queryset(), pk=event_id)
     return Response(EventSerializer(event, context={"request": request}).data)
+
+
+
+# GET /events/api/plants/  the theme plant choices for the app's Host an event form
+@api_view(["GET"])
+def event_plant_choices(request):
+    plants = Plant.objects.order_by("name").values("slug", "name")
+    return Response(list(plants))
